@@ -1,0 +1,6 @@
+/target/
+/dist/
+/captures/
+/work/
+*.tmp
+*.partial
