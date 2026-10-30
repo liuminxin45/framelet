@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 description = "A tiny native Windows screen recorder for people and agents"
 license = "MIT"
+repository = "https://github.com/liuminxin45/framelet"
+readme = "README.md"
 
 [dependencies]
 anyhow = "1"

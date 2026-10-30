@@ -2,7 +2,34 @@
 
 **一个小窗口，把屏幕变成 GIF。也让 agent 直接调用录屏。**
 
+Tiny native Windows screen recorder for people and agents. **CLI first · MCP ready · GIF + PNG · Rust + Win32.**
+
+[![Windows CI](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml/badge.svg)](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/liuminxin45/framelet)](https://github.com/liuminxin45/framelet/releases/latest)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
 受 [GifCam](https://www.bahraniapps.com/apps/gifcam/gifcam.php) 启发的独立实现：Rust、原生 Win32、CLI First、MCP stdio。无 Electron，无浏览器运行时，无账号，无遥测。MIT 开源。
+
+## 下载
+
+[**下载 v0.1.0 Windows x64 便携版**](https://github.com/liuminxin45/framelet/releases/download/v0.1.0/framelet-v0.1.0-windows-x64.zip) · [所有版本](https://github.com/liuminxin45/framelet/releases) · [校验文件](https://github.com/liuminxin45/framelet/releases/download/v0.1.0/SHA256SUMS.txt)
+
+解压后双击 `framelet.exe`，或从终端调用。EXE 约 **0.87 MiB**；运行时无需安装 Rust、Python、.NET 或 FFmpeg。便携包包含依赖许可证。
+
+## 真实界面与演示
+
+![Framelet 原生透明取景框与录制控件](docs/images/framelet-window.jpg)
+
+下方为 Framelet 实际录制的 **620×300、3 秒、16 FPS** GIF：48 帧，15,250 字节。它是带有移动标记的测试画面，不代表所有场景的压缩率。
+
+![Framelet 实际录制的 GIF，展示移动标记](docs/images/framelet-demo.gif)
+
+| 使用方式 | 已支持 |
+| --- | --- |
+| 原生窗口 | 透明取景框、区域点击穿透、移动缩放、暂停/继续、单帧、F8、鼠标光标 |
+| CLI | GIF/PNG、区域与帧率、JSON 结果、JSONL 进度、命名会话停止、裁剪变速 |
+| Agent | MCP stdio、7 个工具、版本化工具声明、本地录制核心 |
+| 编码 | 静止画面合并延时、变化区域编码、持续写盘 |
 
 ## 快速开始
 
@@ -80,6 +107,8 @@ MCP 录制是阻塞调用，单次最多 300 秒；调用前让客户端的工�
 Rust stable + MSVC C++ Build Tools + Windows SDK。
 
 ```powershell
+git clone https://github.com/liuminxin45/framelet.git
+cd framelet
 cargo build --release --locked
 cargo fmt --check
 cargo clippy --all-targets --locked -- -D warnings
@@ -98,3 +127,5 @@ powershell -ExecutionPolicy Bypass -File scripts/package.ps1
 v0.1 实现区域 GIF、PNG、暂停/单帧、鼠标、变化区域编码、CLI 裁剪变速与 MCP。编辑器导出为不透明 GIF，透明像素落在黑色背景上。暂未实现 GifCam 的可视时间轴、逐帧删除/绘字、调色模式、AVI、音频及窗口后台捕获；这不是完整的逐项等价复刻。
 
 逆向记录见 [docs/research.md](docs/research.md)，设计见 [docs/design.md](docs/design.md)。参考软件不随源码或发行包分发；分析得到的 API/行为用于制定接口，项目代码独立编写。项目与 GifCam 作者无隶属关系。
+
+欢迎提交 [Issue](https://github.com/liuminxin45/framelet/issues) 或 Pull Request。问题反馈请附 Windows 版本、Framelet 版本、使用的命令、期望和实际结果；共享截图前请检查是否包含个人信息。
