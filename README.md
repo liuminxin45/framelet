@@ -1,110 +1,106 @@
 # Framelet
 
-**一个小窗口，把屏幕变成 GIF。也让 agent 直接调用录屏。**
+**Small binary. Zero extra runtime installs. Callable by AI through MCP.**
 
-Tiny native Windows screen recorder for people and agents. **CLI first · MCP ready · GIF + PNG · Rust + Win32.**
+**小体积 · 无需额外运行时依赖 · AI 可通过 MCP 调用**
+
+[English](README.md) | [简体中文](README.zh-CN.md)
 
 [![Windows CI](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml/badge.svg)](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml)
 [![Release](https://img.shields.io/github/v/release/liuminxin45/framelet)](https://github.com/liuminxin45/framelet/releases/latest)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-受 [GifCam](https://www.bahraniapps.com/apps/gifcam/gifcam.php) 启发的独立实现：Rust、原生 Win32、CLI First、MCP stdio。无 Electron，无浏览器运行时，无账号，无遥测。MIT 开源。
+Framelet is a tiny native Windows screen recorder built with Rust and Win32. Its biggest advantage is a small, self-contained executable: **unzip and run**, or let an AI agent call it over local MCP stdio. No Python, Node.js, .NET, FFmpeg, browser runtime, model SDK or account is needed to run the recorder.
 
-## 下载
+The v0.1.0 EXE is about **0.88 MiB**; the development build with frame extraction is around **1 MiB**. Both use Windows system APIs and a static CRT. Build tools and test SDKs are development dependencies only.
 
-[**下载 v0.1.0 Windows x64 便携版**](https://github.com/liuminxin45/framelet/releases/download/v0.1.0/framelet-v0.1.0-windows-x64.zip) · [所有版本](https://github.com/liuminxin45/framelet/releases) · [校验文件](https://github.com/liuminxin45/framelet/releases/download/v0.1.0/SHA256SUMS.txt)
+## Download
 
-解压后双击 `framelet.exe`，或从终端调用。EXE 约 **0.87 MiB**；运行时无需安装 Rust、Python、.NET 或 FFmpeg。便携包包含依赖许可证。
+[**Windows x64 portable v0.1.0**](https://github.com/liuminxin45/framelet/releases/download/v0.1.0/framelet-v0.1.0-windows-x64.zip) · [Releases](https://github.com/liuminxin45/framelet/releases) · [SHA-256](https://github.com/liuminxin45/framelet/releases/download/v0.1.0/SHA256SUMS.txt)
 
-## 真实界面与演示
+Requires an interactive Windows 10 2004+ / Windows 11 x64 desktop. Extract the ZIP and run `framelet.exe`. License texts are included.
 
-![Framelet 原生透明取景框与录制控件](docs/images/framelet-window.jpg)
+**Version note:** v0.1.0 has recording and seven MCP tools. Frame extraction and MCP image previews are in **main / 0.2.0-dev**; build from source to use them. Published v0.1.0 assets remain unchanged.
 
-下方为 Framelet 实际录制的 **620×300、3 秒、16 FPS** GIF：48 帧，15,250 字节。它是带有移动标记的测试画面，不代表所有场景的压缩率。
+## Real window and recording
 
-![Framelet 实际录制的 GIF，展示移动标记](docs/images/framelet-demo.gif)
+![Framelet's native transparent capture frame](docs/images/framelet-window.jpg)
 
-| 使用方式 | 已支持 |
-| --- | --- |
-| 原生窗口 | 透明取景框、区域点击穿透、移动缩放、暂停/继续、单帧、F8、鼠标光标 |
-| CLI | GIF/PNG、区域与帧率、JSON 结果、JSONL 进度、命名会话停止、裁剪变速 |
-| Agent | MCP stdio、7 个工具、版本化工具声明、本地录制核心 |
-| 编码 | 静止画面合并延时、变化区域编码、持续写盘 |
+This real recording is 620×300, 3 seconds, 16 FPS, 48 frames and 15,250 bytes. It is a mostly static test screen with a moving marker, rather than a general compression benchmark.
 
-## 快速开始
+![GIF recorded by Framelet](docs/images/framelet-demo.gif)
 
-Windows 10 2004+ / Windows 11，x64，交互式桌面。
+## Window and CLI
+
+Move or resize the transparent frame. **Record / F8** starts and finishes recording. **Pause / Resume** excludes paused time. **Frame** starts a paused single-frame session or appends a frame. **Save as...** copies a finished GIF to a new path; **Open folder** opens auto-saved recordings.
+
+Auto-save: `%LOCALAPPDATA%\Framelet\Captures`. The capture region stays fixed while recording. Closing an active recording first saves it; close again to exit. The GUI offers 10 / 16 / 20 / 25 FPS and cursor capture.
 
 ```powershell
-# 双击或无参数运行，打开透明取景框
 .\framelet.exe
-
-# 录制物理像素区域 x,y,width,height，3 秒，16 fps
 .\framelet.exe record --region 100,100,640,360 --duration 3 --fps 16 --cursor --output demo.gif
-
-# 截一张 PNG
 .\framelet.exe shot --region 100,100,640,360 --output shot.png
-
-# 裁剪第 0.5 到第 2 秒，并以 2 倍速导出
+.\framelet.exe inspect demo.gif
 .\framelet.exe edit demo.gif --start 0.5 --end 2 --speed 2 --output trimmed.gif
-```
-
-输出路径不能已经存在；父文件夹需提前创建。坐标包含负数时可用 `--region=-1920,0,1280,720`。不传 region 则捕获整个虚拟桌面，受 16 MP 上限约束。屏幕像素来自当前可见桌面；遮挡和受保护内容遵循 Windows 的捕获行为。
-
-## 小窗口
-
-拖动、缩放透明取景框，框内区域可以直接点击。按 **Record / F8** 开始，再按一次完成保存；**Pause / Resume** 排除暂停时段；**Frame** 可启动暂停的单帧会话并逐张追加。停止后 **Save as...** 复制导出，**Open folder** 查看自动保存文件。
-
-自动保存位置：`%LOCALAPPDATA%\Framelet\Captures`。取景框录制时固定位置和尺寸；关闭正在录制的窗口会先保存，再次关闭才退出。可选 10 / 16 / 20 / 25 fps 和鼠标光标。F8 注册失败时仍可用按钮控制。窗口自身默认排除在录屏外；开发时设置 `FRAMELET_CAPTURE_UI=1` 可以对窗口做截图 QA。
-
-## CLI First
-
-```powershell
-.\framelet.exe --help
 .\framelet.exe doctor
 .\framelet.exe monitors
 .\framelet.exe windows
-.\framelet.exe inspect demo.gif
-.\framelet.exe schema
-
-# JSON Lines 进度在 stderr，最终 JSON 在 stdout
 .\framelet.exe record --duration 60 --session demo --events --output long.gif
-# 在另一个终端或 agent 进程中提前结束并保存
+# From another process:
 .\framelet.exe stop --session demo
 ```
 
-Ctrl+C 同样会完成 GIF。CLI fps 范围 1–50，duration 范围 (0,3600] 秒，quality 范围 1–30（1 最精细，30 最快）。GIF 延时单位为 10 ms，采样按实际经过时间记账。相同画面合并延时，变化画面只编码变化包围框，录制内存不会随时长增长。
+Coordinates are physical pixels; use `--region=-1920,0,1280,720` for a negative origin. Without a region, capture covers the virtual desktop within a 16 MP limit. Existing outputs are never replaced; create the parent directory first. Capture reads currently visible pixels, with Windows occlusion/capture-protection behavior.
 
-成功输出：`{"ok":true,"result":{...}}`；操作失败在 stderr 返回 `{"ok":false,"error":"..."}` 并退出 1；命令行语法错误由 clap 报告并退出 2。标准帮助和版本信息是文本。
+CLI FPS is 1–50, duration is (0,3600] seconds, and quality is 1–30 (1 best, 30 fastest). Ctrl+C finalizes a valid GIF. Identical samples merge their delay; changed frames encode a bounding rectangle and stream to disk. Results are JSON on stdout; `--events` emits JSONL progress on stderr. Operation errors exit 1 with JSON; syntax errors exit 2. Help/version are text.
 
-## AI Native
+## AI through MCP
 
-`framelet schema` 提供版本化工具声明。`framelet mcp` 是本地 JSON-RPC MCP stdio server，支持 initialize、ping、tools/list、tools/call。提供 7 个工具：doctor、monitors、windows、record、shot、inspect、edit。录制与 CLI 共用相同核心，不需要 LLM SDK、API Key 或网络。
+The executable is the MCP server. **No separate server runtime or model API key is required.** Starting it does not record until a capture tool is called.
 
-客户端配置示例（把路径替换为你的实际位置）：
-
-```json
-{
-  "mcpServers": {
-    "framelet": {
-      "command": "D:\\Projects\\framelet\\dist\\framelet.exe",
-      "args": ["mcp"]
-    }
-  }
-}
+```powershell
+codex mcp add framelet -- C:\Tools\Framelet\framelet.exe mcp
+codex mcp get framelet --json
 ```
 
-工具调用示例：
+Use your EXE's absolute path. Restart the MCP connection/client after registering or updating it. For long recordings, set `tool_timeout_sec = 330` under `[mcp_servers.framelet]` in Codex's `config.toml`; MCP recordings are blocking and limited to 300 seconds.
+
+Other stdio clients can use:
 
 ```json
-{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"framelet_record","arguments":{"output":"D:/captures/demo.gif","region":{"x":100,"y":100,"width":640,"height":360},"duration":3,"fps":16,"cursor":true}}}
+{"mcpServers":{"framelet":{"command":"C:\\Tools\\Framelet\\framelet.exe","args":["mcp"]}}}
 ```
 
-MCP 录制是阻塞调用，单次最多 300 秒；调用前让客户端的工具超时大于录制时长。进程启动不开始录屏，只有调用 record/shot 才捕获；不包含自动上传、自动理解画面或自然语言模型。
+| Tools | Purpose |
+| --- | --- |
+| `framelet_doctor`, `framelet_monitors`, `framelet_windows` | Readiness and capture geometry |
+| `framelet_record`, `framelet_shot` | GIF recording and PNG screenshot |
+| `framelet_inspect`, `framelet_edit` | GIF metadata, trim and playback speed |
+| `framelet_extract_frames` *(main)* | PNG candidates, contact-sheet image, timestamps and context ranges |
+| `framelet_read_image` *(main)* | View a selected PNG as an MCP image block |
 
-## 构建与验证
+In main, screenshots and extraction contact sheets return **actual MCP image blocks**, alongside structured results. Previews are bounded to 960px and 1 MiB. `framelet schema` prints the versioned catalog. No cloud upload, shell-execution or model-understanding service is embedded.
 
-Rust stable + MSVC C++ Build Tools + Windows SDK。
+## Frames for AI review — main / 0.2.0-dev
+
+**Native GIF decoding, without FFmpeg or another runtime.** Extraction reconstructs full frames from delta rectangles, transparency and disposal modes before exporting PNGs.
+
+```powershell
+.\framelet.exe frames demo.gif --mode scene --count 8 --output frames
+.\framelet.exe frames demo.gif --mode uniform --count 8 --output overview
+```
+
+The new directory contains numbered PNGs, `contact-sheet.png` and `manifest.json`, with source frame indexes, timestamps, change scores, selection reasons and suggested context ranges. `--count` is a maximum of 1–64; duplicate uniform time samples are deduplicated. Scene mode keeps opening context and selects changes above `--min-change` (default 0.04). `--min-gap` controls spacing (default 0.5 seconds), and `--padding` controls context (default 0.75 seconds).
+
+An AI can extract frames, review the contact sheet, call `framelet_read_image` for details, then call `framelet_edit` with the chosen start/end in seconds. **Visual change is not semantic importance.** The agent must inspect images to decide which event matters; suggested ranges are context windows, not automatic semantic highlights. Input is currently **GIF only**, not MP4 or other video containers.
+
+![MCP contact sheet from a synthetic READY / ERROR / DONE test GIF](docs/images/framelet-frames.png)
+
+This synthetic interoperability fixture illustrates the workflow: the agent reviewed the ERROR frame at 1.0–2.2 seconds and exported 0.8–2.4 seconds with context through MCP. It is a test example, not an automatic highlight-quality benchmark.
+
+## Build and verify
+
+Rust stable, MSVC C++ Build Tools and the Windows SDK are required **to build**, not to run the portable EXE.
 
 ```powershell
 git clone https://github.com/liuminxin45/framelet.git
@@ -114,18 +110,14 @@ cargo fmt --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
 python -m pip install pillow
-python scripts/verify.py target/release/framelet.exe
-# 需要交互式桌面；实际录屏、单帧、命名会话停止
 python scripts/verify.py target/release/framelet.exe --desktop
+python scripts/verify_frames.py target/release/framelet.exe
+# Official SDK interoperability: development dependency only.
+npm install --prefix work/mcp-client @modelcontextprotocol/sdk@1.32.2 --ignore-scripts --no-audit --no-fund
+node scripts/verify_mcp.mjs target/release/framelet.exe docs/images/framelet-demo.gif --desktop
 powershell -ExecutionPolicy Bypass -File scripts/package.ps1
 ```
 
-发布包使用静态 CRT；用户无需安装 Rust、.NET、FFmpeg、Python。开发和验证依赖不进入发布包。
+Omit `--desktop` on headless runners. Audio, AVI/MP4, a visual timeline, per-frame deletion, overlays, richer palette controls and hidden-window capture are not implemented. GIF edits flatten transparency onto black. The frame excludes itself from capture by default; `FRAMELET_CAPTURE_UI=1` is a screenshot-QA override.
 
-## 范围
-
-v0.1 实现区域 GIF、PNG、暂停/单帧、鼠标、变化区域编码、CLI 裁剪变速与 MCP。编辑器导出为不透明 GIF，透明像素落在黑色背景上。暂未实现 GifCam 的可视时间轴、逐帧删除/绘字、调色模式、AVI、音频及窗口后台捕获；这不是完整的逐项等价复刻。
-
-逆向记录见 [docs/research.md](docs/research.md)，设计见 [docs/design.md](docs/design.md)。参考软件不随源码或发行包分发；分析得到的 API/行为用于制定接口，项目代码独立编写。项目与 GifCam 作者无隶属关系。
-
-欢迎提交 [Issue](https://github.com/liuminxin45/framelet/issues) 或 Pull Request。问题反馈请附 Windows 版本、Framelet 版本、使用的命令、期望和实际结果；共享截图前请检查是否包含个人信息。
+An independent implementation inspired by [GifCam](https://www.bahraniapps.com/apps/gifcam/gifcam.php), with no affiliation or redistributed executable, reference icons or decompiled code. See [investigation notes](docs/research.md), [design](docs/design.md), [changelog](CHANGELOG.md). MIT licensed; [issues](https://github.com/liuminxin45/framelet/issues) and pull requests are welcome.

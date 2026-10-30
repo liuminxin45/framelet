@@ -14,8 +14,11 @@ jobs:
       - run: cargo build --release --locked
       - run: python -m pip install pillow
       - run: python scripts/verify.py target/release/framelet.exe
+      - run: python scripts/verify_frames.py target/release/framelet.exe
+      - run: npm install --prefix work/mcp-client @modelcontextprotocol/sdk@1.32.2 --ignore-scripts --no-audit --no-fund
+      - run: node scripts/verify_mcp.mjs target/release/framelet.exe
       - run: ./scripts/package.ps1
       - uses: actions/upload-artifact@v4
         with:
           name: framelet-windows-x64
-          path: dist/framelet-v0.1.0-windows-x64.zip
+          path: dist/framelet-*-windows-x64.zip

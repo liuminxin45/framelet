@@ -1,6 +1,7 @@
 mod capture;
 mod cli;
 mod encode;
+mod frames;
 mod gui;
 mod mcp;
 

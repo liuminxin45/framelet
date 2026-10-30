@@ -24,7 +24,7 @@ def passed(name):
     print('PASS', name, flush=True)
 
 catalog = run('schema')
-assert len(catalog['tools']) == 7
+assert len(catalog['tools']) == 9
 passed('versioned tool catalog')
 
 with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
@@ -66,7 +66,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
     responses = [json.loads(line) for line in p.stdout.splitlines()]
     assert len(responses) == 6
     assert responses[0]['result']['protocolVersion'] == '2025-06-18'
-    assert len(responses[1]['result']['tools']) == 7
+    assert len(responses[1]['result']['tools']) == 9
     assert responses[2]['result']['structuredContent']['result']['frames'] == 3
     assert all(x['result']['isError'] for x in responses[3:])
     passed('MCP handshake, notification, discovery, tool result and input errors')

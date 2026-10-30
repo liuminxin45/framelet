@@ -46,6 +46,8 @@ enum Command {
     Windows,
     /// Inspect an animated GIF.
     Inspect { input: PathBuf },
+    /// Extract reviewable PNG frames, a contact sheet and timestamp/clip suggestions from a GIF.
+    Frames(crate::frames::ExtractArgs),
     /// Trim and change playback speed; all times are seconds.
     Edit {
         input: PathBuf,
@@ -133,6 +135,7 @@ pub fn run() -> Result<()> {
         Command::Monitors => print(json!({"ok":true,"result":capture::monitors()}))?,
         Command::Windows => print(json!({"ok":true,"result":capture::windows()}))?,
         Command::Inspect { input } => print(json!({"ok":true,"result":encode::inspect(&input)?}))?,
+        Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract(&a)?}))?,
         Command::Edit {
             input,
             output,

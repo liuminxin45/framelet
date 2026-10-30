@@ -202,66 +202,32 @@ pub fn edit(
             && end.is_none_or(|e| e.is_finite() && e > start),
         "invalid trim range or speed"
     );
-    let mut opt = gif::DecodeOptions::new();
-    opt.set_color_output(gif::ColorOutput::RGBA);
-    let mut reader = opt.read_info(File::open(input)?)?;
-    let (w, h) = (reader.width() as usize, reader.height() as usize);
     ensure!(
-        w * h <= 16_777_216,
-        "GIF exceeds 16 megapixel memory budget"
+        !output.exists(),
+        "output already exists: {}",
+        output.display()
     );
-    let mut canvas = vec![0u8; w * h * 4];
-    let mut output = GifWriter::new(output, w as u32, h as u32, 10)?;
-    let mut time = 0.0;
+    let mut writer: Option<GifWriter> = None;
     let mut timing_error = 0.0;
-    while let Some(f) = reader.read_next_frame()? {
-        ensure!(
-            usize::from(f.left) + usize::from(f.width) <= w
-                && usize::from(f.top) + usize::from(f.height) <= h,
-            "frame outside GIF canvas"
-        );
-        let saved = if f.dispose == DisposalMethod::Previous {
-            Some(canvas.clone())
-        } else {
-            None
-        };
-        for y in 0..f.height as usize {
-            for x in 0..f.width as usize {
-                let src = (y * f.width as usize + x) * 4;
-                let dst = ((y + f.top as usize) * w + x + f.left as usize) * 4;
-                if f.buffer[src + 3] != 0 {
-                    canvas[dst..dst + 4].copy_from_slice(&f.buffer[src..src + 4]);
+    crate::frames::decode(
+        |_, at, delay_ms, w, h, rgb| {
+            let time = at as f64 / 1000.0;
+            let next = (at + delay_ms) as f64 / 1000.0;
+            let included = next.min(end.unwrap_or(f64::INFINITY)) - time.max(start);
+            if included > 0.0 {
+                let desired = included / speed * 100.0 + timing_error;
+                let delay = desired.round().clamp(1.0, 65535.0);
+                timing_error = desired - delay;
+                if writer.is_none() {
+                    writer = Some(GifWriter::new(output, w, h, 10)?);
                 }
+                writer.as_mut().unwrap().push(rgb.to_vec(), delay as u16)?;
             }
-        }
-        let next = time + f64::from(f.delay.max(1)) / 100.0;
-        let included = next.min(end.unwrap_or(f64::INFINITY)) - time.max(start);
-        if included > 0.0 {
-            let desired = included / speed * 100.0 + timing_error;
-            let delay = desired.round().clamp(1.0, 65535.0);
-            timing_error = desired - delay;
-            let rgb = canvas
-                .as_chunks::<4>()
-                .0
-                .iter()
-                .flat_map(|p| [p[0], p[1], p[2]])
-                .collect();
-            output.push(rgb, delay as u16)?;
-        }
-        if let Some(saved) = saved {
-            canvas = saved;
-        } else if f.dispose == DisposalMethod::Background {
-            for y in f.top as usize..(f.top + f.height) as usize {
-                let i = (y * w + f.left as usize) * 4;
-                canvas[i..i + f.width as usize * 4].fill(0);
-            }
-        }
-        time = next;
-        if end.is_some_and(|e| time >= e) {
-            break;
-        }
-    }
-    output.finish()
+            Ok(end.is_none_or(|e| next < e))
+        },
+        input,
+    )?;
+    writer.context("trim range contains no frames")?.finish()
 }
 pub fn inspect(input: &Path) -> Result<serde_json::Value> {
     let mut reader = gif::DecodeOptions::new().read_info(File::open(input)?)?;

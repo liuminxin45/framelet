@@ -16,7 +16,9 @@ UI/UX Pro Max returned Minimalism & Swiss Style for the desktop recorder query. 
 
 `gui.rs`: Win32 window with a subtracted capture aperture, native controls, a capture/encode worker, channel commands and periodic UI updates. Pause removes inactive time. Auto-save makes Stop a concrete commit. Save as copies to a new path. Recording geometry is frozen. Screen content is visible through the hole, rather than repeatedly rendered into a preview.
 
-`mcp.rs`: newline-delimited JSON-RPC; bounded 1 MiB requests, seven declared tools, structured success and MCP tool errors. No shell-execution or cloud-upload tool. Blocking recording bounds duration to 300 seconds. CLI is also directly usable by agents.
+`frames.rs`: shared GIF compositing for extraction and editing. Two-pass extraction retains bounded canvases instead of a full recording. Uniform mode samples playback time; scene mode ranks small-thumbnail differences with spacing/threshold controls. Numbered PNGs, a contact sheet, timestamps and context ranges support agent review. Scores do not establish semantic importance.
+
+`mcp.rs`: newline-delimited JSON-RPC; bounded 1 MiB requests, nine declared tools, structured success and MCP tool errors. Screenshots, contact sheets and selected PNGs can return bounded PNG image content (960px / 1 MiB). Preview errors preserve successful disk captures. No shell-execution or cloud-upload tool. Blocking recording bounds duration to 300 seconds. CLI is also directly usable by agents.
 
 ## Tradeoffs
 

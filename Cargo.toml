@@ -1,6 +1,6 @@
 [package]
 name = "framelet"
-version = "0.1.0"
+version = "0.2.0-dev"
 edition = "2024"
 description = "A tiny native Windows screen recorder for people and agents"
 license = "MIT"
@@ -9,6 +9,7 @@ readme = "README.md"
 
 [dependencies]
 anyhow = "1"
+base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
 ctrlc = "3"
 gif = "0.13"

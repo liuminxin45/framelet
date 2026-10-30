@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0-dev — main
+
+- Bilingual README and About emphasize the small, self-contained executable and AI access through MCP.
+- Native GIF frame extraction: time-uniform or visual-change candidates, full compositing, PNGs, contact sheet, timestamp manifest and context ranges.
+- Two new MCP tools for extraction and PNG viewing; screenshots include bounded image content.
+- Shared GIF compositing for extraction and trimming, including Previous/Background disposal.
+- Independent pixel tests and official MCP SDK interoperability checks; no extra runtime install required.
+- Published v0.1.0 assets remain unchanged. Visual-change candidates are not semantic highlights.
+
 ## v0.1.0 — 2026-10-30
 
 First public release of Framelet for Windows x64.
