@@ -167,7 +167,7 @@ impl Grabber {
             let src =
                 std::slice::from_raw_parts(self.bits, r.width as usize * r.height as usize * 4);
             let mut rgb = Vec::with_capacity(src.len() / 4 * 3);
-            for p in src.chunks_exact(4) {
+            for p in src.as_chunks::<4>().0 {
                 rgb.extend_from_slice(&[p[2], p[1], p[0]]);
             }
             Ok(rgb)

@@ -241,7 +241,9 @@ pub fn edit(
             let delay = desired.round().clamp(1.0, 65535.0);
             timing_error = desired - delay;
             let rgb = canvas
-                .chunks_exact(4)
+                .as_chunks::<4>()
+                .0
+                .iter()
                 .flat_map(|p| [p[0], p[1], p[2]])
                 .collect();
             output.push(rgb, delay as u16)?;
