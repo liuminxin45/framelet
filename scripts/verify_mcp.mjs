@@ -13,7 +13,7 @@ const desktop = process.argv.includes('--desktop');
 await fs.mkdir('work', { recursive: true });
 const output = await fs.mkdtemp(path.resolve('work/mcp-check-'));
 const client = new Client({ name: 'framelet-interoperability-check', version: '1.0.0' }, { capabilities: {} });
-const transport = new StdioClientTransport({ command: executable, args: ['mcp'], stderr: 'pipe' });
+const transport = new StdioClientTransport({ command: executable, args: ['mcp'], stderr: 'pipe', env: { ...process.env, FRAMELET_MCP_ROOT: output, FRAMELET_MCP_READ_ROOTS: JSON.stringify([path.dirname(input)]) } });
 const checks = [];
 async function call(name, args) {
   const r = await client.callTool({ name, arguments: args });
@@ -33,7 +33,7 @@ try {
   await client.connect(transport);
   const tools = (await client.listTools()).tools;
   const expanded = tools.some(t => t.name === 'framelet_extract_frames');
-  assert.equal(tools.length, expanded ? 9 : 7);
+  assert.equal(tools.length, expanded ? 17 : 7);
   checks.push('SDK initialization and tool discovery');
   const info = (await call('framelet_inspect', { input })).structuredContent.result;
   assert(info.frames > 0 && info.duration_ms >= 300);
@@ -45,6 +45,11 @@ try {
   await client.ping();
   checks.push('tool errors preserve the MCP session');
   if (expanded) {
+    const point = await call('framelet_frame_at', { input, at: 0.12, output: path.join(output, 'point.png') });
+    image(point);
+    assert(point.structuredContent.result.timestamp_ms <= 120);
+    assert(point.structuredContent.result.timestamp_ms + point.structuredContent.result.duration_ms > 120);
+    checks.push('single timestamp probe returns an MCP image and its exact playback interval');
     const extraction = await call('framelet_extract_frames', { input, output: path.join(output, 'frames'), count: 8, mode: 'uniform' });
     await fs.writeFile(path.join(output, 'mcp-contact-sheet.png'), image(extraction));
     const report = extraction.structuredContent.result;

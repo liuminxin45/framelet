@@ -12,13 +12,15 @@ UI/UX Pro Max returned Minimalism & Swiss Style for the desktop recorder query. 
 
 `encode.rs`: a pending GIF frame plus a previous RGB buffer. Identical samples accumulate delay. Changed samples produce a cropped local-palette frame with Keep disposal. GIF data streams to a sibling partial file; successful finalization flushes and synchronizes, then publishes with a hard link that cannot replace an existing output. Partial files are cleaned on handled failure. Forced process termination can leave a partial file. No automatic partial-file recovery is claimed.
 
-`cli.rs`: clap front end, timed recording, cancellation, PNG, named OS stop events, JSON results. CLI and MCP use the same capture and encoder paths. Named events are scoped to the current Windows session; concurrent recordings cannot claim an existing session name.
+`cli.rs`: clap front end, cancellation, PNG, named OS stop events, JSON results. `recording.rs` provides the timed CLI/MCP loop, countdown, downscaling and pre-encoding privacy masks. A recording becomes ready after its first successful sample. Named events are scoped to the current Windows session; concurrent recordings cannot claim an existing session name.
 
 `gui.rs`: Win32 window with a subtracted capture aperture, native controls, a capture/encode worker, channel commands and periodic UI updates. Pause removes inactive time. Auto-save makes Stop a concrete commit. Save as copies to a new path. Recording geometry is frozen. Screen content is visible through the hole, rather than repeatedly rendered into a preview.
 
 `frames.rs`: shared GIF compositing for extraction and editing. Two-pass extraction retains bounded canvases instead of a full recording. Uniform mode samples playback time; scene mode ranks small-thumbnail differences with spacing/threshold controls. Numbered PNGs, a contact sheet, timestamps and context ranges support agent review. Scores do not establish semantic importance.
 
-`mcp.rs`: newline-delimited JSON-RPC; bounded 1 MiB requests, nine declared tools, structured success and MCP tool errors. Screenshots, contact sheets and selected PNGs can return bounded PNG image content (960px / 1 MiB). Preview errors preserve successful disk captures. No shell-execution or cloud-upload tool. Blocking recording bounds duration to 300 seconds. CLI is also directly usable by agents.
+`mcp.rs`: newline-delimited JSON-RPC; bounded 1 MiB requests, 17 declared tools, structured success and MCP tool errors. Malformed/oversized requests preserve framing for the next request. Screenshots, timestamp probes, contact sheets and selected PNGs return bounded PNG image content (960px / 1 MiB). Preview errors preserve successful disk captures. `sessions.rs` owns one background worker per server, pause/resume/stop/cancel, 16 terminal results and EOF cancellation. Recording is bounded to 300 seconds; pause does not suspend the wall-clock deadline. `safety.rs` resolves explicit capture targets and configured input/output roots. These are local mistake guards, not an OS sandbox. No shell-execution or cloud-upload tool.
+
+`frames::at` decodes only as far as a requested playback timestamp and exports one composited image. GIF prefix decoding remains sequential; bisection reduces images sent to an agent, not necessarily decode work. The Bilibili demonstration uses stable page regions and one forward scroll, with midpoint probes and independent PNG comparisons, then AI visual boundary review. It does not establish a general semantic highlight detector.
 
 ## Tradeoffs
 

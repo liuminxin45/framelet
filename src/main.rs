@@ -4,6 +4,9 @@ mod encode;
 mod frames;
 mod gui;
 mod mcp;
+mod recording;
+mod safety;
+mod sessions;
 
 fn main() {
     capture::init_dpi();

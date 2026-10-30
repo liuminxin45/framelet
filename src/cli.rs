@@ -1,6 +1,6 @@
 use crate::{
     capture::{self, Grabber, Region},
-    encode::{self, GifWriter},
+    encode,
 };
 use anyhow::{Result, ensure};
 use clap::{Parser, Subcommand};
@@ -13,7 +13,6 @@ use std::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
-    time::{Duration, Instant},
 };
 
 #[derive(Parser)]
@@ -48,6 +47,14 @@ enum Command {
     Inspect { input: PathBuf },
     /// Extract reviewable PNG frames, a contact sheet and timestamp/clip suggestions from a GIF.
     Frames(crate::frames::ExtractArgs),
+    /// Return the composited frame covering a timestamp (seconds); useful for binary-search review.
+    FrameAt {
+        input: PathBuf,
+        #[arg(long)]
+        at: f64,
+        #[arg(short, long)]
+        output: PathBuf,
+    },
     /// Trim and change playback speed; all times are seconds.
     Edit {
         input: PathBuf,
@@ -101,6 +108,25 @@ pub struct RecordArgs {
     #[arg(long)]
     #[serde(default)]
     pub events: bool,
+    /// Scale down to this width, preserving aspect ratio. Never upscale.
+    #[arg(long)]
+    #[serde(default)]
+    pub max_width: Option<u32>,
+    /// Solid privacy rectangles, relative to the capture region: x,y,width,height. Repeatable.
+    #[arg(long = "mask", allow_hyphen_values = true)]
+    #[serde(default)]
+    pub masks: Vec<Region>,
+    /// Countdown before capture, in seconds (0..30).
+    #[arg(long, default_value_t = 0.0)]
+    #[serde(default)]
+    pub delay: f64,
+    /// Maximum GIF bytes in MiB; exceeding the budget discards unfinished output.
+    #[arg(long, default_value_t = 256)]
+    #[serde(default = "default_max_mib")]
+    pub max_mib: u64,
+}
+fn default_max_mib() -> u64 {
+    256
 }
 fn default_fps() -> u32 {
     10
@@ -136,6 +162,9 @@ pub fn run() -> Result<()> {
         Command::Windows => print(json!({"ok":true,"result":capture::windows()}))?,
         Command::Inspect { input } => print(json!({"ok":true,"result":encode::inspect(&input)?}))?,
         Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract(&a)?}))?,
+        Command::FrameAt { input, at, output } => {
+            print(json!({"ok":true,"result":crate::frames::at(&input,at,&output)?}))?
+        }
         Command::Edit {
             input,
             output,
@@ -173,82 +202,13 @@ pub fn shot(region: Option<Region>, path: &std::path::Path, cursor: bool) -> Res
     encode::screenshot(path, r.width, r.height, &g.rgb()?)
 }
 pub fn record(a: &RecordArgs, cancel: Option<&AtomicBool>) -> Result<encode::Stats> {
-    ensure!(
-        (1..=50).contains(&a.fps),
-        "fps must be 1..50 (GIF timing resolution is 10ms)"
-    );
-    ensure!(
-        a.duration.is_finite() && a.duration > 0.0 && a.duration <= 3600.0,
-        "duration must be >0 and <=3600 seconds"
-    );
-    let event = if let Some(s) = &a.session {
-        Some(StopEvent::create(s)?)
-    } else {
-        None
-    };
-    let r = a.region.unwrap_or_else(capture::desktop);
-    let grab = Grabber::new(r, a.cursor)?;
-    let mut writer = GifWriter::new(&a.output, r.width, r.height, a.quality)?;
-    let start = Instant::now();
-    let duration = Duration::from_secs_f64(a.duration);
-    let period = Duration::from_secs_f64(1.0 / f64::from(a.fps));
-    let mut next = start;
-    let mut last = None;
-    let mut previous = None;
-    let mut accounted_cs = 0u64;
-    let mut progress = Instant::now();
-    if a.events {
-        eprintln!(
-            "{}",
-            json!({"event":"started","region":r,"fps":a.fps,"session":a.session})
-        );
-    }
-    loop {
-        let now = Instant::now();
-        if last.is_some()
-            && (now.duration_since(start) >= duration
-                || cancel.is_some_and(|c| c.load(Ordering::Relaxed))
-                || event.as_ref().is_some_and(|e| e.signaled()))
-        {
-            break;
-        }
-        let pixels = grab.rgb()?;
-        if let Some(prev) = previous.take() {
-            let target = (now.duration_since(start).as_secs_f64() * 100.0).round() as u64;
-            let delay = target.saturating_sub(accounted_cs).clamp(1, 65535) as u16;
-            writer.push(prev, delay)?;
-            accounted_cs += u64::from(delay);
-        }
-        previous = Some(pixels);
-        last = Some(now);
-        if a.events && progress.elapsed() >= Duration::from_secs(1) {
-            eprintln!(
-                "{}",
-                json!({"event":"progress","elapsed_ms":start.elapsed().as_millis(),"samples":writer.samples+1})
-            );
-            progress = Instant::now();
-        }
-        next += period;
-        let now = Instant::now();
-        if next > now {
-            std::thread::sleep((next - now).min(duration.saturating_sub(start.elapsed())))
-        } else {
-            next = now;
-        }
-    }
-    if let Some(p) = previous {
-        let target = (start.elapsed().as_secs_f64().min(a.duration) * 100.0).round() as u64;
-        writer.push(
-            p,
-            target.saturating_sub(accounted_cs).clamp(1, 65535) as u16,
-        )?;
-    }
-    let stats = writer.finish()?;
-    if a.events {
-        eprintln!("{}", json!({"event":"saved","result":stats}));
-    }
-    Ok(stats)
+    let event = a.session.as_deref().map(StopEvent::create).transpose()?;
+    crate::recording::run(a, &crate::recording::Control::default(), || {
+        cancel.is_some_and(|c| c.load(Ordering::Relaxed))
+            || event.as_ref().is_some_and(|e| e.signaled())
+    })
 }
+
 struct StopEvent(windows_sys::Win32::Foundation::HANDLE);
 fn event_name(s: &str) -> Result<Vec<u16>> {
     ensure!(

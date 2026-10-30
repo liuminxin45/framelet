@@ -49,6 +49,17 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
     assert uniform['duration_ms'] == 3000
     print('PASS scene spacing and time-weighted uniform sampling')
 
+    for at, index in [(0,0),(0.999,0),(1,1),(1.5,1),(2.999,2)]:
+        image_path = root/f'at-{at}.png'
+        probe = run('frame-at', source, '--at', at, '--output', image_path)['result']
+        assert probe['frame_index'] == index and probe['timestamp_ms'] == index*1000
+        with Image.open(image_path) as actual:
+            assert actual.convert('RGB').tobytes() == pages[index].tobytes()
+    for at in [-1,3,'NaN']:
+        run('frame-at', source, '--at='+str(at), '--output', root/'invalid-at.png', ok=False)
+        assert not (root/'invalid-at.png').exists()
+    print('PASS timestamp probes cover the correct half-open frame interval; invalid/end timestamps publish nothing')
+
     delta = []
     for n, color in enumerate(['red','blue','green','yellow']):
         frame = Image.new('RGBA',(48,32),(0,0,0,0))
@@ -81,4 +92,4 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
     assert not (root/'bad').exists() and not (root/'broken').exists()
     assert not list(root.glob('.framelet-*.partial'))
     print('PASS overwrite refusal, bounded options, malformed input and failure cleanup')
-print(json.dumps({'ok':True,'frame_extraction_checks':4}))
+print(json.dumps({'ok':True,'frame_extraction_checks':5}))

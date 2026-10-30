@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1040" height="244" viewBox="0 0 1040 244" role="img" aria-labelledby="title desc">
+<title id="title">A real recording: 29.88 seconds to 7.63 seconds</title><desc id="desc">Keep 14.56 to 22.19 seconds. Twelve midpoint probes locate each boundary to about 0.23 seconds. The opening and closing waits are omitted.</desc>
+<rect width="1040" height="244" rx="12" fill="#10181c"/>
+<g font-family="Segoe UI,Arial,sans-serif" fill="#f1f5f6">
+<text x="36" y="42" font-size="18" font-weight="600">Record → probe → keep the action</text><text x="1004" y="42" text-anchor="end" font-size="14" fill="#a5b6bf">Real Bilibili MCP demo</text>
+<text x="36" y="83" font-size="13" fill="#a5b6bf">SOURCE</text><text x="1004" y="83" text-anchor="end" font-size="13" fill="#a5b6bf">29.88 s</text>
+<rect x="36" y="96" width="968" height="42" rx="5" fill="#2b3940"/>
+<rect x="507.7" y="96" width="247.2" height="42" rx="3" fill="#62dfd1"/>
+<text x="272" y="122" text-anchor="middle" font-size="14" fill="#a5b6bf">opening wait</text><text x="631" y="122" text-anchor="middle" font-size="14" font-weight="600" fill="#10181c">scrolling</text><text x="879" y="122" text-anchor="middle" font-size="14" fill="#a5b6bf">closing wait</text>
+<path d="M507.7 91v57M754.9 91v57" stroke="#62dfd1" stroke-width="1.5"/>
+<text x="507.7" y="168" text-anchor="middle" font-size="14" fill="#62dfd1">14.56 s</text><text x="754.9" y="168" text-anchor="middle" font-size="14" fill="#62dfd1">22.19 s</text>
+<text x="36" y="209" font-size="14">7.63 s kept at original speed</text><text x="1004" y="209" text-anchor="end" font-size="13" fill="#a5b6bf">12 midpoint probes · ~0.23 s boundary interval</text>
+</g></svg>

@@ -1,0 +1,58 @@
+{
+  "independent_decoder": "Pillow",
+  "raw_duration_ms": 29880,
+  "raw_frames": 137,
+  "clip_duration_ms": 7630,
+  "clip_frames": 30,
+  "clip_width": 960,
+  "clip_height": 505,
+  "max_mean_absolute_rgb_error_vs_source": 1.0201,
+  "mean_absolute_rgb_error_vs_source": 0.034,
+  "trim_start_seconds": 14.56,
+  "trim_end_seconds": 22.19,
+  "playback_speed": 1,
+  "files": {
+    "bilibili-slow-raw.gif": {
+      "bytes": 4678343,
+      "sha256": "9957cba66f947d6dfaf1cb1dab4bc08eb36ee0db1cd6b972f8c51dd03b110765"
+    },
+    "bilibili-demo.gif": {
+      "bytes": 3783927,
+      "sha256": "87ab97a4c80c97d482c72493114b426fb4a379ebacf224691f2f61b34892af89"
+    }
+  },
+  "target_url": "https://www.bilibili.com/",
+  "capture_server_version": "0.2.0-rc.1",
+  "mcp_client": "official TypeScript SDK 1.32.2",
+  "capture_binary_sha256": "bc4d4d39566cf2e800b5b54c2853e6abdf25e9998bfefb6f787ac2ae2d4cb871",
+  "source_region": {
+    "x": 42,
+    "y": 40,
+    "width": 1860,
+    "height": 980
+  },
+  "requested_fps": 12,
+  "requested_duration_limit_seconds": 90,
+  "captured_samples": 268,
+  "output_width_limit": 960,
+  "quality": 15,
+  "browser_zoom_percent": 150,
+  "scroll": {
+    "started_utc": "2026-10-30T15:06:12.106Z",
+    "finished_utc": "2026-10-30T15:06:19.091Z",
+    "steps": 48,
+    "pixels_per_step": 30
+  },
+  "timestamp_probes": 15,
+  "midpoint_probes": 12,
+  "boundary_uncertainty_seconds": 0.234,
+  "boundary_images_visually_reviewed": 5,
+  "final_uniform_frames": 4,
+  "notes": [
+    "Real GDI capture while Codex operated the browser through native UI tools.",
+    "Source and GIF are not generated website mockups.",
+    "Framelet native edit exported the GIF at playback speed 1.",
+    "Requested fps is a ceiling; actual capture/encoding throughput depends on the desktop and image complexity.",
+    "The capture binary was built before the final readiness-state refinement; release artifacts are independently hashed and verified."
+  ]
+}

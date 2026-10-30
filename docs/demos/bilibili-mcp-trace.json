@@ -1,0 +1,514 @@
+[
+  {
+    "time": "2026-10-30T15:05:57.551Z",
+    "tool": "framelet_start_recording",
+    "arguments": {
+      "output": "bilibili-slow-raw.gif",
+      "region": {
+        "x": 42,
+        "y": 40,
+        "width": 1860,
+        "height": 980
+      },
+      "duration": 90,
+      "fps": 12,
+      "max_width": 960,
+      "quality": 15,
+      "max_mib": 64
+    },
+    "result": {
+      "next": "poll recording_status until recording, then operate the UI; stop_recording saves; cancel_recording discards unfinished output",
+      "session_id": "demo-session",
+      "state": "starting",
+      "terminal": false
+    },
+    "image_blocks": 0
+  },
+  {
+    "time": "2026-10-30T15:05:57.912Z",
+    "tool": "framelet_recording_status",
+    "arguments": {
+      "session_id": "demo-session"
+    },
+    "result": {
+      "recorded_ms": 341,
+      "samples": 3,
+      "session_id": "demo-session",
+      "state": "recording",
+      "terminal": false
+    },
+    "image_blocks": 0
+  },
+  {
+    "time": "2026-10-30T15:06:27.399Z",
+    "tool": "framelet_stop_recording",
+    "arguments": {
+      "session_id": "demo-session"
+    },
+    "result": {
+      "result": {
+        "recording": {
+          "bytes": 4678343,
+          "duration_ms": 29880,
+          "frames": 137,
+          "height": 505,
+          "output": "bilibili-slow-raw.gif",
+          "samples": 268,
+          "width": 960
+        },
+        "state": "completed"
+      },
+      "session_id": "demo-session",
+      "terminal": true
+    },
+    "image_blocks": 0
+  },
+  {
+    "time": "2026-10-30T15:06:27.828Z",
+    "tool": "framelet_inspect",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif"
+    },
+    "result": {
+      "bytes": 4678343,
+      "duration_ms": 29880,
+      "frames": 137,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "width": 960
+    },
+    "image_blocks": 0
+  },
+  {
+    "time": "2026-10-30T15:07:10.590Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 0,
+      "output": "slow-probe-00000.png"
+    },
+    "result": {
+      "bytes": 481200,
+      "duration_ms": 3290,
+      "frame_index": 0,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "slow-probe-00000.png",
+      "requested_ms": 0,
+      "timestamp_ms": 0,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:07:10.969Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 14.94,
+      "output": "slow-probe-14940.png"
+    },
+    "result": {
+      "bytes": 417778,
+      "duration_ms": 360,
+      "frame_index": 26,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "slow-probe-14940.png",
+      "requested_ms": 14940,
+      "timestamp_ms": 14940,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:07:11.405Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 29.87,
+      "output": "slow-probe-29870.png"
+    },
+    "result": {
+      "bytes": 471663,
+      "duration_ms": 80,
+      "frame_index": 136,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "slow-probe-29870.png",
+      "requested_ms": 29870,
+      "timestamp_ms": 29800,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:23.784Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 7.47,
+      "output": "bisect-start-01.png"
+    },
+    "result": {
+      "bytes": 455037,
+      "duration_ms": 4120,
+      "frame_index": 9,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-start-01.png",
+      "requested_ms": 7470,
+      "timestamp_ms": 4140,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:23.878Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 11.205,
+      "output": "bisect-start-02.png"
+    },
+    "result": {
+      "bytes": 472018,
+      "duration_ms": 4210,
+      "frame_index": 17,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-start-02.png",
+      "requested_ms": 11205,
+      "timestamp_ms": 9090,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:23.999Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 13.0725,
+      "output": "bisect-start-03.png"
+    },
+    "result": {
+      "bytes": 472018,
+      "duration_ms": 4210,
+      "frame_index": 17,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-start-03.png",
+      "requested_ms": 13072,
+      "timestamp_ms": 9090,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:24.147Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 14.00625,
+      "output": "bisect-start-04.png"
+    },
+    "result": {
+      "bytes": 439199,
+      "duration_ms": 110,
+      "frame_index": 22,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-start-04.png",
+      "requested_ms": 14006,
+      "timestamp_ms": 13900,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:24.276Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 14.473125,
+      "output": "bisect-start-05.png"
+    },
+    "result": {
+      "bytes": 439181,
+      "duration_ms": 670,
+      "frame_index": 24,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-start-05.png",
+      "requested_ms": 14473,
+      "timestamp_ms": 14100,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:24.408Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 14.7065625,
+      "output": "bisect-start-06.png"
+    },
+    "result": {
+      "bytes": 439181,
+      "duration_ms": 670,
+      "frame_index": 24,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-start-06.png",
+      "requested_ms": 14706,
+      "timestamp_ms": 14100,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:24.542Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 22.405,
+      "output": "bisect-end-01.png"
+    },
+    "result": {
+      "bytes": 471376,
+      "duration_ms": 120,
+      "frame_index": 55,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-end-01.png",
+      "requested_ms": 22405,
+      "timestamp_ms": 22340,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:24.893Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 18.6725,
+      "output": "bisect-end-02.png"
+    },
+    "result": {
+      "bytes": 354988,
+      "duration_ms": 260,
+      "frame_index": 39,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-end-02.png",
+      "requested_ms": 18672,
+      "timestamp_ms": 18440,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:25.129Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 20.53875,
+      "output": "bisect-end-03.png"
+    },
+    "result": {
+      "bytes": 452961,
+      "duration_ms": 220,
+      "frame_index": 46,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-end-03.png",
+      "requested_ms": 20538,
+      "timestamp_ms": 20400,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:25.423Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 21.471875,
+      "output": "bisect-end-04.png"
+    },
+    "result": {
+      "bytes": 467381,
+      "duration_ms": 250,
+      "frame_index": 50,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-end-04.png",
+      "requested_ms": 21471,
+      "timestamp_ms": 21350,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:25.743Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 21.9384375,
+      "output": "bisect-end-05.png"
+    },
+    "result": {
+      "bytes": 468160,
+      "duration_ms": 180,
+      "frame_index": 52,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-end-05.png",
+      "requested_ms": 21938,
+      "timestamp_ms": 21810,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:26.089Z",
+    "tool": "framelet_frame_at",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "at": 21.70515625,
+      "output": "bisect-end-06.png"
+    },
+    "result": {
+      "bytes": 468377,
+      "duration_ms": 210,
+      "frame_index": 51,
+      "height": 505,
+      "input": "bilibili-slow-raw.gif",
+      "output": "bisect-end-06.png",
+      "requested_ms": 21705,
+      "timestamp_ms": 21600,
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:10:44.893Z",
+    "tool": "framelet_edit",
+    "arguments": {
+      "input": "bilibili-slow-raw.gif",
+      "output": "bilibili-demo.gif",
+      "start": 14.56,
+      "end": 22.19,
+      "speed": 1
+    },
+    "result": {
+      "bytes": 3783927,
+      "duration_ms": 7630,
+      "frames": 30,
+      "height": 505,
+      "output": "bilibili-demo.gif",
+      "samples": 30,
+      "width": 960
+    },
+    "image_blocks": 0
+  },
+  {
+    "time": "2026-10-30T15:10:46.228Z",
+    "tool": "framelet_extract_frames",
+    "arguments": {
+      "input": "bilibili-demo.gif",
+      "output": "bilibili-demo-frames",
+      "count": 4,
+      "mode": "uniform"
+    },
+    "result": {
+      "contact_sheet": "bilibili-demo-frames/contact-sheet.png",
+      "duration_ms": 7630,
+      "frames": [
+        {
+          "change_score": 0,
+          "duration_ms": 210,
+          "frame_index": 0,
+          "image": "bilibili-demo-frames/frame-001-0000000000ms.png",
+          "order": 1,
+          "reason": "uniform_time_sample",
+          "timestamp_ms": 0
+        },
+        {
+          "change_score": 0.1881785584604212,
+          "duration_ms": 300,
+          "frame_index": 10,
+          "image": "bilibili-demo-frames/frame-002-0000002500ms.png",
+          "order": 2,
+          "reason": "uniform_time_sample",
+          "timestamp_ms": 2500
+        },
+        {
+          "change_score": 0.1342161401597676,
+          "duration_ms": 300,
+          "frame_index": 19,
+          "image": "bilibili-demo-frames/frame-003-0000005000ms.png",
+          "order": 3,
+          "reason": "uniform_time_sample",
+          "timestamp_ms": 5000
+        },
+        {
+          "change_score": 0.0010507443718228032,
+          "duration_ms": 200,
+          "frame_index": 29,
+          "image": "bilibili-demo-frames/frame-004-0000007430ms.png",
+          "order": 4,
+          "reason": "uniform_time_sample",
+          "timestamp_ms": 7430
+        }
+      ],
+      "height": 505,
+      "input": "bilibili-demo.gif",
+      "manifest": "bilibili-demo-frames/manifest.json",
+      "mode": "uniform",
+      "output": "bilibili-demo-frames",
+      "schema_version": "1.0",
+      "selection_note": "Visual-change candidates only. Review the images to judge semantic importance; suggested ranges are context windows, not semantic highlights.",
+      "semantic_analysis": false,
+      "source_frames": 30,
+      "suggested_ranges": [
+        {
+          "end_ms": 960,
+          "start_ms": 0
+        },
+        {
+          "end_ms": 3550,
+          "start_ms": 1750
+        },
+        {
+          "end_ms": 6050,
+          "start_ms": 4250
+        },
+        {
+          "end_ms": 7630,
+          "start_ms": 6680
+        }
+      ],
+      "width": 960
+    },
+    "image_blocks": 1
+  },
+  {
+    "time": "2026-10-30T15:13:48.282Z",
+    "tool": "framelet_read_image",
+    "arguments": {
+      "input": "bilibili-demo-frames/contact-sheet.png"
+    },
+    "result": {
+      "input": "bilibili-demo-frames/contact-sheet.png",
+      "preview_height": 199,
+      "preview_width": 960,
+      "source_height": 212,
+      "source_width": 1024
+    },
+    "image_blocks": 1
+  }
+]

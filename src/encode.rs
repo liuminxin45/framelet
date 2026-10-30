@@ -21,6 +21,7 @@ pub struct GifWriter {
     path: PathBuf,
     partial: PathBuf,
     committed: bool,
+    limit: u64,
 }
 impl GifWriter {
     pub fn new(path: &Path, width: u32, height: u32, quality: i32) -> Result<Self> {
@@ -35,17 +36,30 @@ impl GifWriter {
         ensure!(!path.exists(), "output already exists: {}", path.display());
         let path = std::path::absolute(path)?;
         let partial = path.with_file_name(format!(
-            "{}.{}.partial",
+            "{}.{}-{}.partial",
             path.file_name().unwrap().to_string_lossy(),
-            std::process::id()
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)?
+                .as_nanos()
         ));
         let f = OpenOptions::new()
             .write(true)
             .create_new(true)
             .open(&partial)
             .context("create output (parent directory must exist)")?;
-        let mut enc = Encoder::new(BufWriter::new(f), width as u16, height as u16, &[])?;
-        enc.set_repeat(Repeat::Infinite)?;
+        let initialized = (|| -> Result<_> {
+            let mut enc = Encoder::new(BufWriter::new(f), width as u16, height as u16, &[])?;
+            enc.set_repeat(Repeat::Infinite)?;
+            Ok(enc)
+        })();
+        let enc = match initialized {
+            Ok(enc) => enc,
+            Err(e) => {
+                let _ = std::fs::remove_file(&partial);
+                return Err(e);
+            }
+        };
         Ok(Self {
             enc: Some(enc),
             previous: Vec::new(),
@@ -59,11 +73,19 @@ impl GifWriter {
             path,
             partial,
             committed: false,
+            limit: 256 * 1024 * 1024,
         })
+    }
+    pub fn set_limit(&mut self, bytes: u64) {
+        self.limit = bytes;
     }
     fn flush(&mut self) -> Result<()> {
         if let Some(frame) = self.pending.take() {
             self.enc.as_mut().unwrap().write_frame(&frame)?;
+            ensure!(
+                std::fs::metadata(&self.partial)?.len() <= self.limit,
+                "GIF exceeds output byte budget; unfinished output discarded"
+            );
             self.frames += 1;
         }
         Ok(())
@@ -116,6 +138,10 @@ impl GifWriter {
         writer.flush()?;
         writer.get_ref().sync_all()?;
         drop(writer);
+        ensure!(
+            std::fs::metadata(&self.partial)?.len() <= self.limit,
+            "GIF exceeds output byte budget; unfinished output discarded"
+        );
         // Hard-link publishes without replacing an existing user file, even under races.
         std::fs::hard_link(&self.partial, &self.path)
             .context("publish output without overwrite")?;
@@ -174,15 +200,41 @@ fn bounds(a: &[u8], b: &[u8], w: usize, h: usize) -> (usize, usize, usize, usize
 }
 
 pub fn screenshot(path: &Path, width: u32, height: u32, rgb: &[u8]) -> Result<serde_json::Value> {
-    let file = OpenOptions::new().write(true).create_new(true).open(path)?;
-    let mut enc = png::Encoder::new(BufWriter::new(file), width, height);
-    enc.set_color(png::ColorType::Rgb);
-    enc.set_depth(png::BitDepth::Eight);
-    let mut writer = enc.write_header()?;
-    writer.write_image_data(rgb)?;
-    writer.finish()?;
+    ensure!(
+        width > 0 && height > 0 && u64::from(width) * u64::from(height) <= 16_777_216,
+        "PNG exceeds 16 MP budget"
+    );
+    ensure!(
+        rgb.len() == width as usize * height as usize * 3,
+        "pixel buffer length mismatch"
+    );
+    let path = std::path::absolute(path)?;
+    ensure!(!path.exists(), "output already exists");
+    let partial = path.with_file_name(format!(
+        "{}.{}.png.partial",
+        path.file_name().context("file name")?.to_string_lossy(),
+        std::process::id()
+    ));
+    let file = OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&partial)?;
+    let result = (|| -> Result<()> {
+        let mut file = file;
+        let mut enc = png::Encoder::new(BufWriter::new(&mut file), width, height);
+        enc.set_color(png::ColorType::Rgb);
+        enc.set_depth(png::BitDepth::Eight);
+        let mut writer = enc.write_header()?;
+        writer.write_image_data(rgb)?;
+        writer.finish()?;
+        file.sync_all()?;
+        std::fs::hard_link(&partial, &path).context("publish PNG without overwrite")?;
+        Ok(())
+    })();
+    let _ = std::fs::remove_file(&partial);
+    result?;
     Ok(
-        serde_json::json!({"output":std::path::absolute(path)?,"width":width,"height":height,"bytes":std::fs::metadata(path)?.len()}),
+        serde_json::json!({"output":path,"width":width,"height":height,"bytes":std::fs::metadata(&path)?.len()}),
     )
 }
 
@@ -195,8 +247,7 @@ pub fn edit(
 ) -> Result<Stats> {
     ensure!(
         speed.is_finite()
-            && speed > 0.0
-            && speed <= 100.0
+            && (0.01..=100.0).contains(&speed)
             && start.is_finite()
             && start >= 0.0
             && end.is_none_or(|e| e.is_finite() && e > start),
@@ -209,6 +260,7 @@ pub fn edit(
     );
     let mut writer: Option<GifWriter> = None;
     let mut timing_error = 0.0;
+    let mut output_cs = 0u64;
     crate::frames::decode(
         |_, at, delay_ms, w, h, rgb| {
             let time = at as f64 / 1000.0;
@@ -216,12 +268,21 @@ pub fn edit(
             let included = next.min(end.unwrap_or(f64::INFINITY)) - time.max(start);
             if included > 0.0 {
                 let desired = included / speed * 100.0 + timing_error;
-                let delay = desired.round().clamp(1.0, 65535.0);
-                timing_error = desired - delay;
+                let mut delay = desired.round().max(1.0) as u64;
+                timing_error = desired - delay as f64;
+                output_cs += delay;
+                ensure!(
+                    output_cs <= 360_000,
+                    "edited GIF exceeds 1 hour duration budget"
+                );
                 if writer.is_none() {
                     writer = Some(GifWriter::new(output, w, h, 10)?);
                 }
-                writer.as_mut().unwrap().push(rgb.to_vec(), delay as u16)?;
+                while delay > 0 {
+                    let part = delay.min(65535);
+                    writer.as_mut().unwrap().push(rgb.to_vec(), part as u16)?;
+                    delay -= part;
+                }
             }
             Ok(end.is_none_or(|e| next < e))
         },
@@ -230,11 +291,26 @@ pub fn edit(
     writer.context("trim range contains no frames")?.finish()
 }
 pub fn inspect(input: &Path) -> Result<serde_json::Value> {
+    ensure!(
+        std::fs::metadata(input)?.len() <= 512 * 1024 * 1024,
+        "GIF exceeds 512 MiB input budget"
+    );
+    let started = std::time::Instant::now();
     let mut reader = gif::DecodeOptions::new().read_info(File::open(input)?)?;
     let (w, h) = (reader.width(), reader.height());
+    ensure!(
+        w > 0 && h > 0 && u64::from(w) * u64::from(h) <= 16_777_216,
+        "GIF exceeds 16 MP canvas budget"
+    );
     let (mut frames, mut cs) = (0u64, 0u64);
     while let Some(f) = reader.read_next_frame()? {
         frames += 1;
+        ensure!(
+            frames <= 100_000
+                && frames * u64::from(w) * u64::from(h) <= 2_000_000_000
+                && started.elapsed().as_secs() < 60,
+            "GIF exceeds processing budget"
+        );
         cs += u64::from(f.delay);
     }
     Ok(

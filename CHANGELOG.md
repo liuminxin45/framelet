@@ -1,13 +1,18 @@
 # Changelog
 
-## 0.2.0-dev — main
+## v0.2.0-rc.1 — 2026-10-30
 
-- Bilingual README and About emphasize the small, self-contained executable and AI access through MCP.
-- Native GIF frame extraction: time-uniform or visual-change candidates, full compositing, PNGs, contact sheet, timestamp manifest and context ranges.
-- Two new MCP tools for extraction and PNG viewing; screenshots include bounded image content.
-- Shared GIF compositing for extraction and trimming, including Previous/Background disposal.
-- Independent pixel tests and official MCP SDK interoperability checks; no extra runtime install required.
-- Published v0.1.0 assets remain unchanged. Visual-change candidates are not semantic highlights.
+Acceptance preview; v0.1.0 remains the stable release.
+
+- 17 MCP tools, including background start/status/pause/resume/stop/cancel and context/path discovery. Recording readiness follows the first successful sample.
+- Native GIF timestamp probes (`frame-at` / `framelet_frame_at`) return one composited frame for midpoint/bisection review; GIF prefix decoding remains sequential.
+- Native scene/time-uniform frame extraction, full GIF compositing, PNG contact sheets and bounded MCP image previews.
+- CLI/MCP countdown, aspect-preserving downscale, fixed pre-encoding privacy masks and output byte budgets.
+- Scoped MCP input/output roots, explicit capture targets, no-overwrite guards, atomic PNG/GIF publication and bounded GIF processing.
+- Recovery from malformed/oversized JSON-RPC requests, EOF cancellation, idempotent terminal controls and bounded session history.
+- Real Bilibili recording through the official MCP SDK: 29.88-second source, 12 midpoint probes, 7.63-second native GIF and independent pixel/timing verification.
+- Rewritten English/Chinese README and About; media is separate from the compact portable ZIP. No extra runtime installation required.
+- Desktop/session, protocol/path, compositor, timestamp and official SDK regression checks.
 
 ## v0.1.0 — 2026-10-30
 

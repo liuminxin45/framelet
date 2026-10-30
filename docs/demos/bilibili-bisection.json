@@ -1,0 +1,181 @@
+{
+  "source": "bilibili-slow-raw.gif",
+  "duration_ms": 29880,
+  "source_frames": 137,
+  "method": "MCP midpoint timestamp probes with independent PNG ROI comparison, then AI visual boundary review; no frame-by-frame image export",
+  "assumption": "one forward scrolling segment with a stable opening and closing page position; not a general semantic highlight detector",
+  "opening_roi": [
+    40,
+    125,
+    925,
+    190
+  ],
+  "closing_roi": [
+    40,
+    310,
+    920,
+    390
+  ],
+  "pixel_difference_threshold": 24,
+  "opening_changed_fraction": 0.03,
+  "closing_equal_fraction": 0.025,
+  "start_boundary": {
+    "before_seconds": 14.706563,
+    "after_seconds": 14.94,
+    "uncertainty_seconds": 0.233437
+  },
+  "end_boundary": {
+    "before_seconds": 21.705156,
+    "after_seconds": 21.938437,
+    "uncertainty_seconds": 0.233281
+  },
+  "midpoint_probes": 12,
+  "trim_start_seconds": 14.56,
+  "trim_end_seconds": 22.19,
+  "trace": [
+    {
+      "side": "start",
+      "iteration": 1,
+      "requested_seconds": 7.47,
+      "frame_index": 9,
+      "timestamp_ms": 4140,
+      "duration_ms": 4120,
+      "opening_roi_difference": 0.0,
+      "closing_roi_difference": 0.62044,
+      "predicate": false,
+      "image": "bisect-start-01.png"
+    },
+    {
+      "side": "start",
+      "iteration": 2,
+      "requested_seconds": 11.205,
+      "frame_index": 17,
+      "timestamp_ms": 9090,
+      "duration_ms": 4210,
+      "opening_roi_difference": 0.0,
+      "closing_roi_difference": 0.621648,
+      "predicate": false,
+      "image": "bisect-start-02.png"
+    },
+    {
+      "side": "start",
+      "iteration": 3,
+      "requested_seconds": 13.0725,
+      "frame_index": 17,
+      "timestamp_ms": 9090,
+      "duration_ms": 4210,
+      "opening_roi_difference": 0.0,
+      "closing_roi_difference": 0.621648,
+      "predicate": false,
+      "image": "bisect-start-03.png"
+    },
+    {
+      "side": "start",
+      "iteration": 4,
+      "requested_seconds": 14.00625,
+      "frame_index": 22,
+      "timestamp_ms": 13900,
+      "duration_ms": 110,
+      "opening_roi_difference": 0.0,
+      "closing_roi_difference": 0.40733,
+      "predicate": false,
+      "image": "bisect-start-04.png"
+    },
+    {
+      "side": "start",
+      "iteration": 5,
+      "requested_seconds": 14.473125,
+      "frame_index": 24,
+      "timestamp_ms": 14100,
+      "duration_ms": 670,
+      "opening_roi_difference": 0.0,
+      "closing_roi_difference": 0.40733,
+      "predicate": false,
+      "image": "bisect-start-05.png"
+    },
+    {
+      "side": "start",
+      "iteration": 6,
+      "requested_seconds": 14.706563,
+      "frame_index": 24,
+      "timestamp_ms": 14100,
+      "duration_ms": 670,
+      "opening_roi_difference": 0.0,
+      "closing_roi_difference": 0.40733,
+      "predicate": false,
+      "image": "bisect-start-06.png"
+    },
+    {
+      "side": "end",
+      "iteration": 1,
+      "requested_seconds": 22.405,
+      "frame_index": 55,
+      "timestamp_ms": 22340,
+      "duration_ms": 120,
+      "opening_roi_difference": 0.153203,
+      "closing_roi_difference": 0.009943,
+      "predicate": true,
+      "image": "bisect-end-01.png"
+    },
+    {
+      "side": "end",
+      "iteration": 2,
+      "requested_seconds": 18.6725,
+      "frame_index": 39,
+      "timestamp_ms": 18440,
+      "duration_ms": 260,
+      "opening_roi_difference": 0.626858,
+      "closing_roi_difference": 0.823778,
+      "predicate": false,
+      "image": "bisect-end-02.png"
+    },
+    {
+      "side": "end",
+      "iteration": 3,
+      "requested_seconds": 20.53875,
+      "frame_index": 46,
+      "timestamp_ms": 20400,
+      "duration_ms": 220,
+      "opening_roi_difference": 0.897888,
+      "closing_roi_difference": 0.843267,
+      "predicate": false,
+      "image": "bisect-end-03.png"
+    },
+    {
+      "side": "end",
+      "iteration": 4,
+      "requested_seconds": 21.471875,
+      "frame_index": 50,
+      "timestamp_ms": 21350,
+      "duration_ms": 250,
+      "opening_roi_difference": 0.167962,
+      "closing_roi_difference": 0.314048,
+      "predicate": false,
+      "image": "bisect-end-04.png"
+    },
+    {
+      "side": "end",
+      "iteration": 5,
+      "requested_seconds": 21.938437,
+      "frame_index": 52,
+      "timestamp_ms": 21810,
+      "duration_ms": 180,
+      "opening_roi_difference": 0.153881,
+      "closing_roi_difference": 0.009872,
+      "predicate": true,
+      "image": "bisect-end-05.png"
+    },
+    {
+      "side": "end",
+      "iteration": 6,
+      "requested_seconds": 21.705156,
+      "frame_index": 51,
+      "timestamp_ms": 21600,
+      "duration_ms": 210,
+      "opening_roi_difference": 0.151499,
+      "closing_roi_difference": 0.071165,
+      "predicate": false,
+      "image": "bisect-end-06.png"
+    }
+  ]
+}

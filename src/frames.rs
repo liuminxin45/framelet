@@ -95,6 +95,11 @@ pub(crate) fn decode(
     mut visit: impl FnMut(usize, u64, u64, u32, u32, &[u8]) -> Result<bool>,
     path: &Path,
 ) -> Result<()> {
+    ensure!(
+        std::fs::metadata(path)?.len() <= 512 * 1024 * 1024,
+        "GIF input exceeds 512 MiB budget"
+    );
+    let started = std::time::Instant::now();
     let mut options = gif::DecodeOptions::new();
     options.set_color_output(gif::ColorOutput::RGBA);
     options.set_memory_limit(gif::MemoryLimit::Bytes(
@@ -120,6 +125,14 @@ pub(crate) fn decode(
     let mut index = 0;
     while let Some(f) = reader.read_next_frame()? {
         ensure!(index < 100_000, "GIF exceeds 100000 frame budget");
+        ensure!(
+            (index as u64 + 1) * u64::from(w) * u64::from(h) <= 2_000_000_000,
+            "GIF exceeds 2 gigapixel compositing budget; trim the input first"
+        );
+        ensure!(
+            started.elapsed().as_secs() < 60,
+            "GIF processing exceeded 60 second budget"
+        );
         ensure!(
             u32::from(f.left) + u32::from(f.width) <= w
                 && u32::from(f.top) + u32::from(f.height) <= h,
@@ -451,6 +464,36 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
     std::fs::rename(&stage.0, &output).context("publish frame directory")?;
     Ok(report)
 }
+/// GIFs have no general random-access index: decode the prefix, but return only one image.
+/// This saves model context during bisection; it does not promise logarithmic decoder work.
+pub fn at(input: &Path, seconds: f64, output: &Path) -> Result<serde_json::Value> {
+    ensure!(
+        seconds.is_finite() && (0.0..=3600.0).contains(&seconds),
+        "at must be 0..3600 seconds"
+    );
+    crate::safety::extension(output, "png")?;
+    ensure!(!output.exists(), "output already exists");
+    let requested = (seconds * 1000.0).floor() as u64;
+    let mut result = None;
+    decode(
+        |index, start, duration, w, h, rgb| {
+            if requested >= start && requested < start + duration {
+                let mut value = crate::encode::screenshot(output, w, h, rgb)?;
+                value["input"] = serde_json::json!(input.canonicalize()?);
+                value["requested_ms"] = serde_json::json!(requested);
+                value["frame_index"] = serde_json::json!(index);
+                value["timestamp_ms"] = serde_json::json!(start);
+                value["duration_ms"] = serde_json::json!(duration);
+                result = Some(value);
+                return Ok(false);
+            }
+            Ok(true)
+        },
+        input,
+    )?;
+    result.context("timestamp is outside GIF playback duration")
+}
+
 pub fn preview_png(path: &Path, max_side: u32) -> Result<(serde_json::Value, Vec<u8>)> {
     ensure!(
         std::fs::metadata(path)?.len() <= 32 * 1024 * 1024,
