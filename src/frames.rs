@@ -466,24 +466,97 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
 }
 /// GIFs have no general random-access index: decode the prefix, but return only one image.
 /// This saves model context during bisection; it does not promise logarithmic decoder work.
-pub fn at(input: &Path, seconds: f64, output: &Path) -> Result<serde_json::Value> {
+pub struct ProbeOptions {
+    pub reference: Option<PathBuf>,
+    pub region: Option<crate::capture::Region>,
+    pub threshold: u8,
+}
+impl Default for ProbeOptions {
+    fn default() -> Self {
+        Self {
+            reference: None,
+            region: None,
+            threshold: 24,
+        }
+    }
+}
+pub fn at(
+    input: &Path,
+    seconds: f64,
+    output: Option<&Path>,
+    options: ProbeOptions,
+) -> Result<serde_json::Value> {
     ensure!(
         seconds.is_finite() && (0.0..=3600.0).contains(&seconds),
         "at must be 0..3600 seconds"
     );
-    crate::safety::extension(output, "png")?;
-    ensure!(!output.exists(), "output already exists");
+    if let Some(output) = output {
+        crate::safety::extension(output, "png")?;
+        ensure!(!output.exists(), "output already exists");
+    }
+    ensure!(
+        options.reference.is_some() || options.region.is_none(),
+        "compare_region requires reference"
+    );
+    let reference = options.reference.as_deref().map(read_png).transpose()?;
     let requested = (seconds * 1000.0).floor() as u64;
     let mut result = None;
     decode(
         |index, start, duration, w, h, rgb| {
             if requested >= start && requested < start + duration {
-                let mut value = crate::encode::screenshot(output, w, h, rgb)?;
+                let comparison = if let Some((rw, rh, ref_pixels)) = &reference {
+                    ensure!(
+                        (*rw, *rh) == (w, h),
+                        "reference dimensions must match the source GIF"
+                    );
+                    let r = options.region.unwrap_or(crate::capture::Region {
+                        x: 0,
+                        y: 0,
+                        width: w,
+                        height: h,
+                    });
+                    ensure!(
+                        r.x >= 0
+                            && r.y >= 0
+                            && r.width > 0
+                            && r.height > 0
+                            && i64::from(r.x) + i64::from(r.width) <= i64::from(w)
+                            && i64::from(r.y) + i64::from(r.height) <= i64::from(h),
+                        "compare_region must fit inside the image"
+                    );
+                    let (mut changed, mut sum) = (0u64, 0u64);
+                    for y in r.y as u32..r.y as u32 + r.height {
+                        for x in r.x as u32..r.x as u32 + r.width {
+                            let at = (y as usize * w as usize + x as usize) * 3;
+                            let diffs = [
+                                rgb[at].abs_diff(ref_pixels[at]),
+                                rgb[at + 1].abs_diff(ref_pixels[at + 1]),
+                                rgb[at + 2].abs_diff(ref_pixels[at + 2]),
+                            ];
+                            changed += u64::from(*diffs.iter().max().unwrap() > options.threshold);
+                            sum += diffs.iter().map(|d| u64::from(*d)).sum::<u64>();
+                        }
+                    }
+                    let pixels = u64::from(r.width) * u64::from(r.height);
+                    Some(
+                        serde_json::json!({"reference":options.reference,"region":r,"difference_threshold":options.threshold,"metric":"max_absolute_rgb_channel","changed_pixels":changed,"pixels":pixels,"changed_fraction":changed as f64/pixels as f64,"mean_absolute_error":sum as f64/(pixels*3) as f64}),
+                    )
+                } else {
+                    None
+                };
+                let mut value = if let Some(output) = output {
+                    crate::encode::screenshot(output, w, h, rgb)?
+                } else {
+                    serde_json::json!({"width":w,"height":h})
+                };
                 value["input"] = serde_json::json!(input.canonicalize()?);
                 value["requested_ms"] = serde_json::json!(requested);
                 value["frame_index"] = serde_json::json!(index);
                 value["timestamp_ms"] = serde_json::json!(start);
                 value["duration_ms"] = serde_json::json!(duration);
+                if let Some(comparison) = comparison {
+                    value["comparison"] = comparison;
+                }
                 result = Some(value);
                 return Ok(false);
             }
@@ -494,7 +567,7 @@ pub fn at(input: &Path, seconds: f64, output: &Path) -> Result<serde_json::Value
     result.context("timestamp is outside GIF playback duration")
 }
 
-pub fn preview_png(path: &Path, max_side: u32) -> Result<(serde_json::Value, Vec<u8>)> {
+fn read_png(path: &Path) -> Result<(u32, u32, Vec<u8>)> {
     ensure!(
         std::fs::metadata(path)?.len() <= 32 * 1024 * 1024,
         "PNG exceeds 32 MiB budget"
@@ -520,6 +593,11 @@ pub fn preview_png(path: &Path, max_side: u32) -> Result<(serde_json::Value, Vec
         };
         rgb.extend([r, g, b].map(|v| (u16::from(v) * u16::from(alpha) / 255) as u8));
     }
+    Ok((w, h, rgb))
+}
+
+pub fn preview_png(path: &Path, max_side: u32) -> Result<(serde_json::Value, Vec<u8>)> {
+    let (w, h, rgb) = read_png(path)?;
     let mut side = max_side;
     loop {
         let scale = (f64::from(side) / f64::from(w.max(h))).min(1.0);

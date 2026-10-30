@@ -47,9 +47,21 @@ try {
   if (expanded) {
     const point = await call('framelet_frame_at', { input, at: 0.12, output: path.join(output, 'point.png') });
     image(point);
+    assert.equal(point.structuredContent.result.preview.source_width,info.width);
     assert(point.structuredContent.result.timestamp_ms <= 120);
     assert(point.structuredContent.result.timestamp_ms + point.structuredContent.result.duration_ms > 120);
     checks.push('single timestamp probe returns an MCP image and its exact playback interval');
+    const filesBefore=await fs.readdir(output);
+    const numeric=await call('framelet_frame_at',{input,at:0.12,reference:path.join(output,'point.png'),compare_region:{x:0,y:0,width:16,height:16},include_image:false});
+    assert.equal(numeric.content.filter(c=>c.type==='image').length,0);
+    assert.equal(numeric.structuredContent.result.comparison.changed_fraction,0);
+    assert.equal(numeric.structuredContent.result.comparison.mean_absolute_error,0);
+    assert.deepEqual(await fs.readdir(output),filesBefore);
+    const badFlag=await client.callTool({name:'framelet_frame_at',arguments:{input,at:0.12,include_image:'false'}});
+    assert.equal(badFlag.isError,true);
+    const badThreshold=await client.callTool({name:'framelet_frame_at',arguments:{input,at:0.12,reference:path.join(output,'point.png'),include_image:false,difference_threshold:256}});
+    assert.equal(badThreshold.isError,true);
+    checks.push('numeric region probe sends zero images, writes zero PNGs and validates flags');
     const extraction = await call('framelet_extract_frames', { input, output: path.join(output, 'frames'), count: 8, mode: 'uniform' });
     await fs.writeFile(path.join(output, 'mcp-contact-sheet.png'), image(extraction));
     const report = extraction.structuredContent.result;

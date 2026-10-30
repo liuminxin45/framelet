@@ -54,6 +54,14 @@ enum Command {
         at: f64,
         #[arg(short, long)]
         output: PathBuf,
+        /// Compare against a full-size PNG anchor.
+        #[arg(long)]
+        reference: Option<PathBuf>,
+        /// Relative image rectangle x,y,width,height; defaults to the full image.
+        #[arg(long, allow_hyphen_values = true)]
+        compare_region: Option<Region>,
+        #[arg(long, default_value_t = 24)]
+        difference_threshold: u8,
     },
     /// Trim and change playback speed; all times are seconds.
     Edit {
@@ -162,9 +170,16 @@ pub fn run() -> Result<()> {
         Command::Windows => print(json!({"ok":true,"result":capture::windows()}))?,
         Command::Inspect { input } => print(json!({"ok":true,"result":encode::inspect(&input)?}))?,
         Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract(&a)?}))?,
-        Command::FrameAt { input, at, output } => {
-            print(json!({"ok":true,"result":crate::frames::at(&input,at,&output)?}))?
-        }
+        Command::FrameAt {
+            input,
+            at,
+            output,
+            reference,
+            compare_region,
+            difference_threshold,
+        } => print(
+            json!({"ok":true,"result":crate::frames::at(&input,at,Some(&output),crate::frames::ProbeOptions{reference,region:compare_region,threshold:difference_threshold})?}),
+        )?,
         Command::Edit {
             input,
             output,

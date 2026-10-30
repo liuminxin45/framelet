@@ -1,0 +1,315 @@
+{
+  "source": "bilibili-slow-raw.gif",
+  "server_version": "0.2.0-rc.1",
+  "algorithm": "native region difference + bisection with frame-interval jumps",
+  "difference_metric": "max absolute RGB channel",
+  "pixel_threshold": 24,
+  "opening_changed_fraction": 0.03,
+  "closing_equal_fraction": 0.025,
+  "regions": {
+    "start": {
+      "x": 40,
+      "y": 125,
+      "width": 885,
+      "height": 65
+    },
+    "end": {
+      "x": 40,
+      "y": 310,
+      "width": 880,
+      "height": 80
+    }
+  },
+  "start_boundary": {
+    "before_ms": 14769,
+    "after_ms": 14940,
+    "uncertainty_ms": 171,
+    "midpoint_calls": 3
+  },
+  "end_boundary": {
+    "before_ms": 21599,
+    "after_ms": 21810,
+    "uncertainty_ms": 211,
+    "midpoint_calls": 5
+  },
+  "midpoint_calls": 8,
+  "total_point_calls": 12,
+  "image_blocks": 2,
+  "png_files_written": 2,
+  "all_midpoint_images_omitted": true,
+  "classic_midpoint_calls": 12,
+  "trace": [
+    {
+      "kind": "anchor",
+      "side": "start",
+      "requested_ms": 0,
+      "frame_index": 0,
+      "timestamp_ms": 0,
+      "duration_ms": 3290,
+      "image_blocks": 1,
+      "png_written": true
+    },
+    {
+      "kind": "anchor",
+      "side": "end",
+      "requested_ms": 29870,
+      "frame_index": 136,
+      "timestamp_ms": 29800,
+      "duration_ms": 80,
+      "image_blocks": 1,
+      "png_written": true
+    },
+    {
+      "kind": "bracket_validation",
+      "side": "start",
+      "requested_ms": 14940,
+      "frame_index": 26,
+      "timestamp_ms": 14940,
+      "duration_ms": 360,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.39374185136897,
+        "changed_pixels": 22650,
+        "difference_threshold": 24,
+        "mean_absolute_error": 30.444815297696653,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 57525,
+        "reference": "native-opening.png",
+        "region": {
+          "height": 65,
+          "width": 885,
+          "x": 40,
+          "y": 125
+        }
+      }
+    },
+    {
+      "kind": "bracket_validation",
+      "side": "end",
+      "requested_ms": 14940,
+      "frame_index": 26,
+      "timestamp_ms": 14940,
+      "duration_ms": 360,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.7493323863636364,
+        "changed_pixels": 52753,
+        "difference_threshold": 24,
+        "mean_absolute_error": 71.98949337121212,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 70400,
+        "reference": "native-closing.png",
+        "region": {
+          "height": 80,
+          "width": 880,
+          "x": 40,
+          "y": 310
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "start",
+      "requested_ms": 7470,
+      "frame_index": 9,
+      "timestamp_ms": 4140,
+      "duration_ms": 4120,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0,
+        "changed_pixels": 0,
+        "difference_threshold": 24,
+        "mean_absolute_error": 0,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 57525,
+        "reference": "native-opening.png",
+        "region": {
+          "height": 65,
+          "width": 885,
+          "x": 40,
+          "y": 125
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "start",
+      "requested_ms": 11599,
+      "frame_index": 17,
+      "timestamp_ms": 9090,
+      "duration_ms": 4210,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0,
+        "changed_pixels": 0,
+        "difference_threshold": 24,
+        "mean_absolute_error": 0,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 57525,
+        "reference": "native-opening.png",
+        "region": {
+          "height": 65,
+          "width": 885,
+          "x": 40,
+          "y": 125
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "start",
+      "requested_ms": 14119,
+      "frame_index": 24,
+      "timestamp_ms": 14100,
+      "duration_ms": 670,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0,
+        "changed_pixels": 0,
+        "difference_threshold": 24,
+        "mean_absolute_error": 0,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 57525,
+        "reference": "native-opening.png",
+        "region": {
+          "height": 65,
+          "width": 885,
+          "x": 40,
+          "y": 125
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "end",
+      "requested_ms": 22405,
+      "frame_index": 55,
+      "timestamp_ms": 22340,
+      "duration_ms": 120,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.0125,
+        "changed_pixels": 880,
+        "difference_threshold": 24,
+        "mean_absolute_error": 1.2251041666666667,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 70400,
+        "reference": "native-closing.png",
+        "region": {
+          "height": 80,
+          "width": 880,
+          "x": 40,
+          "y": 310
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "end",
+      "requested_ms": 18640,
+      "frame_index": 39,
+      "timestamp_ms": 18440,
+      "duration_ms": 260,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.8334801136363637,
+        "changed_pixels": 58677,
+        "difference_threshold": 24,
+        "mean_absolute_error": 128.95072916666666,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 70400,
+        "reference": "native-closing.png",
+        "region": {
+          "height": 80,
+          "width": 880,
+          "x": 40,
+          "y": 310
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "end",
+      "requested_ms": 20519,
+      "frame_index": 46,
+      "timestamp_ms": 20400,
+      "duration_ms": 220,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.8612926136363637,
+        "changed_pixels": 60635,
+        "difference_threshold": 24,
+        "mean_absolute_error": 104.26139678030303,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 70400,
+        "reference": "native-closing.png",
+        "region": {
+          "height": 80,
+          "width": 880,
+          "x": 40,
+          "y": 310
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "end",
+      "requested_ms": 21479,
+      "frame_index": 50,
+      "timestamp_ms": 21350,
+      "duration_ms": 250,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.34485795454545454,
+        "changed_pixels": 24278,
+        "difference_threshold": 24,
+        "mean_absolute_error": 45.12447916666667,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 70400,
+        "reference": "native-closing.png",
+        "region": {
+          "height": 80,
+          "width": 880,
+          "x": 40,
+          "y": 310
+        }
+      }
+    },
+    {
+      "kind": "midpoint",
+      "side": "end",
+      "requested_ms": 21969,
+      "frame_index": 52,
+      "timestamp_ms": 21810,
+      "duration_ms": 180,
+      "image_blocks": 0,
+      "png_written": false,
+      "comparison": {
+        "changed_fraction": 0.013508522727272727,
+        "changed_pixels": 951,
+        "difference_threshold": 24,
+        "mean_absolute_error": 1.2401183712121213,
+        "metric": "max_absolute_rgb_channel",
+        "pixels": 70400,
+        "reference": "native-closing.png",
+        "region": {
+          "height": 80,
+          "width": 880,
+          "x": 40,
+          "y": 310
+        }
+      }
+    }
+  ],
+  "independent_comparison_verifier": "Pillow max-channel difference and mean absolute RGB error, exact match for every numeric probe",
+  "probe_binary_sha256": "0b34159b1675cdd667a36aa9f1054019ea72650c8fcc66fd1ca22a6c8e0344af"
+}

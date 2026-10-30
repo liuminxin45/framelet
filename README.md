@@ -12,17 +12,21 @@
 [![Windows CI](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml/badge.svg)](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-52525B)](LICENSE)
 
-[**Download portable**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [Quick start](#quick-start) · [MCP setup](docs/mcp.md) · [Real demo](#a-real-demo-codex-browses-bilibili)
+[**Download portable**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [Quick start](#quick-start) · [MCP setup](docs/mcp.md) · [Examples](#example-1--real-window-and-recording)
 
 </div>
 
 Framelet turns a visible part of your Windows desktop into a GIF or PNG. Double-click for a small native capture frame, use the CLI, or let an AI agent start, stop, inspect and trim recordings through **MCP stdio**.
 
-Its biggest advantage: **one small EXE, about 1.12 MiB, with zero extra runtime installs**. No Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required to run Framelet. Windows system APIs do the capture; Rust and a static CRT keep it self-contained.
+Its biggest advantage: **one small EXE, about 1.1 MiB, with zero extra runtime installs**. No Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required to run Framelet. Windows system APIs do the capture; Rust and a static CRT keep it self-contained.
 
-[![Real Bilibili scrolling recorded and trimmed through Framelet MCP](docs/images/bilibili-demo.gif)](docs/demo.md)
+## Example 1 · Real window and recording
 
-**Real browser. Real MCP calls. Native GIF output.** Codex started recording, scrolled Bilibili, stopped, probed timestamps and trimmed the result. **29.88 s → 7.63 s**, 960×505, 30 GIF frames, 3.61 MiB. [Static preview](docs/images/bilibili-poster.png) · [Recording & evidence](docs/demo.md)
+![Framelet's native transparent capture frame](docs/images/framelet-window.jpg)
+
+The original small demo is preserved: **620×300, 3 seconds, 16 FPS, 48 frames, 15,250 bytes**. It is a real Framelet recording of a mostly static test scene with a moving marker, rather than a general compression benchmark.
+
+![Original GIF recorded by Framelet](docs/images/framelet-demo.gif)
 
 ## Download
 
@@ -55,8 +59,6 @@ Coordinates are physical pixels; `monitors` and `windows` discover bounds. Outpu
 
 <details>
 <summary>Native window, keyboard controls and CLI details</summary>
-
-![Framelet's native capture frame](docs/images/framelet-window.jpg)
 
 Move/resize the transparent frame; its opening is click-through. **Record / F8** starts or finishes; **Pause / Resume** omits waiting time. **Frame** starts a paused single-frame session or appends another image. **Save as...** copies a finished GIF without replacing existing files. Auto-save: `%LOCALAPPDATA%\Framelet\Captures`. Geometry stays fixed during recording; closing first saves, then a second close exits. GUI FPS choices: 10 / 16 / 20 / 25, with optional cursor capture. Countdown, masks and downscale are CLI/MCP options.
 
@@ -93,7 +95,11 @@ windows / monitors → start_recording → recording_status → operate the brow
 
 Start returns a `session_id`. Wait for `recording` with at least one sample before operating the UI. Stop saves; cancel discards unfinished output; pause excludes waiting time. MCP images are real image content blocks, bounded to 960px / 1 MiB. The client controls the browser; Framelet supplies recording and image tools.
 
-## A real demo: Codex browses Bilibili
+## Example 2 · Codex browses Bilibili
+
+[![Real Bilibili scrolling recorded and trimmed through Framelet MCP](docs/images/bilibili-demo.gif)](docs/demo.md)
+
+**Real browser. Real MCP calls. Native GIF output.** 29.88 s → 7.63 s, 960×505, 30 GIF frames, 3.61 MiB. [Static preview](docs/images/bilibili-poster.png) · [Recording & evidence](docs/demo.md)
 
 Open [Bilibili](https://www.bilibili.com/) and the homepage brings together music, knowledge, technology and other categories. As you scroll into recommendations, its large header gives way to a compact fixed navigation bar. A still screenshot misses that transition; a short screen recording preserves it.
 
@@ -113,6 +119,11 @@ The MCP extraction returned four full-resolution PNGs, this contact sheet and a 
 </details>
 
 ## Review frames without flooding the model
+
+[Agent editing recipe →](docs/agent-guide.md) · Also returned by `framelet_context`.
+
+The efficient path is **stable-region difference + playback-time bisection + frame-interval caching**. `framelet_frame_at` can compare against an anchor PNG and return numerical differences with `include_image:false`; omit `output` to avoid writing a PNG. On the same Bilibili source, interval jumps reduced midpoint calls from **12 to 8**, with only **2 anchor images** returned during the numeric search. Final visual review is still required. [Native replay evidence](docs/demos/bilibili-native-bisection.json)
+
 
 ```powershell
 # Ask for a single time point, then halve a known static-to-action interval

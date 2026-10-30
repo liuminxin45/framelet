@@ -78,6 +78,12 @@ The exact trim times belong to this recording. For another recording, first esta
 
 **边界：** 此示例假设单次向前滚动且首尾位置稳定，不能直接当作多动作、镜头运动或语义精彩片段检测器。GIF 不能普遍随机访问目标帧，每个探针仍需解码前缀；二分减少的是导出和模型可见的图片，不保证底层解码计算量也为对数级。Pillow 对比属于独立开发验证，不是 Framelet 的运行时依赖。
 
+## What the recording taught us / 这次实录带来的算法改进
+
+The original cut used plain midpoint probes. Framelet now computes stable-region differences natively and can return numerical results without an image block or PNG export. Reusing each returned frame interval reduced midpoint calls on the same source from **12 to 8**: 3 for the opening and 5 for the closing boundary, with 171/211 ms intervals. The native replay returned two anchor images; every midpoint was numerical. Independent Pillow comparisons exactly matched all native numerical results. [Agent workflow](agent-guide.md) · [Native replay](demos/bilibili-native-bisection.json)
+
+最初裁剪采用普通中点探针；项目现已内置稳定区域数值差分，可不发送图片、不导出中间 PNG。利用每次返回的帧覆盖区间，在同一原片上将中点请求从 **12 次降到 8 次**：开头 3 次、结尾 5 次，定位区间为 171/211 ms。原生复测仅返回 2 张锚点图，中间均为数值；所有原生差分结果与独立 Pillow 像素核对完全一致。[给 Agent 的操作流程](agent-guide.md) · [原生复测记录](demos/bilibili-native-bisection.json)
+
 ## Inspect the evidence / 核验依据
 
 - [Bisection points, regions and decisions / 二分点位、比较区域和选择记录](demos/bilibili-bisection.json)

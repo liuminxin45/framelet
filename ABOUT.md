@@ -3,9 +3,9 @@
 **Tiny. Self-contained. Callable by AI.**<br>
 **小体积，无需额外运行时，AI 可通过 MCP 调用。**
 
-Framelet is a native Windows GIF/PNG screen recorder built with Rust and Win32. The v0.2 preview EXE is about **1.12 MiB**. Unzip and run; no Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required. Windows system APIs and a static CRT provide the local runtime foundation. Open-source Rust libraries are compiled in; their license notices are included in the portable package.
+Framelet is a native Windows GIF/PNG screen recorder built with Rust and Win32. The v0.2 preview EXE is about **1.1 MiB**. Unzip and run; no Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required. Windows system APIs and a static CRT provide the local runtime foundation. Open-source Rust libraries are compiled in; their license notices are included in the portable package.
 
-Framelet 是使用 Rust + Win32 编写的原生 Windows GIF/PNG 录屏工具。v0.2 预览版单个 EXE 约 **1.12 MiB**，解压即用，无需额外安装 Python、Node.js、.NET、FFmpeg 或浏览器运行时，也无需账号和模型 API Key。程序使用 Windows 系统 API 和静态 CRT；编译进程序的开源 Rust 库及其许可证声明随便携包提供。
+Framelet 是使用 Rust + Win32 编写的原生 Windows GIF/PNG 录屏工具。v0.2 预览版单个 EXE 约 **1.1 MiB**，解压即用，无需额外安装 Python、Node.js、.NET、FFmpeg 或浏览器运行时，也无需账号和模型 API Key。程序使用 Windows 系统 API 和静态 CRT；编译进程序的开源 Rust 库及其许可证声明随便携包提供。
 
 Three entrances share the same local capture/encoding foundation: a small native window, a JSON-oriented CLI, and a stdio MCP server with 17 tools. An AI host launches the EXE, discovers its paths with `framelet_context`, then records, probes timestamps, reviews images and trims clips. No model or cloud upload service is embedded.
 

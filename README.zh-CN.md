@@ -12,17 +12,21 @@
 [![Windows CI](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml/badge.svg)](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-52525B)](LICENSE)
 
-[**下载便携版**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [三步上手](#三步上手) · [MCP 配置](docs/mcp.md) · [真实演示](#真实演示codex-带你逛-bilibili)
+[**下载便携版**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [三步上手](#三步上手) · [MCP 配置](docs/mcp.md) · [真实演示](#示例一真实界面与演示)
 
 </div>
 
 Framelet 把 Windows 桌面上的一块可见区域录成 GIF，或截成 PNG。双击打开原生小取景框，也可以使用 CLI，或者让 AI 通过 **MCP stdio** 开始录制、停止、看图和裁剪。
 
-最大的优势是**小，而且无需额外运行时依赖**：单个 EXE 约 **1.12 MiB**，解压即用。运行录屏工具无需安装 Python、Node.js、.NET、FFmpeg、浏览器运行时，也无需账号或模型 API Key。Rust + 原生 Windows API，静态 CRT，没有额外服务安装步骤。
+最大的优势是**小，而且无需额外运行时依赖**：单个 EXE 约 **1.1 MiB**，解压即用。运行录屏工具无需安装 Python、Node.js、.NET、FFmpeg、浏览器运行时，也无需账号或模型 API Key。Rust + 原生 Windows API，静态 CRT，没有额外服务安装步骤。
 
-[![Codex 通过 Framelet MCP 实际录制并裁剪的 Bilibili 滚动演示](docs/images/bilibili-demo.gif)](docs/demo.md)
+## 示例一：真实界面与演示
 
-**真实浏览器，真实 MCP 调用，Framelet 原生导出的 GIF。** Codex 先开始录制，再滚动 B 站、停止、按时间点取帧并裁剪。**29.88 秒 → 7.63 秒**，960×505，30 帧 GIF，3.61 MiB。[静态预览](docs/images/bilibili-poster.png) · [实录与验证依据](docs/demo.md)
+![Framelet 原生透明取景框](docs/images/framelet-window.jpg)
+
+保留最初的小演示：**620×300、3 秒、16 FPS、48 帧、15,250 字节**。它是 Framelet 实际录制的测试画面，展示静止背景与移动标记，不代表所有场景的压缩率。
+
+![Framelet 最初实际录制的 GIF](docs/images/framelet-demo.gif)
 
 ## 下载
 
@@ -55,8 +59,6 @@ Framelet 把 Windows 桌面上的一块可见区域录成 GIF，或截成 PNG。
 
 <details>
 <summary>原生界面、快捷键与更多 CLI 用法</summary>
-
-![Framelet 原生透明取景框](docs/images/framelet-window.jpg)
 
 拖动或缩放取景框，透明区域可以直接点击。**Record / F8** 开始或完成录制；**Pause / Resume** 排除等待时间；**Frame** 启动暂停的单帧会话或追加一帧；**Save as...** 将成品复制到新路径，已有文件不可覆盖。自动保存位置：`%LOCALAPPDATA%\Framelet\Captures`。录制中固定取景区域；关闭先保存，再次关闭才退出。GUI 可选 10 / 16 / 20 / 25 FPS 和鼠标光标。倒计时、遮挡与缩放是 CLI/MCP 选项。
 
@@ -93,7 +95,11 @@ AI 先调用 `framelet_context`，便能知道 EXE、工作目录和输出位置
 
 start 返回 `session_id`。等状态为 `recording` 且已有采样，再操作页面。stop 保存，cancel 丢弃尚未完成的输出，pause 排除等待。截图和抽帧返回真正的 MCP 图片块，预览最大 960px / 1 MiB。浏览器由 AI 客户端操作，Framelet 提供录像和图像工具。
 
-## 真实演示：Codex 带你逛 Bilibili
+## 示例二：Codex 带你逛 Bilibili
+
+[![Codex 通过 Framelet MCP 实际录制并裁剪的 Bilibili 滚动演示](docs/images/bilibili-demo.gif)](docs/demo.md)
+
+**真实浏览器，真实 MCP 调用，Framelet 原生导出的 GIF。** 29.88 秒 → 7.63 秒，960×505，30 帧 GIF，3.61 MiB。[静态预览](docs/images/bilibili-poster.png) · [实录与验证依据](docs/demo.md)
 
 打开 [哔哩哔哩](https://www.bilibili.com/)，首页把音乐、知识、科技数码等内容入口放在一起。向下浏览推荐视频时，大幅页头逐渐让位于固定导航，视频卡片接着进入视野。一张截图难以讲清这个变化，几秒钟的录屏正合适。
 
@@ -113,6 +119,11 @@ start 返回 `session_id`。等状态为 `recording` 且已有采样，再操作
 </details>
 
 ## 少看图，也能找到片段
+
+[给 Agent 的高效剪辑指引 →](docs/agent-guide.md)，`framelet_context` 也会返回这套流程。
+
+推荐方法是**稳定区域差分＋按播放时间二分＋帧区间缓存**。`framelet_frame_at` 可与锚点 PNG 比较，传 `include_image:false` 只返回差异数值；再省略 `output`，便不写中间 PNG。在同一段 Bilibili 原片上，区间跳跃把中点请求从 **12 次降到 8 次**，数值搜索期间只返回 **2 张锚点图片**；最后仍需看边界图复核。[原生接口复测记录](docs/demos/bilibili-native-bisection.json)
+
 
 ```powershell
 # 取一个时间点；对于已知静止→动作区间，继续取中点缩小范围

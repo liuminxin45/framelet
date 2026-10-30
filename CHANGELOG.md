@@ -5,6 +5,7 @@
 Acceptance preview; v0.1.0 remains the stable release.
 
 - 17 MCP tools, including background start/status/pause/resume/stop/cancel and context/path discovery. Recording readiness follows the first successful sample.
+- Native reference/region comparisons, optional zero-image/zero-PNG probes, frame-interval caching guidance and an automatically advertised agent editing recipe. Native Bilibili replay reduced midpoint calls from 12 to 8.
 - Native GIF timestamp probes (`frame-at` / `framelet_frame_at`) return one composited frame for midpoint/bisection review; GIF prefix decoding remains sequential.
 - Native scene/time-uniform frame extraction, full GIF compositing, PNG contact sheets and bounded MCP image previews.
 - CLI/MCP countdown, aspect-preserving downscale, fixed pre-encoding privacy masks and output byte budgets.

@@ -97,6 +97,10 @@ v0.2 预览版共 17 个工具；v0.1.0 保留原来的 7 个。以下新增能�
 
 ## Timestamp probes / 时间点探针
 
-`framelet_frame_at` takes GIF `input`, `at` in seconds (0..3600), and a new PNG `output`. It returns one composited image, frame index, start timestamp and duration. The interval is half-open: a timestamp exactly at the end of the GIF is out of range. No file is published for an invalid/out-of-range timestamp. Use midpoint probes inside a known static/action bracket; review stable page regions rather than treating every changing thumbnail as scrolling. See the [real Bilibili bisection example](demo.md).
+`framelet_frame_at` takes GIF `input` and `at` in seconds (0..3600). With the default `include_image:true`, a new PNG `output` is required. With `include_image:false`, `output` may be omitted: no image block is sent and no PNG is written. Optional `reference` is a full-size PNG; `compare_region` selects image-relative pixels, and `difference_threshold` is an integer 0..255 (default 24). The result reports changed-pixel fraction and mean absolute RGB error. A pixel changes when any channel's absolute difference exceeds the threshold. References must match source dimensions; the read-root policy applies.
 
-`framelet_frame_at` 接收 GIF 输入、秒数 `at`（0..3600）和新的 PNG 输出，返回一张合成后的完整画面、帧号、起点与持续时间。区间左闭右开，恰好等于 GIF 总时长的时间点越界；无效或越界时不发布输出。可在已知静止/动作区间内取中点，依据稳定页面区域判断，避免把缩略图变化误判为滚动。见 [Bilibili 真实二分示例](demo.md)。
+The returned frame index and half-open playback interval support interval caching. Exactly at GIF duration is out of range. Invalid timestamps, references or regions publish no output. Image responses include original/preview dimensions for coordinate mapping. See the [efficient agent recipe](agent-guide.md) and [real Bilibili example](demo.md).
+
+`framelet_frame_at` 接收 GIF 输入与秒数 `at`（0..3600）。默认 `include_image:true` 时必须提供新的 PNG `output`；传 `include_image:false` 后可以省略 `output`，不发送图片、不写 PNG。可选 `reference` 为原尺寸 PNG，`compare_region` 指定图像内的相对像素区域，`difference_threshold` 为 0..255 的整数（默认 24）。返回变化像素占比与 RGB 平均绝对差；任一通道绝对差超过阈值才计作变化像素。参考图尺寸必须匹配输入，且受读取根目录限制。
+
+帧号与左闭右开的播放区间可用于缓存和跳跃，恰好等于 GIF 总时长的时间点越界。无效时间点、参考图或区域不会发布输出。图片响应还包含原图与预览尺寸，用于坐标映射。见 [Agent 高效剪辑指引](agent-guide.md) 和 [Bilibili 真实示例](demo.md)。

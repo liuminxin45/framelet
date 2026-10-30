@@ -53,6 +53,25 @@
     "Source and GIF are not generated website mockups.",
     "Framelet native edit exported the GIF at playback speed 1.",
     "Requested fps is a ceiling; actual capture/encoding throughput depends on the desktop and image complexity.",
-    "The capture binary was built before the final readiness-state refinement; release artifacts are independently hashed and verified."
-  ]
+    "Capture predates the final readiness and agent-probe refinements; native replay and release artifacts are independently hashed and verified."
+  ],
+  "native_replay": {
+    "algorithm": "native region difference + bisection with frame-interval jumps",
+    "midpoint_calls": 8,
+    "total_point_calls": 12,
+    "image_blocks": 2,
+    "png_files_written": 2,
+    "start_boundary": {
+      "before_ms": 14769,
+      "after_ms": 14940,
+      "uncertainty_ms": 171,
+      "midpoint_calls": 3
+    },
+    "end_boundary": {
+      "before_ms": 21599,
+      "after_ms": 21810,
+      "uncertainty_ms": 211,
+      "midpoint_calls": 5
+    }
+  }
 }

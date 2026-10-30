@@ -60,6 +60,14 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
         assert not (root/'invalid-at.png').exists()
     print('PASS timestamp probes cover the correct half-open frame interval; invalid/end timestamps publish nothing')
 
+    compared=run('frame-at', source, '--at', 1.5, '--reference', root/'at-0.png', '--compare-region', '2,3,10,8', '--output', root/'compared.png')['result']['comparison']
+    assert compared['pixels']==80 and compared['changed_pixels']==80 and compared['changed_fraction']==1
+    assert abs(compared['mean_absolute_error']-(255+128)/3)<0.001
+    run('frame-at', source, '--at', 1.5, '--compare-region', '0,0,10,8', '--output', root/'bad-compare.png', ok=False)
+    run('frame-at', source, '--at', 1.5, '--reference', root/'at-0.png', '--compare-region', '60,40,10,10', '--output', root/'bad-compare.png', ok=False)
+    assert not (root/'bad-compare.png').exists()
+    print('PASS native reference/region difference and invalid-region no-publication')
+
     delta = []
     for n, color in enumerate(['red','blue','green','yellow']):
         frame = Image.new('RGBA',(48,32),(0,0,0,0))
@@ -92,4 +100,4 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
     assert not (root/'bad').exists() and not (root/'broken').exists()
     assert not list(root.glob('.framelet-*.partial'))
     print('PASS overwrite refusal, bounded options, malformed input and failure cleanup')
-print(json.dumps({'ok':True,'frame_extraction_checks':5}))
+print(json.dumps({'ok':True,'frame_extraction_checks':6}))

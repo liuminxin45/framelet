@@ -44,7 +44,7 @@ pub fn catalog() -> Value {
         "Start a bounded background GIF recording, return session_id immediately. Poll recording_status until recording, then operate the UI. Pause excludes waiting time; stop saves; cancel discards unfinished output. Only one recording per MCP server. EOF cancels active recording."
     );
     list.push(start);
-    list.push(json!({"name":"framelet_frame_at","description":"Return one composited PNG and an MCP image block at a GIF playback timestamp in seconds. Use midpoint probes to bisect a known static-to-action boundary instead of sending every frame. GIF prefix decoding is still sequential; only image/token output is reduced. Output must be a new .png inside output_root.","inputSchema":{"type":"object","properties":{"input":{"type":"string"},"at":{"type":"number","minimum":0,"maximum":3600},"output":{"type":"string"}},"required":["input","at","output"],"additionalProperties":false}}));
+    list.push(json!({"name":"framelet_frame_at","description":"Probe one GIF playback timestamp. By default return a composited PNG and image block (output required). For efficient bisection use reference PNG + compare_region + include_image:false; output may then be omitted, returning numeric region difference and frame interval without writing PNG or sending an image. Cache intervals to skip repeated frames. GIF decoding is still sequential. Not semantic highlight detection.","inputSchema":{"type":"object","properties":{"input":{"type":"string"},"at":{"type":"number","minimum":0,"maximum":3600},"output":{"type":"string"},"reference":{"type":"string"},"compare_region":region,"difference_threshold":{"type":"integer","minimum":0,"maximum":255,"default":24},"include_image":{"type":"boolean","default":true}},"required":["input","at"],"additionalProperties":false}}));
     list.push(json!({"name":"framelet_context","description":"Discover executable path, working directory, allowed output/read roots and the recommended recording workflow. Call first; relative paths resolve under output_root.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}}));
     for (name, description) in [
         (
@@ -67,7 +67,7 @@ pub fn catalog() -> Value {
     ] {
         list.push(json!({"name":name,"description":description,"inputSchema":{"type":"object","properties":{"session_id":{"type":"string","maxLength":80}},"required":["session_id"],"additionalProperties":false}}));
     }
-    json!({"schema_version":"1.3","name":"framelet","version":env!("CARGO_PKG_VERSION"),"tools":tools})
+    json!({"schema_version":"1.4","name":"framelet","version":env!("CARGO_PKG_VERSION"),"tools":tools})
 }
 fn string<'a>(a: &'a Value, k: &str) -> Result<&'a str> {
     a.get(k)
@@ -110,11 +110,13 @@ fn call_value(
             "unknown argument: {k}"
         );
     }
-    if let Some(v) = a.get("cursor") {
-        anyhow::ensure!(v.is_boolean(), "cursor must be boolean");
+    for key in ["cursor", "include_image"] {
+        if let Some(v) = a.get(key) {
+            anyhow::ensure!(v.is_boolean(), "{key} must be boolean");
+        }
     }
     let mut args = a.clone();
-    for (key, is_output) in [("input", false), ("output", true)] {
+    for (key, is_output) in [("input", false), ("output", true), ("reference", false)] {
         if args.get(key).is_some() {
             args[key] = json!(paths.resolve(string(&args, key)?, is_output)?);
         }
@@ -169,11 +171,41 @@ fn call_value(
             )
         }
         "framelet_inspect" => crate::encode::inspect(Path::new(string(a, "input")?)),
-        "framelet_frame_at" => crate::frames::at(
-            Path::new(string(a, "input")?),
-            number(a, "at", f64::NAN)?,
-            Path::new(string(a, "output")?),
-        ),
+        "framelet_frame_at" => {
+            let output = a
+                .get("output")
+                .map(|_| string(a, "output").map(Path::new))
+                .transpose()?;
+            anyhow::ensure!(
+                !a["include_image"].as_bool().unwrap_or(true) || output.is_some(),
+                "output is required when include_image is true"
+            );
+            let threshold = match a.get("difference_threshold") {
+                None => 24,
+                Some(v) => v
+                    .as_u64()
+                    .and_then(|v| u8::try_from(v).ok())
+                    .ok_or_else(|| {
+                        anyhow::anyhow!("difference_threshold must be an integer 0..255")
+                    })?,
+            };
+            crate::frames::at(
+                Path::new(string(a, "input")?),
+                number(a, "at", f64::NAN)?,
+                output,
+                crate::frames::ProbeOptions {
+                    reference: a
+                        .get("reference")
+                        .map(|_| string(a, "reference").map(std::path::PathBuf::from))
+                        .transpose()?,
+                    region: a
+                        .get("compare_region")
+                        .map(|r| serde_json::from_value(r.clone()))
+                        .transpose()?,
+                    threshold,
+                },
+            )
+        }
         "framelet_extract_frames" => Ok(serde_json::to_value(crate::frames::extract(
             &serde_json::from_value(a.clone())?,
         )?)?),
@@ -197,7 +229,9 @@ fn call(
     let mut value = call_value(name, a, paths, sessions)?;
     let image_path = match name {
         "framelet_shot" => value["output"].as_str(),
-        "framelet_frame_at" => value["output"].as_str(),
+        "framelet_frame_at" if a["include_image"].as_bool().unwrap_or(true) => {
+            value["output"].as_str()
+        }
         "framelet_extract_frames" => value["contact_sheet"].as_str(),
         "framelet_read_image" => value["input"].as_str(),
         _ => None,
@@ -209,6 +243,8 @@ fn call(
             Ok((meta, png)) => {
                 if name == "framelet_read_image" {
                     value = meta;
+                } else {
+                    value["preview"] = meta;
                 }
                 content.push(json!({"type":"image","mimeType":"image/png","data":base64::engine::general_purpose::STANDARD.encode(png)}));
             }
@@ -306,7 +342,7 @@ pub fn serve() -> Result<()> {
                 } else {
                     "2025-03-26"
                 };
-                json!({"result":{"protocolVersion":version,"capabilities":{"tools":{}},"serverInfo":{"name":"framelet","version":env!("CARGO_PKG_VERSION")},"instructions":"Framelet runs locally on Windows with an interactive desktop. Call framelet_context first to discover paths. Use windows/monitors to choose a region. For UI demos use start_recording, poll until recording, operate your browser/app, then stop_recording. Relative paths use output_root. Never capture secrets; masks are fixed rectangles relative to the selected region, not automatic detection. No capture starts during initialization."}})
+                json!({"result":{"protocolVersion":version,"capabilities":{"tools":{}},"serverInfo":{"name":"framelet","version":env!("CARGO_PKG_VERSION")},"instructions":"Framelet runs locally on Windows with an interactive desktop. Call framelet_context first to discover paths. Use windows/monitors to choose a region. For UI demos use start_recording, poll until recording, operate your browser/app, then stop_recording. Relative paths use output_root. Never capture secrets; masks are fixed rectangles relative to the selected region, not automatic detection. No capture starts during initialization. For efficient GIF editing: inspect duration; save opening/closing anchor PNGs with frame_at; bisect known single-action boundaries using reference + a stable compare_region + include_image:false (output optional). Use returned frame intervals to skip repeated probes, then visually review boundary images and trim with context. For unknown/multiple actions, first extract a small overview. See framelet_context editing_recipe."}})
             }
             "ping" => json!({"result":{}}),
             "tools/list" => json!({"result":{"tools":catalog()["tools"]}}),
