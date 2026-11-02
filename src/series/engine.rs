@@ -173,7 +173,8 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
         "recording group has already started; use status/recover"
     );
     index.owner_pid = std::process::id();
-    index.owner_created = store::process_stamp(std::process::id())?.context("worker exited")?;
+    index.owner_created =
+        crate::identity::process_stamp(std::process::id())?.context("worker exited")?;
     index.state = "recording".into();
     index.reason = "recording".into();
     store::save_index(root, &index)?;

@@ -26,8 +26,8 @@ pub struct Control {
 pub fn validate(a: &RecordArgs) -> Result<(Region, u32, u32)> {
     ensure!((1..=60).contains(&a.fps), "fps must be 1..60");
     ensure!(
-        a.duration.is_finite() && a.duration > 0.0 && a.duration <= 3600.0,
-        "duration must be >0 and <=3600 seconds"
+        a.duration.is_finite() && a.duration > 0.0 && a.duration <= 300.0,
+        "single GIF duration must be >0 and <=300 seconds; use record-series for longer capture"
     );
     ensure!(
         a.delay.is_finite() && (0.0..=30.0).contains(&a.delay),

@@ -12,10 +12,10 @@ use std::{
 use windows_sys::Win32::UI::WindowsAndMessaging::WM_LBUTTONDOWN;
 fn fixture() -> Data {
     Data {
-        schema: 1,
-        asset_id: None,
+        schema: 2,
+        asset_id: Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into()),
         gif_sha256: None,
-        session_id: "test".into(),
+        session_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into(),
         region: Region {
             x: -100,
             y: 20,
@@ -28,7 +28,7 @@ fn fixture() -> Data {
         duration_ms: 2000,
         frames: 1,
         samples: vec![Sample {
-            id: None,
+            id: Some(1),
             seq: 0,
             utc_us: 1_000_000,
             capture_us: 100,
@@ -41,13 +41,13 @@ fn fixture() -> Data {
             cursor: Some([50, 50]),
         }],
         events: vec![Event {
-            id: None,
+            id: Some(2),
             device: Device::Mouse,
             vk: None,
             scan: None,
             flags: 0,
             key_name: None,
-            sample_id: None,
+            sample_id: Some(1),
             offset_us: None,
             seq: 0,
             utc_us: 2_000_000,

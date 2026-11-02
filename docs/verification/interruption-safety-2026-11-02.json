@@ -1,0 +1,114 @@
+{
+  "ok": true,
+  "suite": "core",
+  "desktop": true,
+  "exe_sha256": "9aa206caba95cd3db59093f5d8bf159130e4b8554ad95d93b092f0b3741f0ec1",
+  "checks": [
+    {
+      "name": "verify",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 3.875,
+      "ok": true
+    },
+    {
+      "name": "verify_frames",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 2.828,
+      "ok": true
+    },
+    {
+      "name": "verify_timeline",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 7.125,
+      "ok": true
+    },
+    {
+      "name": "verify_defense",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 7.031,
+      "ok": true
+    },
+    {
+      "name": "verify_sync",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 17.562,
+      "ok": true
+    },
+    {
+      "name": "verify_robustness",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 3.094,
+      "ok": true
+    },
+    {
+      "name": "verify_series",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 35.344,
+      "ok": true
+    },
+    {
+      "name": "verify_60fps",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 10.562,
+      "ok": true
+    },
+    {
+      "name": "verify_interruptions",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 30.375,
+      "ok": true
+    },
+    {
+      "name": "fuzz_regression",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 5.641,
+      "ok": true
+    },
+    {
+      "name": "mcp-sdk",
+      "timeout_seconds": 180,
+      "exit_code": 0,
+      "elapsed_seconds": 2.406,
+      "ok": true
+    }
+  ],
+  "unit_tests": 20,
+  "version": "0.3.0-rc.2-dev",
+  "static_checks": [
+    "cargo fmt --check",
+    "cargo clippy --all-targets --locked -- -D warnings",
+    "cargo test --locked",
+    "actionlint 1.7.12 (hash verified)",
+    "extracted portable checksum/catalog/docs smoke test"
+  ],
+  "dependency_audit": {
+    "ok": true,
+    "packages_checked": 53,
+    "findings": [],
+    "source": "https://api.osv.dev/v1/querybatch"
+  },
+  "interruptions": [
+    "stop is nonblocking and wins over later cancel/pause/resume; saved bytes immutable",
+    "cancel during countdown wins over later stop and permits next task",
+    "suspended worker times out, is reaped, ping and next recording succeed",
+    "host killed while paused: job kills worker, fresh-host recovery validates and is idempotent",
+    "single: broken response pipe shuts down task and reaps worker",
+    "series: broken response pipe shuts down task and reaps worker",
+    "stopped-single: broken response pipe shuts down task and reaps worker"
+  ],
+  "limits": [
+    "Local Windows interactive desktop; not a remote GitHub Actions result.",
+    "Current binary did not run fresh 650-second acceptance locally; weekly/manual CI jobs are configured separately.",
+    "No universal zero-loss recovery from power failure, hardware/storage failure or uncommitted observations."
+  ]
+}

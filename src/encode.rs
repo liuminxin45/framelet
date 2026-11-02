@@ -337,7 +337,7 @@ impl Drop for GifWriter {
 }
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct Stats {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub playback: Option<PlaybackInfo>,
     pub output: PathBuf,
     pub width: u16,
@@ -347,7 +347,6 @@ pub struct Stats {
     pub duration_ms: u64,
     pub bytes: u64,
     pub timeline: Option<PathBuf>,
-    #[serde(default)]
     pub manifest: Option<PathBuf>,
     pub warnings: Vec<String>,
 }

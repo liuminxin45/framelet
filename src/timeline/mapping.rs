@@ -78,6 +78,7 @@ pub fn remap(
                 );
             } else {
                 e.sample_id = None;
+                e.offset_us = None;
             }
         }
     }

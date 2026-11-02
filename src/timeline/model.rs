@@ -3,14 +3,13 @@ use serde::{Deserialize, Serialize};
 pub(super) const MAX_EVENTS: usize = 100_000;
 pub(super) const MAX_SAMPLES: usize = 200_000;
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Sample {
-    #[serde(default)]
     pub id: Option<u64>,
     pub seq: u64,
     pub utc_us: u64,
     pub capture_us: u64,
     pub capture_end_us: u64,
-    #[serde(default)]
     pub coverage_start_us: u64,
     pub hold_end_us: u64,
     pub media_start_us: u64,
@@ -19,22 +18,15 @@ pub struct Sample {
     pub cursor: Option<[i32; 2]>,
 }
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Event {
-    #[serde(default)]
     pub id: Option<u64>,
-    #[serde(default)]
     pub device: Device,
-    #[serde(default)]
     pub vk: Option<u32>,
-    #[serde(default)]
     pub scan: Option<u32>,
-    #[serde(default)]
     pub flags: u32,
-    #[serde(default)]
     pub key_name: Option<String>,
-    #[serde(default)]
     pub sample_id: Option<u64>,
-    #[serde(default)]
     pub offset_us: Option<i64>,
     pub seq: u64,
     pub utc_us: u64,
@@ -47,11 +39,10 @@ pub struct Event {
     pub gif_frame: Option<u64>,
 }
 #[derive(Clone, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Data {
     pub schema: u32,
-    #[serde(default)]
     pub asset_id: Option<String>,
-    #[serde(default)]
     pub gif_sha256: Option<String>,
     pub session_id: String,
     pub region: Region,

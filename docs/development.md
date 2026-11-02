@@ -9,7 +9,7 @@ cargo build --release --locked
 cargo fmt --check
 cargo clippy --all-targets --locked -- -D warnings
 cargo test --locked
-python -m pip install pillow psutil
+python -m pip install -r scripts/requirements-test.txt
 python scripts/verify.py target/release/framelet.exe --desktop
 python scripts/verify_frames.py target/release/framelet.exe
 python scripts/verify_timeline.py target/release/framelet.exe --desktop
@@ -34,3 +34,14 @@ Built by [Neo / 刘民心](https://liuminxin.cn). Independent implementation ins
 
 
 [Architecture and failure contract](architecture.md) · [Code audit](code-audit.md). Fault injection includes hostile sidecars, bounded diagnostic rotation, unwritable logs and a small deterministic GIF mutation corpus. It is not a sustained coverage-guided fuzzer.
+
+## Mandatory gate / 强制门槛
+
+Read [engineering-standard.md](engineering-standard.md) first. After building and installing the official SDK as above, run the shared bounded suite:
+
+```powershell
+python scripts/run_checks.py target/release/framelet.exe --desktop --output work/checks-unique-name
+python scripts/verify_package.py <extracted-portable-directory>
+```
+
+The output directory must be fresh. Every command has a deadline, per-check log, exit code and EXE SHA-bound summary. GitHub Actions runs on Windows 2022 and 2025, with failure artifacts; weekly or workflow_dispatch(long_acceptance=true) adds two real 650-second CLI/MCP jobs. These are Windows Server runner checks, not proof of native GUI operation on every Windows 10/11 system. GUI acceptance still requires a real interactive desktop. No raw capture/input sidecars are uploaded by the core artifact rule.

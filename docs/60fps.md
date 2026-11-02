@@ -7,7 +7,7 @@ framelet record --region 0,0,960,540 --fps 60 --duration 5 --output demo.gif
 framelet record-series --output-dir D:\Captures --name demo --duration 20 --fps 60 --region 0,0,960,540
 ```
 
-MCP uses fps:60 on framelet_record, framelet_start_recording or framelet_start_series. Call framelet_context first. This version still has one FPS parameter; separate capture_fps/gif_fps and four visual presets are a [design proposal](fidelity-strategy-design.md).
+MCP uses fps:60 on framelet_start_recording or framelet_start_series. Call framelet_context first. This version still has one FPS parameter; separate capture_fps/gif_fps and four visual presets are a [design proposal](fidelity-strategy-design.md).
 
 ## What 60 means / 60 的含义
 

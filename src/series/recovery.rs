@@ -17,7 +17,7 @@ pub fn recover(input: &Path) -> Result<Value> {
         Ok::<_, anyhow::Error>(old)
     })?;
     ensure!(
-        process_stamp(i.owner_pid)? != Some(i.owner_created),
+        crate::identity::process_stamp(i.owner_pid)? != Some(i.owner_created),
         "recording owner is still active; stop before recovery"
     );
     let mut checkpoints = vec![];
@@ -110,18 +110,10 @@ pub fn recover(input: &Path) -> Result<Value> {
                         == c.gif_prefix_sha256,
                 "checkpoint GIF prefix digest mismatch"
             );
-            let mut name = c.target.clone();
-            if root.join(&name).exists() {
-                name = name.replace(".gif", ".recovered.gif")
-            }
-            let target = root.join(name);
-            ensure!(
-                !target.exists(),
-                "recovery output already exists without a commit"
-            );
             let candidate = root
                 .join(".work")
                 .join(format!("recovery-{}.gif", crate::identity::new_id()?));
+            let cleanup = RecoveryCandidate(candidate.clone());
             let mut staged = crate::storage::StagedFile::new(&candidate)?;
             let mut source = File::open(&source)?.take(c.safe_bytes);
             ensure!(
@@ -139,17 +131,49 @@ pub fn recover(input: &Path) -> Result<Value> {
             );
             // Decode every frame before publication; inventory alone is insufficient for corrupt image blocks.
             crate::frames::validate_all(&candidate)?;
-            crate::storage::copy(&candidate, &target)?;
-            std::fs::remove_file(&candidate)?;
+            let digest = crate::identity::sha256(&candidate)?;
+            let mut data = c.timeline;
+            data.gif_bytes = candidate.metadata()?.len();
+            data.gif_sha256 = Some(digest.clone());
+            // Validate the full checkpoint mapping before publishing any media.
+            crate::timeline::publish(&candidate, &data)?;
+            crate::timeline::load(&candidate)?;
+            let primary = root.join(&c.target);
+            let target = if primary.try_exists()? && crate::identity::sha256(&primary)? != digest {
+                root.join(c.target.replace(".gif", ".recovered.gif"))
+            } else {
+                primary
+            };
+            if target.try_exists()? {
+                ensure!(
+                    crate::identity::sha256(&target)? == digest,
+                    "recovery output conflicts with checkpoint; existing files preserved"
+                );
+            } else {
+                crate::storage::copy(&candidate, &target)?;
+            }
             let mut stats = c.recording;
             stats.output = target.clone();
-            stats.bytes = target.metadata()?.len();
-            let mut data = c.timeline;
-            data.gif_bytes = stats.bytes;
-            stats.timeline = Some(crate::timeline::publish(&target, &data)?);
-            // Strict validation binds every event/sample to actual GIF intervals.
-            crate::timeline::load(&target)?;
-            stats.manifest = Some(crate::transaction::complete(&target)?);
+            stats.bytes = data.gif_bytes;
+            let sidecar = crate::timeline::sidecar_path(&target);
+            if sidecar.try_exists()? {
+                let existing = crate::timeline::load(&target)?;
+                ensure!(
+                    serde_json::to_value(existing)? == serde_json::to_value(&data)?,
+                    "recovery timeline conflicts with checkpoint; existing files preserved"
+                );
+            } else {
+                crate::timeline::publish(&target, &data)?;
+            }
+            stats.timeline = Some(sidecar);
+            let manifest = crate::transaction::manifest(&target);
+            if manifest.try_exists()? {
+                crate::transaction::verify(&target)?;
+            } else {
+                crate::transaction::complete(&target)?;
+            }
+            stats.manifest = Some(manifest);
+            drop(cleanup);
             stats.warnings.push(
                 "recovered to last durable checkpoint; later observations may be missing".into(),
             );
@@ -197,4 +221,19 @@ pub fn recover(input: &Path) -> Result<Value> {
     v["recovered_parts"] = json!(recovered);
     v["errors"] = json!(errors);
     Ok(v)
+}
+
+// Only our fresh candidate and its sidecar are removed. Published outputs and
+// durable checkpoint prefixes are never cleanup targets.
+struct RecoveryCandidate(std::path::PathBuf);
+impl Drop for RecoveryCandidate {
+    fn drop(&mut self) {
+        for path in [&self.0, &crate::timeline::sidecar_path(&self.0)] {
+            if let Err(e) = std::fs::remove_file(path)
+                && e.kind() != std::io::ErrorKind::NotFound
+            {
+                crate::runtime::report("series.recovery.cleanup", &e.into());
+            }
+        }
+    }
 }

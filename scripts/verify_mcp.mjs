@@ -32,10 +32,10 @@ function image(r) {
 try {
   await client.connect(transport);
   const tools = (await client.listTools()).tools;
-  const expanded = tools.some(t => t.name === 'framelet_extract_frames');
-  assert.equal(tools.length, expanded ? 21 : 7);
+  assert.equal(tools.length, 20);
+  assert(!tools.some(t => t.name === 'framelet_record'));
   checks.push('SDK initialization and tool discovery');
-  if (expanded) {
+  {
     const context = (await call('framelet_context', {})).structuredContent.result;
     const guidance = context.capture_guidance;
     assert(context.documentation.timeline && context.timeline.default_enabled);
@@ -60,7 +60,7 @@ try {
   assert.equal(invalid.isError, true);
   await client.ping();
   checks.push('tool errors preserve the MCP session');
-  if (expanded) {
+  {
     const point = await call('framelet_frame_at', { input, at: 0.12, output: path.join(output, 'point.png') });
     image(point);
     assert.equal(point.structuredContent.result.preview.source_width,info.width);
@@ -96,9 +96,18 @@ try {
     const region = { x: monitor.region.x, y: monitor.region.y, width: 128, height: 96 };
     await call('framelet_windows', {});
     const shot = await call('framelet_shot', { region, output: path.join(output, 'shot.png') });
-    if (expanded) image(shot);
+    image(shot);
     console.log(JSON.stringify({ shot_image_blocks: shot.content.filter(c => c.type === 'image').length }));
-    const recording = await call('framelet_record', { region, duration: 0.6, fps: 10, output: path.join(output, 'capture.gif') });
+    const started = (await call('framelet_start_recording', { region, duration: 0.6, fps: 10, output: path.join(output, 'capture.gif') })).structuredContent.result;
+    let status;
+    const deadline = Date.now() + 20000;
+    do {
+      assert(Date.now() < deadline, 'recording terminal timeout');
+      await new Promise(resolve => setTimeout(resolve, 50));
+      status = (await call('framelet_recording_status', {session_id:started.session_id})).structuredContent.result;
+    } while (!status.terminal);
+    assert.equal(status.result.state, 'completed');
+    const recording = {structuredContent:{result:status.result.recording}};
     assert(Math.abs(recording.structuredContent.result.duration_ms - 600) <= 30);
     const timeline=await call('framelet_timeline',{input:recording.structuredContent.result.output,at:0.1});
     assert(timeline.structuredContent.result.sample_count>0 && timeline.structuredContent.result.sample);

@@ -3,39 +3,114 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      long_acceptance:
+        description: Run real 650-second CLI and MCP recording acceptance
+        type: boolean
+        default: false
   schedule:
     - cron: "23 3 * * 1"
 permissions:
   contents: read
+concurrency:
+  group: windows-${{ github.workflow }}-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+defaults:
+  run:
+    shell: pwsh
+env:
+  PYTHONUTF8: "1"
+  CARGO_TERM_COLOR: never
 jobs:
-  build:
-    runs-on: windows-latest
-    timeout-minutes: 15
+  verify:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, windows-2025]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
       - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         with:
           components: rustfmt, clippy
-      - if: github.event_name == 'schedule'
-        run: python scripts/audit_dependencies.py --output work/dependency-audit.json
       - run: cargo fmt --check
+      - run: python scripts/lint_workflow.py
       - run: cargo clippy --all-targets --locked -- -D warnings
       - run: cargo test --locked
       - run: cargo build --release --locked
-      - run: python -m pip install pillow psutil
-      - run: python scripts/verify.py target/release/framelet.exe
-      - run: python scripts/verify_frames.py target/release/framelet.exe
-      - run: python scripts/verify_timeline.py target/release/framelet.exe
-      - run: python scripts/verify_defense.py target/release/framelet.exe
-      - run: python scripts/verify_sync.py target/release/framelet.exe
-      - run: python scripts/verify_series.py target/release/framelet.exe --output work/series-ci
-      - run: python scripts/verify_60fps.py target/release/framelet.exe --output work/fps60-ci
-      - run: python scripts/fuzz_regression.py target/release/framelet.exe --iterations 1000 --seed ${{ github.run_number }} --output work/fuzz-results.json
-      - run: python scripts/verify_robustness.py target/release/framelet.exe
+      - run: python -m pip install -r scripts/requirements-test.txt
       - run: npm install --prefix work/mcp-client @modelcontextprotocol/sdk@1.32.2 --ignore-scripts --no-audit --no-fund
-      - run: node scripts/verify_mcp.mjs target/release/framelet.exe
-      - run: ./scripts/package.ps1
+      - name: Bounded regressions and process interruption tests
+        run: python scripts/run_checks.py target/release/framelet.exe --desktop --output work/ci-${{ matrix.os }}
+      - name: Package and validate extracted portable
+        run: |
+          ./scripts/package.ps1
+          if ($LASTEXITCODE -ne 0) { throw 'Package failed' }
+          $archive = Get-ChildItem -LiteralPath dist -Filter 'framelet-*-windows-x64.zip' -File
+          if (@($archive).Count -ne 1) { throw 'Expected one portable ZIP' }
+          Expand-Archive -LiteralPath $archive.FullName -DestinationPath work/portable-smoke
+          python scripts/verify_package.py work/portable-smoke
+          if ($LASTEXITCODE -ne 0) { throw 'Portable verification failed' }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: verification-${{ matrix.os }}
+          path: |
+            work/ci-${{ matrix.os }}/summary.json
+            work/ci-${{ matrix.os }}/*.log
+          retention-days: 14
+          if-no-files-found: warn
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: framelet-windows-x64
+          name: framelet-${{ matrix.os }}-x64
           path: dist/framelet-*-windows-x64.zip
+          if-no-files-found: error
+  dependencies:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - run: python scripts/audit_dependencies.py --output work/dependency-audit.json
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: dependency-audit
+          path: work/dependency-audit.json
+          retention-days: 14
+  long-recording:
+    if: github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.long_acceptance)
+    strategy:
+      fail-fast: false
+      matrix:
+        suite: [long-cli, long-mcp]
+    runs-on: windows-2025
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
+      - run: cargo build --release --locked
+      - run: python -m pip install -r scripts/requirements-test.txt
+      - run: python scripts/run_checks.py target/release/framelet.exe --suite ${{ matrix.suite }} --output work/${{ matrix.suite }}
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: ${{ matrix.suite }}-evidence
+          path: |
+            work/${{ matrix.suite }}/summary.json
+            work/${{ matrix.suite }}/*.log
+            work/${{ matrix.suite }}/long/long-verification.json
+          retention-days: 14

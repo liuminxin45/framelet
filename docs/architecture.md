@@ -2,7 +2,7 @@
 
 ## Reliable rotating recordings / 可靠轮转录制
 
-`series/args.rs` validates the explicit long-recording contract; `model.rs` defines group/segment/checkpoint identities; `store.rs` owns naming, bounded indexes, leases and discovery; `engine.rs` owns continuous observation, writer rotation, reserved budgets and one asynchronous finalizer; `recovery.rs` validates dead owners, committed receipts and hash-bound checkpoint prefixes; `review.rs` produces bounded group overviews. CLI and MCP adapters call these services through the existing supervised worker. Ordinary GUI/single-GIF capture remains compatible. [Operation and limits](long-recording.md).
+`series/args.rs` validates the explicit long-recording contract; `model.rs` defines group/segment/checkpoint identities; `store.rs` owns naming, bounded indexes, leases and discovery; `engine.rs` owns continuous observation, writer rotation, reserved budgets and one asynchronous finalizer; `recovery.rs` validates dead owners, committed receipts and hash-bound checkpoint prefixes; `review.rs` produces bounded group overviews. CLI and MCP adapters call these services through the existing supervised worker. GUI and single-GIF capture use the same current supervised core. [Operation and limits](long-recording.md).
 
 Each part is independently playable and committed. recording.json is an atomically replaced, backed-up index; segment.json receipts can rebuild it. Checkpoints are bounded full snapshots every approximately five seconds, not an unbounded in-memory session or a promise of crash-free native APIs. Shared session/observation IDs survive rotations; asset/frame identity is per part. Recovery never fabricates missing observations or retries application input.
 
@@ -14,7 +14,7 @@ Each part is independently playable and committed. recording.json is an atomical
 - `transaction.rs` creates pending markers and a final hash-bound capture manifest. Explicit recovery validates both files and checks that the prior owner exited. Missing frames/events are reported, not recreated.
 - Operational logs have per-process names to avoid concurrent rotation, a 1 MiB rotation threshold and owned-file retention. They never include the input event stream or request body.
 
-This supersedes the older single-process/manual-loop notes below. Keyboard and mouse share one bounded event queue and observation-ID allocator; IDs, timestamps and explicit offsets connect them to frame samples.
+Keyboard and mouse share one bounded event queue and observation-ID allocator; IDs, timestamps and explicit offsets connect them to frame samples.
 
 ```text
 src/
@@ -72,6 +72,8 @@ flowchart TD
 - Stage writes before publishing. Publication uses a handle-based no-overwrite rename under pinned directory leases. A cleanup failure after publication is a warning, not a false claim that the output was lost. PNG and GUI Save As share the staged-file primitive. GIF retains its streaming writer transaction; its publication follows the same rule.
 - GIF and timeline remain separate file transactions. Preserve a successfully published GIF if optional metadata fails; report incomplete metadata and warn. Do not blindly retry a partially committed operation. Inspect returned paths/warnings first.
 - Mouse startup and shutdown waits are bounded. A native thread that cannot stop in time is detached with its own Arc-owned data; warnings identify incomplete trace data. Windows API calls themselves are not forcibly interruptible.
+
+All changes must follow [the engineering standard](engineering-standard.md). Only timeline schema 2 is read; there is no schema-1 reader, inferred interval or asset-ID fallback. MCP exposes 20 current tools; recording always uses asynchronous sessions. Stop/cancel returns immediately, the first terminal intent wins, and disconnect preserves an already accepted stop. Process identity belongs to identity.rs and uses PID plus creation time for both single and group recovery. Recovery validates candidate media/timeline before publication and safely resumes after media, timeline, manifest or receipt publication.
 
 ## Boundaries that remain / 仍然存在的边界
 

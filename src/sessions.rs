@@ -19,7 +19,6 @@ struct Session {
 pub struct Sessions {
     active: Option<Session>,
     history: VecDeque<Value>,
-    counter: u64,
 }
 impl Sessions {
     pub fn start_series(&mut self, a: crate::series::SeriesArgs) -> Result<Value> {
@@ -102,7 +101,10 @@ impl Sessions {
                     .ok()
                     .and_then(|mut value| value.take())
                     .unwrap_or_else(
-                        || json!({"state":"failed","error":"recording result unavailable"}),
+                        || {
+                            let failure = crate::runtime::report("recording.result", &anyhow::anyhow!("recording result unavailable"));
+                            json!({"state":"failed","error":"recording result unavailable","failure":failure})
+                        },
                     )
             };
             self.history
@@ -123,8 +125,7 @@ impl Sessions {
     pub fn start(&mut self, a: RecordArgs) -> Result<Value> {
         self.idle()?;
         recording::validate(&a)?;
-        self.counter += 1;
-        let id = format!("{}-{}", std::process::id(), self.counter);
+        let id = crate::identity::new_id()?;
         let control = Arc::new(Control::default());
         let c = control.clone();
         let result = Arc::new(Mutex::new(None));
@@ -156,6 +157,13 @@ impl Sessions {
                 2 => "paused",
                 _ => "finalizing",
             };
+            let state = if s.control.stop.load(Ordering::Relaxed)
+                || s.control.cancel.load(Ordering::Relaxed)
+            {
+                "finalizing"
+            } else {
+                state
+            };
             return Ok(
                 json!({"session_id":id,"terminal":false,"state":state,"samples":s.control.samples.load(Ordering::Relaxed),"recorded_ms":s.control.elapsed_ms.load(Ordering::Relaxed),"series":s.control.series.lock().ok().and_then(|v|v.clone())}),
             );
@@ -167,6 +175,10 @@ impl Sessions {
             .ok_or_else(|| anyhow::anyhow!("unknown or expired session_id"))
     }
     pub fn action(&mut self, id: &str, action: &str) -> Result<Value> {
+        ensure!(
+            ["pause", "resume", "stop", "cancel"].contains(&action),
+            "unknown action"
+        );
         self.reap();
         // Terminal stop/cancel is idempotent; never delete an already published recording.
         if self.history.iter().any(|s| s["session_id"] == id) {
@@ -177,6 +189,11 @@ impl Sessions {
             .as_ref()
             .filter(|s| s.id == id)
             .ok_or_else(|| anyhow::anyhow!("unknown session_id"))?;
+        // The first terminal intent wins. A late cancel must not change an
+        // accepted save into data loss, nor may pause resurrect finalization.
+        if s.control.stop.load(Ordering::Relaxed) || s.control.cancel.load(Ordering::Relaxed) {
+            return self.status(id);
+        }
         match action {
             "pause" => s.control.paused.store(true, Ordering::Relaxed),
             "resume" => s.control.paused.store(false, Ordering::Relaxed),
@@ -184,26 +201,15 @@ impl Sessions {
             "cancel" => s.control.cancel.store(true, Ordering::Relaxed),
             _ => anyhow::bail!("unknown action"),
         }
-        if (action == "stop" || action == "cancel") && s.series_root.is_none() {
-            let wait = Instant::now();
-            while self
-                .active
-                .as_ref()
-                .is_some_and(|s| !s.worker.is_finished())
-                && wait.elapsed() < Duration::from_secs(10)
-            {
-                std::thread::sleep(Duration::from_millis(10));
-            }
-        } else {
-            std::thread::sleep(Duration::from_millis(20));
-        }
         self.status(id)
     }
 }
 impl Drop for Sessions {
     fn drop(&mut self) {
         if let Some(s) = &self.active {
-            if s.series_root.is_some() {
+            if s.control.stop.load(Ordering::Relaxed) || s.control.cancel.load(Ordering::Relaxed) {
+                // Preserve a stop/cancel already accepted before disconnect.
+            } else if s.series_root.is_some() {
                 s.control.stop.store(true, Ordering::Relaxed);
             } else {
                 s.control.cancel.store(true, Ordering::Relaxed);

@@ -235,7 +235,7 @@ fn start_worker(r: Region, fps: u32, cursor: bool, path: PathBuf, paused: bool) 
         .name("framelet-gui-capture".into())
         .spawn(move || {
             let result=crate::runtime::guard("gui.recording",||{
-            let args:crate::recording::RecordArgs=serde_json::from_value(serde_json::json!({"region":r,"fps":fps,"cursor":cursor,"output":path,"duration":3600}))?;
+            let args:crate::recording::RecordArgs=serde_json::from_value(serde_json::json!({"region":r,"fps":fps,"cursor":cursor,"output":path,"duration":300}))?;
             let control=crate::recording::Control::default();control.paused.store(paused,Ordering::Relaxed);control.single.store(paused,Ordering::Relaxed);
             crate::recording::run(&args,&control,||{
                 progress.store(control.samples.load(Ordering::Relaxed),Ordering::Relaxed);

@@ -43,7 +43,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-sync-') as tmp, tempfile.Tempo
 
   original=gif.read_bytes();mut=bytearray(original);mut[-2]^=1;gif.write_bytes(mut);tool('framelet_timeline',{'input':'good.gif'},ok=False);gif.write_bytes(original)
   # Recover a complete pair with its commit marker missing (simulated interruption after both files).
-  manifest.unlink();marker=gif.with_suffix('.pending.json');marker.write_text(json.dumps({'schema':1,'gif':'good.gif','pid':0,'transaction_id':'test'}));r=tool('framelet_recover',{'input':'good.gif'});assert r['state']=='recovered' and manifest.exists()
+  manifest.unlink();marker=gif.with_suffix('.pending.json');marker.write_text(json.dumps({'schema':1,'gif':'good.gif','pid':0,'owner_created':0,'transaction_id':'test'}));r=tool('framelet_recover',{'input':'good.gif'});assert r['state']=='recovered' and manifest.exists()
   assert rpc('ping')=={}
   print('PASS worker forced exit is terminal failure; MCP survives; next recording succeeds; incomplete recovery does not invent data')
   print('PASS schema-2 unique IDs, SHA-256 tamper detection, commit manifest and interrupted-pair recovery')

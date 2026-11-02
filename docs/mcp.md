@@ -1,6 +1,6 @@
 # MCP · Local recording for AI / AI 本地录屏
 
-Local development now exposes 21 tools, including `framelet_start_series`, `framelet_recording_list` and `framelet_recover`. `framelet_timeline` accepts `event_id` and returns keyboard/mouse events, unique observation/sample/frame links and timing offsets. Each explicit recording runs in a supervised child process and writes GIF + timeline + content-hash manifest. Keyboard observation is active only during recording, never on MCP initialization. See [timeline.md](timeline.md) and [reliable long recording](long-recording.md) for scope and semantics. Ordinary single-GIF calls retain their 300-second MCP bound; series return immediately and rotate at most every 300 active seconds, with a separate task lifetime. Normal EOF saves a series; a killed process requires recovery.
+Current development uses MCP protocol 2025-11-25 only (standard initialization returns this supported version, without older protocol execution branches) and exposes 20 tools, including `framelet_start_series`, `framelet_recording_list` and `framelet_recover`. `framelet_timeline` accepts `event_id` and returns keyboard/mouse events, unique observation/sample/frame links and timing offsets. Each explicit recording runs in a supervised child process and writes GIF + timeline + content-hash manifest. Keyboard observation is active only during recording, never on MCP initialization. See [timeline.md](timeline.md) and [reliable long recording](long-recording.md) for scope and semantics. Single GIF recording is bounded to 300 seconds across CLI/MCP/GUI; series return immediately and rotate at most every 300 active seconds, with a separate task lifetime. Normal EOF saves a series; a killed process requires recovery.
 
 The portable EXE **is** the MCP server: your AI client launches `framelet.exe mcp` and exchanges JSON-RPC over stdin/stdout. It runs on the Windows computer whose visible desktop you want to capture. There is no daemon to start, model API key or server runtime to install. Initialization alone never starts capture.
 
@@ -8,7 +8,7 @@ The portable EXE **is** the MCP server: your AI client launches `framelet.exe mc
 
 ## Discover local guidance / 默认发现文档
 
-Call `framelet_context` first. `documentation` returns relative document paths, a local document root and a repository fallback URL. The local development version records timestamps/mouse events by default and adds `framelet_timeline`; see [timeline.md](timeline.md). Older releases may lack this tool.
+Call `framelet_context` first. `documentation` returns relative document paths, a local document root and a repository fallback URL. The local development version records timestamps/mouse events by default and adds `framelet_timeline`; see [timeline.md](timeline.md). Only the current catalog and timeline schema 2 are supported.
 
 先调用 context 获取路径、文档与帧率建议。本地开发版默认记录时间线；先查点击，再抽取操作前后画面。文档随便携包提供，源码目录也有 AGENTS.md 入口。
 
@@ -41,7 +41,7 @@ MCP is a protocol, not a universal installer. Each AI host registers its local c
 
 MCP 是协议，不是统一安装器。每个 AI 客户端需要注册本机命令；云端 AI 还需要经过授权的本地连接或执行端，不能直接运行另一台电脑上的 EXE 路径。
 
-## Record while operating / 边操作边录制（v0.2.0-rc.1）
+## Record while operating / 边操作边录制
 
 1. Call `framelet_context` to discover the executable, output root and limits. Call `framelet_windows` / `framelet_monitors` to choose **physical-pixel** coordinates.
 2. Call `framelet_start_recording`, then poll `framelet_recording_status` until it reports `recording` with at least one sample. Operate your browser or app with your AI client's UI tools. Framelet records; it does not automate the page.
@@ -73,9 +73,9 @@ start 返回 `session_id`，后续控制工具都传此 ID。暂停是异步请�
 
 ## Tools / 工具
 
-The v0.2 preview has 17 tools; v0.1.0 has the original 7. Install the preview for the new workflow.
+The current catalog exposes 20 tools. Recording uses background sessions only.
 
-v0.2 预览版共 17 个工具；v0.1.0 保留原来的 7 个。以下新增能力需要安装预览版。
+当前目录共 20 个工具；MCP 录像统一采用后台会话，不提供阻塞式录制。
 
 | Tools | Purpose / 用途 |
 | --- | --- |
@@ -84,7 +84,8 @@ v0.2 预览版共 17 个工具；v0.1.0 保留原来的 7 个。以下新增能�
 | `framelet_start_recording`, `framelet_recording_status` | Background recording / 后台录制与状态 |
 | `framelet_pause_recording`, `framelet_resume_recording` | Exclude waiting time / 排除等待时段 |
 | `framelet_stop_recording`, `framelet_cancel_recording` | Save or discard unfinished output / 保存或取消未完成录像 |
-| `framelet_record`, `framelet_shot` | Blocking GIF or PNG / 阻塞式 GIF 或 PNG |
+| `framelet_shot` | Capture one PNG / 截取单张 PNG |
+| `framelet_start_series`, `framelet_recording_list`, `framelet_recover` | Rotating groups, discovery and recovery / 分组轮转、发现及恢复 |
 | `framelet_inspect`, `framelet_edit` | Inspect, trim and speed / 检查、时间裁剪与变速 |
 | `framelet_frame_at` | One timestamp image for midpoint/bisection review / 按时间点取一帧，辅助二分定位 |
 | `framelet_extract_frames`, `framelet_read_image` | Contact sheet and individual images / 抽帧预览与单图 |
@@ -93,13 +94,13 @@ v0.2 预览版共 17 个工具；v0.1.0 保留原来的 7 个。以下新增能�
 
 - MCP capture requires an explicit `region` or `full_screen:true`. Outputs resolve under the configured root; existing files are never overwritten. Parent directories must exist. Inputs are limited to configured read roots. Traversal, UNC/device paths and alternate data streams are rejected. Canonical parent paths prevent ordinary junction escapes. These are mistake guards for trusted local clients, not an OS security sandbox against another local process racing directory changes.
 - Privacy masks are fixed solid rectangles **relative to the source region**, applied before scaling/encoding. They do not detect secrets, track moving elements or stop unrelated windows from covering the region. Review the recording before sharing.
-- Ordinary single-GIF background sessions have a maximum 300-second wall-clock duration (plus an optional 0–30-second countdown). The tool waits up to 10 seconds on stop; the supervisor separately enforces worker heartbeat/stop deadlines and terminates a stalled child. A finalized file is published without replacement; ordinary cancellation discards unfinished single-GIF output. Series use separate task budgets, save on normal EOF and preserve committed parts on cancel; see [long-recording.md](long-recording.md).
+- Ordinary single-GIF background sessions have a maximum 300-second wall-clock duration (plus an optional 0–30-second countdown). Stop/cancel returns immediately; the first terminal intent wins; the supervisor separately enforces worker heartbeat/stop deadlines and terminates a stalled child. A finalized file is published without replacement; ordinary cancellation discards unfinished single-GIF output. Series use separate task budgets, save on normal EOF and preserve committed parts on cancel; see [long-recording.md](long-recording.md).
 - Capture: 16 MP, 8192 pixels per side, 1–60 fps, 80 MP/s encoded-pixel budget; output defaults to 256 MiB, configurable 1–1024 MiB. GIF processing: 512 MiB input, 100000 frames, 2 billion composited canvas pixels, 60 seconds per decode pass. Oversized/invalid JSON-RPC requests return an error while preserving the next request.
 - No network upload, telemetry, shell execution or audio capture is built in. GIF/PNG output currently; MP4, semantic highlight detection, a visual timeline and background-window capture are not implemented.
 
 - MCP 必须明确区域或传 `full_screen:true`；输出限定在配置根目录内，已有文件不可覆盖，父目录需已存在；读取也受目录限制。拒绝路径穿越、UNC/设备路径、备用数据流，并核对父目录的真实路径。这是防误操作机制，不能代替操作系统沙箱防范其他本地进程竞态替换目录。
 - 遮挡是相对源区域左上角的固定纯色矩形，先遮挡再缩放编码；不自动识别秘密、不跟随元素移动，也不能阻止其他窗口遮住录制区域。分享前仍需检查录像。
-- 普通单 GIF 后台会话最长 300 秒，另可设置 0–30 秒倒计时，暂停仍受墙钟上限约束。停止工具最多等待 10 秒；监督层另有心跳和停止期限，失效子进程会被结束。分段任务采用独立总预算，正常断连停止保存，取消保留已提交段；详见 [长录制指引](long-recording.md)。
+- 普通单 GIF 后台会话最长 300 秒，另可设置 0–30 秒倒计时，暂停仍受墙钟上限约束。停止/取消立即返回，首个终止意图生效，随后查询终态；监督层另有心跳和停止期限，失效子进程会被结束。分段任务采用独立总预算，正常断连停止保存，取消保留已提交段；详见 [长录制指引](long-recording.md)。
 - 像素、帧率、文件大小、GIF 解码工作量均有上限；格式错误或过大的 JSON-RPC 请求不会破坏后续请求的处理。
 - 不内置上传、遥测、shell 执行或音频采集。当前输出 GIF/PNG；尚无 MP4、语义选片、可视时间轴或后台窗口录制。
 
@@ -112,3 +113,5 @@ The returned frame index and half-open playback interval support interval cachin
 `framelet_frame_at` 接收 GIF 输入与秒数 `at`（0..3600）。默认 `include_image:true` 时必须提供新的 PNG `output`；传 `include_image:false` 后可以省略 `output`，不发送图片、不写 PNG。可选 `reference` 为原尺寸 PNG，`compare_region` 指定图像内的相对像素区域，`difference_threshold` 为 0..255 的整数（默认 24）。返回变化像素占比与 RGB 平均绝对差；任一通道绝对差超过阈值才计作变化像素。参考图尺寸必须匹配输入，且受读取根目录限制。
 
 帧号与左闭右开的播放区间可用于缓存和跳跃，恰好等于 GIF 总时长的时间点越界。无效时间点、参考图或区域不会发布输出。图片响应还包含原图与预览尺寸，用于坐标映射。见 [Agent 高效剪辑指引](agent-guide.md) 和 [Bilibili 真实示例](demo.md)。
+
+Current engineering policy: [engineering-standard.md](engineering-standard.md). Interrupted recovery can be repeated; mismatched output is preserved and refused.

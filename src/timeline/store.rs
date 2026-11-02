@@ -50,16 +50,9 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
         "timeline exceeds 64 MiB"
     );
     let _sidecar_lease = crate::file_guard::Lease::input(&p)?;
-    let mut d: Data = serde_json::from_reader(std::fs::File::open(p)?)?;
-    for s in &mut d.samples {
-        if s.coverage_start_us == 0 {
-            s.coverage_start_us = s.capture_us;
-        }
-    }
+    let d: Data = serde_json::from_reader(std::fs::File::open(p)?)?;
     ensure!(
-        (d.schema == 1 || d.schema == 2)
-            && d.samples.len() <= MAX_SAMPLES
-            && d.events.len() <= MAX_EVENTS,
+        d.schema == 2 && d.samples.len() <= MAX_SAMPLES && d.events.len() <= MAX_EVENTS,
         "unsupported timeline or resource limit"
     );
     ensure!(
@@ -142,7 +135,7 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
             "GIF content SHA-256 mismatch"
         );
     }
-    if d.schema == 2 {
+    {
         let hex = |s: &str, len: usize| s.len() == len && s.bytes().all(|b| b.is_ascii_hexdigit());
         ensure!(
             hex(&d.session_id, 32)
@@ -168,17 +161,46 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
                 "invalid keyboard event"
             );
         }
-        let mut sample_ids = std::collections::HashMap::new();
+        let mut sample_ids: std::collections::HashMap<u64, Vec<&Sample>> =
+            std::collections::HashMap::new();
         for s in &d.samples {
             let id = s.id.ok_or_else(|| anyhow::anyhow!("missing sample ID"))?;
             ensure!(!ids.contains(&id), "sample/event ID collision");
-            if let Some(old) = sample_ids.insert(id, s.seq) {
-                ensure!(old == s.seq, "sample identity collision");
+            let spans = sample_ids.entry(id).or_default();
+            if let Some(old) = spans.first() {
+                ensure!(
+                    old.seq == s.seq
+                        && old.utc_us == s.utc_us
+                        && old.capture_us == s.capture_us
+                        && old.capture_end_us == s.capture_end_us,
+                    "sample identity collision"
+                );
             }
+            spans.push(s);
         }
         for e in &d.events {
             if let Some(id) = e.sample_id {
-                ensure!(sample_ids.contains_key(&id), "unknown event sample ID");
+                let spans = sample_ids
+                    .get(&id)
+                    .ok_or_else(|| anyhow::anyhow!("unknown event sample ID"))?;
+                let time = e
+                    .media_us
+                    .ok_or_else(|| anyhow::anyhow!("linked event has no media time"))?;
+                let sample = spans
+                    .get(spans.partition_point(|s| s.media_end_us <= time))
+                    .filter(|s| s.media_start_us <= time)
+                    .ok_or_else(|| anyhow::anyhow!("event/sample interval mismatch"))?;
+                let offset = (e.mono_us as i128 - sample.capture_us as i128)
+                    .clamp(i64::MIN as i128, i64::MAX as i128) as i64;
+                ensure!(
+                    e.gif_frame == Some(sample.gif_frame) && e.offset_us == Some(offset),
+                    "event/sample frame or offset mismatch"
+                );
+            } else {
+                ensure!(
+                    e.offset_us.is_none(),
+                    "unmapped event has a stale sample offset"
+                );
             }
         }
     }

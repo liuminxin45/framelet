@@ -2,7 +2,9 @@
 
 ## Schema 2: keyboard–mouse–frame synchronization / 键鼠帧同步
 
-New recordings default to a shared keyboard/mouse/frame observer. Keyboard transitions use the Windows low-level input hook in the same message thread and bounded queue as mouse events. Input is collected only during an explicit recording, and keyboard scope is a foreground window intersecting the capture region. A fully masked region suppresses keyboard collection; a visual mask is not a general password filter.
+Only the current schema 2 is supported; missing identity/coverage fields and unsupported schemas are rejected, never silently migrated.
+
+Recordings default to a shared keyboard/mouse/frame observer. Keyboard transitions use the Windows low-level input hook in the same message thread and bounded queue as mouse events. Input is collected only during an explicit recording, and keyboard scope is a foreground window intersecting the capture region. A fully masked region suppresses keyboard collection; a visual mask is not a general password filter.
 
 Schema 2 uses a random `session_id` and `asset_id`, plus one shared observation counter: samples and events have disjoint `id` values. Query results expand these into `event_uid`, `sample_uid` and `frame_uid`. Several events may reference one sample/frame. Native edits preserve original event/sample identities and UTC, generate a new asset identity, and remap playback links.
 

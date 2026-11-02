@@ -100,7 +100,7 @@ fn supervise_value(
         let _ = child.wait();
         anyhow::bail!("assign worker job: {}", std::io::Error::last_os_error());
     }
-    let result = (|| -> Result<Value> {
+    let result = (|| -> Result<(Value, std::thread::JoinHandle<()>)> {
         let mut input = child.stdin.take().context("worker stdin missing")?;
         let output = child.stdout.take().context("worker stdout missing")?;
         writeln!(input, "{}", request)?;
@@ -131,7 +131,7 @@ fn supervise_value(
         let mut last = Instant::now();
         let mut prior = (false, false, false);
         let mut stopping_since = None;
-        let outcome = loop {
+        let outcome: Result<Value> = loop {
             let stop = c.stop.load(Ordering::Relaxed) || external_stop();
             let cancel = c.cancel.load(Ordering::Relaxed);
             let paused = c.paused.load(Ordering::Relaxed);
@@ -206,13 +206,20 @@ fn supervise_value(
         };
         drop(input);
         drop(rx);
-        let _ = reader.join();
-        outcome
+        // Never join a pipe reader while its writer may still be alive/hung.
+        // The child is terminated and reaped below before we join on success.
+        Ok((outcome?, reader))
     })();
     // Always reap the child. Job close also handles host death and exceptional returns.
     let _ = child.kill();
     let _ = child.wait();
     drop(job);
+    let result = result.and_then(|(value, reader)| {
+        reader
+            .join()
+            .map_err(|_| anyhow::anyhow!("worker pipe reader panicked"))?;
+        Ok(value)
+    });
     if let Err(e) = &result {
         crate::runtime::report("recording.supervisor", e);
     }

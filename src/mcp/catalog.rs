@@ -5,7 +5,7 @@ pub fn catalog() -> Value {
         {"name":"framelet_doctor","description":"Check local screen capture readiness. No network.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
         {"name":"framelet_monitors","description":"List monitors in physical screen pixels, including negative coordinates.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
         {"name":"framelet_windows","description":"List visible windows, titles and screen bounds. Captures visible pixels, not occluded window contents.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
-        {"name":"framelet_record","description":"Record visible screen pixels into a GIF; blocking, maximum 300 seconds. Output must not exist. No audio.","inputSchema":{"type":"object","properties":{"output":{"type":"string"},"region":region,"duration":{"type":"number","exclusiveMinimum":0,"maximum":300,"default":5},"fps":{"type":"integer","minimum":1,"maximum":60,"default":10},"cursor":{"type":"boolean","default":false},"quality":{"type":"integer","minimum":1,"maximum":30,"default":10}},"required":["output"],"additionalProperties":false}},
+        {"name":"framelet_start_recording","description":"Start a bounded background GIF recording and return session_id immediately. Explicit region or full_screen:true required. Poll status, then operate the UI. Stop saves; cancel discards unfinished output. EOF cancels an unfinished single GIF; an accepted stop is preserved. Never overwrite.","inputSchema":{"type":"object","properties":{"output":{"type":"string"},"region":region,"duration":{"type":"number","exclusiveMinimum":0,"maximum":300,"default":5},"fps":{"type":"integer","minimum":1,"maximum":60,"default":10},"cursor":{"type":"boolean","default":false},"quality":{"type":"integer","minimum":1,"maximum":30,"default":10}},"required":["output"],"additionalProperties":false}},
         {"name":"framelet_shot","description":"Capture visible screen pixels as a PNG. Output must not exist.","inputSchema":{"type":"object","properties":{"output":{"type":"string"},"region":region,"cursor":{"type":"boolean"}},"required":["output"],"additionalProperties":false}},
         {"name":"framelet_inspect","description":"Read GIF size, frame count and duration.","inputSchema":{"type":"object","properties":{"input":{"type":"string"}},"required":["input"],"additionalProperties":false}},
         {"name":"framelet_edit","description":"Trim a GIF and change playback speed. Seconds; output must not exist.","inputSchema":{"type":"object","properties":{"input":{"type":"string"},"output":{"type":"string"},"start":{"type":"number","minimum":0,"default":0},"end":{"type":"number","exclusiveMinimum":0},"speed":{"type":"number","minimum":0.01,"maximum":100,"default":1}},"required":["input","output"],"additionalProperties":false}},
@@ -14,29 +14,19 @@ pub fn catalog() -> Value {
     ]);
     let list = tools.as_array_mut().unwrap();
     let props = json!({"max_width":{"type":"integer","minimum":1,"maximum":8192},"masks":{"type":"array","maxItems":32,"items":region},"delay":{"type":"number","minimum":0,"maximum":30,"default":0},"max_mib":{"type":"integer","minimum":1,"maximum":1024,"default":256},"full_screen":{"type":"boolean","default":false}});
-    for t in list.iter_mut().filter(|t| t["name"] == "framelet_record") {
+    for t in list
+        .iter_mut()
+        .filter(|t| t["name"] == "framelet_start_recording")
+    {
         t["inputSchema"]["properties"]
             .as_object_mut()
             .unwrap()
             .extend(props.as_object().unwrap().clone());
-        t["description"] = json!(
-            "Blocking GIF capture, maximum 300 seconds. Prefer start_recording for UI workflows. Explicit region or full_screen:true required. Output is inside the configured root; never overwrite."
-        );
     }
     list.iter_mut()
         .find(|t| t["name"] == "framelet_shot")
         .unwrap()["inputSchema"]["properties"]["full_screen"] =
         json!({"type":"boolean","default":false});
-    let mut start = list
-        .iter()
-        .find(|t| t["name"] == "framelet_record")
-        .unwrap()
-        .clone();
-    start["name"] = json!("framelet_start_recording");
-    start["description"] = json!(
-        "Start a bounded background GIF recording, return session_id immediately. Poll recording_status until recording, then operate the UI. Pause excludes waiting time; stop saves; cancel discards unfinished output. Only one recording per MCP server. EOF cancels active recording."
-    );
-    list.push(start);
     list.push(json!({"name":"framelet_frame_at","description":"Probe one GIF playback timestamp. By default return a composited PNG and image block (output required). For efficient bisection use reference PNG + compare_region + include_image:false; output may then be omitted, returning numeric region difference and frame interval without writing PNG or sending an image. Cache intervals to skip repeated frames. GIF decoding is still sequential. Not semantic highlight detection.","inputSchema":{"type":"object","properties":{"input":{"type":"string"},"at":{"type":"number","minimum":0,"maximum":3600},"output":{"type":"string"},"reference":{"type":"string"},"compare_region":region,"difference_threshold":{"type":"integer","minimum":0,"maximum":255,"default":24},"include_image":{"type":"boolean","default":true}},"required":["input","at"],"additionalProperties":false}}));
     list.push(json!({"name":"framelet_context","description":"Discover executable path, working directory, allowed output/read roots and the recommended recording workflow/FPS presets. Call first; relative paths resolve under output_root.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}}));
     for (name, description) in [
@@ -51,7 +41,7 @@ pub fn catalog() -> Value {
         ("framelet_resume_recording", "Resume a paused recording."),
         (
             "framelet_stop_recording",
-            "Stop and finalize the GIF. Waits up to 10 seconds; poll status if still finalizing. Safe to repeat.",
+            "Request stop and finalize; return immediately. Poll status to terminal. First stop/cancel intent wins. Safe to repeat.",
         ),
         (
             "framelet_cancel_recording",
@@ -120,5 +110,5 @@ pub fn catalog() -> Value {
     list.iter_mut()
         .find(|t| t["name"] == "framelet_frame_at")
         .unwrap()["inputSchema"]["properties"]["at"]["maximum"] = json!(86400);
-    json!({"schema_version":"1.8","name":"framelet","version":env!("CARGO_PKG_VERSION"),"tools":tools})
+    json!({"schema_version":"2.0","name":"framelet","version":env!("CARGO_PKG_VERSION"),"tools":tools})
 }

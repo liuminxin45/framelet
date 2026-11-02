@@ -82,7 +82,6 @@ fn call_value(
         }
     }
     if [
-        "framelet_record",
         "framelet_start_recording",
         "framelet_start_series",
         "framelet_shot",
@@ -133,22 +132,11 @@ fn call_value(
         "framelet_cancel_recording" => sessions.action(string(a, "session_id")?, "cancel"),
         "framelet_start_recording" => {
             let args: crate::recording::RecordArgs = serde_json::from_value(a.clone())?;
-            anyhow::ensure!(args.duration <= 300.0, "MCP duration limit is 300 seconds");
             sessions.start(args)
         }
         "framelet_doctor" => Ok(crate::recording::doctor()),
         "framelet_monitors" => Ok(serde_json::to_value(crate::capture::monitors())?),
         "framelet_windows" => Ok(serde_json::to_value(crate::capture::windows())?),
-        "framelet_record" => {
-            sessions.idle()?;
-            let args: crate::recording::RecordArgs = serde_json::from_value(a.clone())?;
-            anyhow::ensure!(args.duration <= 300.0, "MCP duration limit is 300 seconds");
-            Ok(serde_json::to_value(crate::recording::run(
-                &args,
-                &crate::recording::Control::default(),
-                || false,
-            )?)?)
-        }
         "framelet_shot" => {
             crate::safety::extension(Path::new(string(a, "output")?), "png")?;
             crate::recording::shot(

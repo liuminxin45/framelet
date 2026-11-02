@@ -243,3 +243,138 @@ fn disk_accounting_tolerates_async_staging_publication() {
     writer.join().unwrap();
     assert!(failure.is_none(), "{failure:?}");
 }
+
+fn recovery_fixture() -> (Root, PathBuf, Checkpoint, PathBuf) {
+    use std::io::Read;
+    let root = Root::new();
+    let plan = store::create(&args(&root.0)).unwrap();
+    let group = &plan.directory;
+    let mut i = plan.index;
+    i.owner_pid = 0;
+    i.owner_created = 0;
+    i.state = "failed".into();
+    store::save_index(group, &i).unwrap();
+    let target = group.join(store::filename(&i.prefix, 1));
+    let mut w =
+        crate::encode::GifWriter::new_in(&target, 8, 8, 10, Some(&group.join(".work"))).unwrap();
+    w.push(vec![42; 8 * 8 * 3], 100).unwrap();
+    let bytes = w.checkpoint().unwrap();
+    let source = w.partial_path().to_path_buf();
+    let sha =
+        crate::identity::sha256_reader(std::fs::File::open(&source).unwrap().take(bytes)).unwrap();
+    let stat = w.snapshot_stats(bytes + 1);
+    let timeline = crate::timeline::Data {
+        schema: 2,
+        session_id: i.session_id.clone(),
+        asset_id: Some(crate::identity::new_id().unwrap()),
+        gif_sha256: None,
+        region: crate::capture::Region {
+            x: 0,
+            y: 0,
+            width: 8,
+            height: 8,
+        },
+        width: 8,
+        height: 8,
+        gif_bytes: bytes + 1,
+        duration_ms: 1000,
+        frames: 1,
+        samples: vec![],
+        events: vec![],
+        dropped_events: 0,
+        warnings: vec![],
+    };
+    let c = Checkpoint {
+        schema: 1,
+        session_id: i.session_id.clone(),
+        number: 1,
+        start_ms: 0,
+        source: source.file_name().unwrap().to_string_lossy().into_owned(),
+        target: target.file_name().unwrap().to_string_lossy().into_owned(),
+        safe_bytes: bytes,
+        gif_prefix_sha256: sha,
+        recording: stat,
+        timeline,
+    };
+    drop(w);
+    let group = group.clone();
+    (root, group, c, source)
+}
+
+#[test]
+fn recovery_resumes_after_each_publication_boundary() {
+    for boundary in 0..=4 {
+        let (_root, group, c, source) = recovery_fixture();
+        let target = group.join(&c.target);
+        let cp = group
+            .join(".work")
+            .join(&c.target)
+            .with_extension("checkpoint.json");
+        crate::storage::replace_json(&cp, &c).unwrap();
+        let mut bytes = std::fs::read(&source).unwrap();
+        bytes.truncate(c.safe_bytes as usize);
+        bytes.push(0x3b);
+        if boundary >= 1 {
+            std::fs::write(&target, &bytes).unwrap();
+        }
+        if boundary >= 2 {
+            crate::timeline::publish(&target, &c.timeline).unwrap();
+        }
+        if boundary >= 3 {
+            crate::transaction::complete(&target).unwrap();
+        }
+        if boundary >= 4 {
+            let mut stat = c.recording.clone();
+            stat.output = target.clone();
+            stat.bytes = bytes.len() as u64;
+            stat.timeline = Some(crate::timeline::sidecar_path(&target));
+            stat.manifest = Some(crate::transaction::manifest(&target));
+            store::relative_stats(&mut stat).unwrap();
+            let part = Part::new(1, 0, "recovered_checkpoint".into(), stat, &c.timeline);
+            store::commit_part(&group, &part).unwrap();
+        }
+        let value = super::recover(&group).unwrap();
+        assert!(
+            value["errors"].as_array().unwrap().is_empty(),
+            "boundary {boundary}: {value}"
+        );
+        assert_eq!(store::read_index(&group).unwrap().parts.len(), 1);
+        assert_eq!(std::fs::read(&target).unwrap(), bytes);
+        assert_eq!(super::recover(&group).unwrap()["recovered_parts"], 0);
+        assert!(
+            !group
+                .join(c.target.replace(".gif", ".recovered.gif"))
+                .exists()
+        );
+        assert!(!std::fs::read_dir(group.join(".work")).unwrap().any(|e| {
+            e.unwrap()
+                .file_name()
+                .to_string_lossy()
+                .starts_with("recovery-")
+        }));
+    }
+}
+
+#[test]
+fn recovery_preserves_foreign_outputs_and_refuses_conflicting_sidecars() {
+    let (_root, group, c, _source) = recovery_fixture();
+    let target = group.join(&c.target);
+    let cp = group
+        .join(".work")
+        .join(&c.target)
+        .with_extension("checkpoint.json");
+    crate::storage::replace_json(&cp, &c).unwrap();
+    std::fs::write(&target, b"foreign output").unwrap();
+    let recovered = group.join(c.target.replace(".gif", ".recovered.gif"));
+    let sidecar = crate::timeline::sidecar_path(&recovered);
+    std::fs::write(&sidecar, b"foreign sidecar").unwrap();
+    let value = super::recover(&group).unwrap();
+    assert_eq!(value["recovered_parts"], 0);
+    assert!(!value["errors"].as_array().unwrap().is_empty());
+    assert_eq!(std::fs::read(&target).unwrap(), b"foreign output");
+    assert_eq!(std::fs::read(&sidecar).unwrap(), b"foreign sidecar");
+    // The retry can reuse only matching media once the conflict is explicitly removed.
+    std::fs::remove_file(sidecar).unwrap();
+    assert_eq!(super::recover(&group).unwrap()["recovered_parts"], 1);
+    assert_eq!(std::fs::read(&target).unwrap(), b"foreign output");
+}

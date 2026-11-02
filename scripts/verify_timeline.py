@@ -1,4 +1,5 @@
 """Independent timing/sidecar regression checks; Python/Pillow are dev-only."""
+import hashlib,uuid
 import argparse,json,pathlib,subprocess,tempfile,time
 from PIL import Image
 p=argparse.ArgumentParser();p.add_argument('exe');p.add_argument('--desktop',action='store_true');a=p.parse_args();exe=str(pathlib.Path(a.exe).resolve())
@@ -16,7 +17,11 @@ with tempfile.TemporaryDirectory(prefix='framelet-timeline-') as tmp:
  for i,d in enumerate([100000,300000,100000,500000]):
   samples.append(dict(seq=i,utc_us=clock+at,capture_us=at,capture_end_us=at+100,coverage_start_us=at,hold_end_us=at+d,media_start_us=at,media_end_us=at+d,gif_frame=i,cursor=[5,5]));at+=d
  events=[dict(seq=i,utc_us=clock+t,mono_us=t,kind=513,point=[5,5],injected=True,wheel=0,media_us=t,gif_frame=next(s['gif_frame'] for s in samples if s['media_start_us']<=t<s['media_end_us'])) for i,t in enumerate([125000,450000,900000])]
- data=dict(schema=1,session_id='synthetic-regression',region=dict(x=-20,y=30,width=32,height=32),width=16,height=16,gif_bytes=raw.stat().st_size,duration_ms=info['duration_ms'],frames=info['frames'],samples=samples,events=events,dropped_events=0,warnings=[])
+ data=dict(schema=2,asset_id=uuid.uuid4().hex,gif_sha256=hashlib.sha256(raw.read_bytes()).hexdigest(),session_id=uuid.uuid4().hex,region=dict(x=-20,y=30,width=32,height=32),width=16,height=16,gif_bytes=raw.stat().st_size,duration_ms=info['duration_ms'],frames=info['frames'],samples=samples,events=events,dropped_events=0,warnings=[])
+ for i,sample in enumerate(data['samples']):sample['id']=i+1
+ for i,event in enumerate(data['events']):
+  sample=next(s for s in data['samples'] if s['media_start_us']<=event['media_us']<s['media_end_us'])
+  event.update(id=len(data['samples'])+i+1,device='mouse',vk=None,scan=None,flags=0,key_name=None,sample_id=sample['id'],offset_us=event['mono_us']-sample['capture_us'])
  side(raw).write_text(json.dumps(data),encoding='utf-8')
  q=run('timeline',raw,'--utc-us',clock+450000)['result'];assert q['sample']['seq']==2 and q['matched_media_us']==450000
  for speed in [0.01,0.5,1,2,100]:

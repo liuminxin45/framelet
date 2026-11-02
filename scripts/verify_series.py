@@ -40,7 +40,7 @@ class MCP:
             for line in self.p.stdout:
                 self.q.put(json.loads(line))
         threading.Thread(target=read, daemon=True).start()
-        self.rpc("initialize", {"protocolVersion": "2024-11-05", "capabilities": {},
+        self.rpc("initialize", {"protocolVersion": "2025-11-25", "capabilities": {},
                                 "clientInfo": {"name": "series-acceptance", "version": "1"}})
 
     def rpc(self, method, params=None):

@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased — current API and interruption safety
+
+- Breaking: remove blocking MCP recording; 20 current tools, catalog 2.0. Only timeline schema 2 is accepted; no implicit interval or identity conversion.
+- Single GIF capture is uniformly limited to 300 seconds across CLI/MCP/GUI; longer recordings use groups. Control session IDs are random, never PID/counter-based.
+- Stop/cancel are immediate, first intent wins; host/worker/pipe failures remain bounded. Recovery can resume after each publication boundary and uses process creation identity.
+- Add process interruption regressions, two Windows CI images, extracted-package validation, weekly real 650-second CLI/MCP jobs and mandatory engineering rules.
+
 ## v0.3.0-rc.1 — 2026-11-02
 
 - Raise CLI/MCP/GUI sampling ceiling to 60 FPS, use deadline-aware waits, and report encoded short-delay frames separately from trace warnings. Chromium playback can stretch 10ms GIF frames; native inspection is recommended, and browser sharing defaults to 30 FPS.

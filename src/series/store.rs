@@ -173,40 +173,6 @@ pub fn save_index(root: &Path, index: &Index) -> Result<()> {
     }
     crate::storage::replace_json_bounded(&target, index, INDEX_LIMIT)
 }
-pub fn process_stamp(pid: u32) -> Result<Option<u64>> {
-    use windows_sys::Win32::{Foundation::*, System::Threading::*};
-    if pid == 0 {
-        return Ok(None);
-    }
-    unsafe {
-        let h = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION | 0x00100000, 0, pid);
-        if h.is_null() {
-            ensure!(
-                GetLastError() == ERROR_INVALID_PARAMETER,
-                "cannot establish recording owner liveness"
-            );
-            return Ok(None);
-        }
-        let state = WaitForSingleObject(h, 0);
-        if state == 0 {
-            CloseHandle(h);
-            return Ok(None);
-        }
-        let mut c = std::mem::zeroed::<FILETIME>();
-        let mut e = c;
-        let mut k = c;
-        let mut u = c;
-        let ok = GetProcessTimes(h, &mut c, &mut e, &mut k, &mut u);
-        CloseHandle(h);
-        ensure!(
-            state == 258 && ok != 0,
-            "cannot read recording owner identity"
-        );
-        Ok(Some(
-            (c.dwHighDateTime as u64) << 32 | c.dwLowDateTime as u64,
-        ))
-    }
-}
 pub fn create(args: &SeriesArgs) -> Result<Plan> {
     args.validate()?;
     let parent = args.output_dir.canonicalize()?;
@@ -273,7 +239,8 @@ pub fn create(args: &SeriesArgs) -> Result<Plan> {
         state: "starting".into(),
         reason: "starting".into(),
         owner_pid: std::process::id(),
-        owner_created: process_stamp(std::process::id())?.context("owner exited")?,
+        owner_created: crate::identity::process_stamp(std::process::id())?
+            .context("owner exited")?,
         segment_seconds: args.segment_seconds,
         request_id: args.request_id.clone(),
         request,

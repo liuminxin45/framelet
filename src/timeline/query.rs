@@ -24,7 +24,9 @@ pub fn query(
                 <= 1,
         "choose media at OR utc_us"
     );
-    let d=load(gif)?.context("no adjacent timeline; recordings made before this feature have no recoverable interaction history")?;
+    let d = load(gif)?
+        .context("no adjacent timeline; input history cannot be reconstructed from pixels")?;
+    let asset_id = d.asset_id.as_deref().context("timeline asset ID missing")?;
     let at = at.map(|x| (x * 1e6) as u64);
     let selected_event = event_id.and_then(|id| d.events.iter().find(|e| e.id == Some(id)));
     let sample = d.samples.iter().find(|s| {
@@ -66,7 +68,7 @@ pub fn query(
         .filter(|e|if let Some(id)=event_id{e.id==Some(id)}else if at.is_none() && utc.is_none(){true}else{center.is_some_and(|t|e.media_us.is_some_and(|m|m.abs_diff(t)<=500_000))})
         .take(100)
         .map(|e| {
-            let mut v = json!({"id":e.id,"device":e.device,"event_uid":e.id.map(|id|format!("{}:observation:{id}",d.session_id)),"sample_id":e.sample_id,"sample_uid":e.sample_id.map(|id|format!("{}:observation:{id}",d.session_id)),"frame_uid":e.gif_frame.map(|f|format!("{}:frame:{f}",d.asset_id.as_deref().unwrap_or(&d.session_id))),"offset_us":e.offset_us,"vk":e.vk,"scan":e.scan,"key_name":e.key_name,"flags":e.flags,"unicode_utf16_unit":if e.device==Device::Keyboard && e.vk==Some(231){e.scan}else{None},"seq":e.seq,"utc_us":e.utc_us,"mono_us":e.mono_us,"kind":e.kind,"point":e.point,"injected":e.injected,"wheel":e.wheel,"media_us":e.media_us,"gif_frame":e.gif_frame});
+            let mut v = json!({"id":e.id,"device":e.device,"event_uid":e.id.map(|id|format!("{}:observation:{id}",d.session_id)),"sample_id":e.sample_id,"sample_uid":e.sample_id.map(|id|format!("{}:observation:{id}",d.session_id)),"frame_uid":e.gif_frame.map(|f|format!("{}:frame:{f}",asset_id)),"offset_us":e.offset_us,"vk":e.vk,"scan":e.scan,"key_name":e.key_name,"flags":e.flags,"unicode_utf16_unit":if e.device==Device::Keyboard && e.vk==Some(231){e.scan}else{None},"seq":e.seq,"utc_us":e.utc_us,"mono_us":e.mono_us,"kind":e.kind,"point":e.point,"injected":e.injected,"wheel":e.wheel,"media_us":e.media_us,"gif_frame":e.gif_frame});
             v["gif_point"] = json!(e.point.map(|p| [
                 p[0] as f64 * d.width as f64 / d.region.width.max(1) as f64,
                 p[1] as f64 * d.height as f64 / d.region.height.max(1) as f64

@@ -80,12 +80,7 @@ pub fn serve() -> Result<()> {
         let method = request["method"].as_str().unwrap_or("");
         let response = match method {
             "initialize" => {
-                let requested = request["params"]["protocolVersion"].as_str().unwrap_or("");
-                let version = if ["2024-11-05", "2025-03-26", "2025-06-18"].contains(&requested) {
-                    requested
-                } else {
-                    "2025-03-26"
-                };
+                let version = "2025-11-25";
                 json!({"result":{"protocolVersion":version,"capabilities":{"tools":{}},"serverInfo":{"name":"framelet","version":env!("CARGO_PKG_VERSION")},"instructions":"Framelet runs locally on Windows with an interactive desktop. Call framelet_context first to discover paths, documentation and capture_guidance FPS presets. Recording saves GIF + key/mouse/frame timeline + hash-bound capture manifest by default. Query framelet_timeline with event_id, at or utc_us for unique event/sample/frame IDs and offsets. Use framelet_recover after an interrupted worker exits. Recording runs in a supervised child process. Use windows/monitors to choose a region. For UI demos use start_recording, poll until recording, operate your browser/app, then stop_recording. Relative paths use output_root. Never capture secrets; masks are fixed rectangles relative to the selected region, not automatic detection. No capture starts during initialization. For efficient GIF editing: inspect duration; save opening/closing anchor PNGs with frame_at; bisect known single-action boundaries using reference + a stable compare_region + include_image:false (output optional). Use returned frame intervals to skip repeated probes, then visually review boundary images and trim with context. For unknown/multiple actions, first extract a small overview. See framelet_context editing_recipe."}})
             }
             "ping" => json!({"result":{}}),

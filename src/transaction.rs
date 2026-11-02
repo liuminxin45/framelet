@@ -27,7 +27,7 @@ pub fn begin(gif: &Path) -> Result<Pending> {
     let mut stage = crate::storage::StagedFile::new(&path)?;
     serde_json::to_writer(
         &mut stage.file,
-        &json!({"schema":1,"state":"pending","gif":gif.file_name().map(|n|n.to_string_lossy().into_owned()),"pid":std::process::id(),"transaction_id":crate::identity::new_id()?}),
+        &json!({"schema":1,"state":"pending","gif":gif.file_name().map(|n|n.to_string_lossy().into_owned()),"pid":std::process::id(),"owner_created":crate::identity::process_stamp(std::process::id())?,"transaction_id":crate::identity::new_id()?}),
     )?;
     stage.file.flush()?;
     stage.publish(&path)?;
@@ -62,7 +62,8 @@ pub fn verify(gif: &Path) -> Result<()> {
     ensure!(p.metadata()?.len() <= 8192, "manifest too large");
     let value: Value = serde_json::from_reader(std::fs::File::open(&p)?)?;
     ensure!(
-        value["state"] == "complete"
+        value["schema"] == 1
+            && value["state"] == "complete"
             && value["gif_sha256"].as_str() == Some(&crate::identity::sha256(gif)?)
             && value["timeline_sha256"].as_str()
                 == Some(&crate::identity::sha256(&crate::timeline::sidecar_path(
@@ -88,20 +89,21 @@ pub fn recover(gif: &Path) -> Result<Value> {
             && marker["gif"] == json!(gif.file_name().map(|n| n.to_string_lossy().into_owned())),
         "pending marker mismatch"
     );
-    let owner = marker["pid"].as_u64().unwrap_or(0) as u32;
-    unsafe {
-        use windows_sys::Win32::System::Threading::*;
-        let h = OpenProcess(
-            PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_SYNCHRONIZE,
-            0,
-            owner,
-        );
-        if !h.is_null() {
-            let alive = WaitForSingleObject(h, 0) == 258;
-            windows_sys::Win32::Foundation::CloseHandle(h);
-            ensure!(!alive, "transaction owner is still active");
-        }
-    }
+    let owner = marker["pid"]
+        .as_u64()
+        .and_then(|v| u32::try_from(v).ok())
+        .ok_or_else(|| anyhow::anyhow!("invalid transaction owner PID"))?;
+    let created = marker["owner_created"]
+        .as_u64()
+        .ok_or_else(|| anyhow::anyhow!("transaction owner creation time missing"))?;
+    ensure!(
+        owner != 0 || created == 0,
+        "invalid transaction owner identity"
+    );
+    ensure!(
+        crate::identity::process_stamp(owner)? != Some(created),
+        "transaction owner is still active"
+    );
     drop(_pending_lease);
     if !gif.exists() || !crate::timeline::sidecar_path(gif).exists() {
         return Ok(

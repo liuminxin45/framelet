@@ -5,9 +5,7 @@ pub const MAX_PARTS: usize = 4096;
 pub const INDEX_LIMIT: u64 = 8 * 1024 * 1024;
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Part {
-    #[serde(default)]
     pub observation_range: Option<[u64; 2]>,
-    #[serde(default)]
     pub utc_range: Option<[u64; 2]>,
     pub number: u32,
     pub start_ms: u64,

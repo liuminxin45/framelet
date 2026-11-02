@@ -25,7 +25,7 @@ def passed(name):
     print('PASS', name, flush=True)
 
 catalog = run('schema')
-assert len(catalog['tools']) == 21
+assert len(catalog['tools']) == 20
 passed('versioned tool catalog')
 
 with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
@@ -54,11 +54,11 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
     passed('overwrite refusal, invalid speed, empty range cleanup')
 
     requests = [
-        {'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-06-18'}},
+        {'jsonrpc':'2.0','id':1,'method':'initialize','params':{'protocolVersion':'2025-11-25'}},
         {'jsonrpc':'2.0','method':'notifications/initialized'},
         {'jsonrpc':'2.0','id':2,'method':'tools/list'},
         {'jsonrpc':'2.0','id':3,'method':'tools/call','params':{'name':'framelet_inspect','arguments':{'input':str(source)}}},
-        {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'framelet_record','arguments':{'output':str(folder/'x.gif'),'duration':301}}},
+        {'jsonrpc':'2.0','id':4,'method':'tools/call','params':{'name':'framelet_start_recording','arguments':{'output':str(folder/'x.gif'),'duration':301}}},
         {'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'framelet_shot','arguments':{'output':'x.png','cursor':'false'}}},
         {'jsonrpc':'2.0','id':6,'method':'tools/call','params':{'name':'framelet_inspect','arguments':{'input':str(source),'arbitrary':True}}},
     ]
@@ -66,8 +66,8 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
     assert p.returncode == 0, p.stderr
     responses = [json.loads(line) for line in p.stdout.splitlines()]
     assert len(responses) == 6
-    assert responses[0]['result']['protocolVersion'] == '2025-06-18'
-    assert len(responses[1]['result']['tools']) == 21
+    assert responses[0]['result']['protocolVersion'] == '2025-11-25'
+    assert len(responses[1]['result']['tools']) == 20
     assert responses[2]['result']['structuredContent']['result']['frames'] == 3
     assert all(x['result']['isError'] for x in responses[3:])
     passed('MCP handshake, notification, discovery, tool result and input errors')
