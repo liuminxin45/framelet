@@ -1,6 +1,11 @@
 # Changelog
 
-## Unreleased — v0.4 performance and current API
+## v0.4.0 — 2026-11-02
+
+- Native user-scoped `integrate install/check/uninstall` for Codex, Claude Code, Cursor and Claude Desktop; managed skill discovery where supported, private backups, explicit adoption, executable-path upgrades and restartable transactions. Uninstall preserves captures and restores adopted entries.
+- Official workflow Skill with focused testing/demo/editing recipes; five embedded MCP guide resources. Binary MCPB, portable, Skill and client plugin packages, registry metadata and a Claude Code repository marketplace.
+- Isolated integration/failure regressions, real Codex/Claude Code host checks, bundle/schema validators and distribution CI.
+
 
 - Breaking: remove blocking MCP recording; 23 current tools, catalog 3.0. Only timeline schema 2 is accepted; no implicit interval or identity conversion.
 - Single GIF capture is uniformly limited to 300 seconds across CLI/MCP/GUI; longer recordings use groups. Control session IDs are random, never PID/counter-based.

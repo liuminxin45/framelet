@@ -12,6 +12,8 @@ Call `framelet_context` first. `documentation` returns relative document paths, 
 
 先调用 context 获取路径、文档与帧率建议。本地开发版默认记录时间线；先查点击，再抽取操作前后画面。文档随便携包提供，源码目录也有 AGENTS.md 入口。
 
+Native installation and client bundles: [installation.md](installation.md). The runtime also exposes version-matched `framelet://guides/*` resources; hosts can read guides without resolving local filesystem paths.
+
 ## Install / 安装
 
 Download and extract the portable ZIP from [Releases](https://github.com/liuminxin45/framelet/releases), verify its SHA256, then use its actual **absolute EXE path** in your client's MCP configuration. The configuration format depends on the client; this is the common JSON form:
@@ -44,12 +46,12 @@ MCP 是协议，不是统一安装器。每个 AI 客户端需要注册本机命
 ## Record while operating / 边操作边录制
 
 1. Call `framelet_context` to discover the executable, output root and limits. Call `framelet_windows` / `framelet_monitors` to choose **physical-pixel** coordinates.
-2. Call `framelet_start_recording`, then poll `framelet_recording_status` until it reports `recording` with at least one sample. Operate your browser or app with your AI client's UI tools. Framelet records; it does not automate the page.
-3. Call `framelet_stop_recording`. If `terminal:false`, poll status until completion. Inspect the saved result, extract frames and review images before trimming a highlight.
+2. Call `framelet_start_recording`, then `framelet_wait_recording(until:"ready")`; inspect readiness or any early terminal result. Operate your browser or app with your AI client's UI tools. Framelet records; it does not automate the page.
+3. Call `framelet_stop_recording`, then `framelet_wait_recording(until:"terminal")` and inspect the saved result. Inspect the saved result, extract frames and review images before trimming a highlight.
 
 1. 先调用 `framelet_context` 获取安装和输出位置，再用 windows / monitors 确认**物理像素**区域。
-2. 调用 start，查询 status 直到 `recording` 且至少有一次采样，再用 AI 客户端的浏览器/桌面工具操作页面。Framelet 负责录像，页面操作由客户端完成。
-3. 调用 stop 保存；若 `terminal:false`，继续查询至完成。检查结果后抽帧看图，再裁出需要的片段。
+2. 调用 start，使用 wait_recording 等待 ready，检查是否提前结束，再用 AI 客户端的浏览器/桌面工具操作页面。Framelet 负责录像，页面操作由客户端完成。
+3. 调用 stop 保存，再使用 wait_recording 等待 terminal 并检查保存状态。检查结果后抽帧看图，再裁出需要的片段。
 
 ```json
 {
@@ -81,6 +83,8 @@ The current catalog exposes 23 tools. Recording uses background sessions only.
 | --- | --- |
 | `framelet_context`, `framelet_doctor` | Paths and capture readiness / 路径与录屏诊断 |
 | `framelet_monitors`, `framelet_windows` | Choose visible capture bounds / 选择可见录制区域 |
+| `framelet_wait_recording` | Wait for readiness/save without blocking controls / 等待就绪或保存，不阻塞控制 |
+| `framelet_probe_frames`, `framelet_analyze` | One-pass batch probes and action intervals / 单遍批量探针与动作区间 |
 | `framelet_start_recording`, `framelet_recording_status` | Background recording / 后台录制与状态 |
 | `framelet_pause_recording`, `framelet_resume_recording` | Exclude waiting time / 排除等待时段 |
 | `framelet_stop_recording`, `framelet_cancel_recording` | Save or discard unfinished output / 保存或取消未完成录像 |
@@ -106,11 +110,11 @@ The current catalog exposes 23 tools. Recording uses background sessions only.
 
 ## Timestamp probes / 时间点探针
 
-`framelet_frame_at` takes GIF `input` and `at` in seconds (0..3600). With the default `include_image:true`, a new PNG `output` is required. With `include_image:false`, `output` may be omitted: no image block is sent and no PNG is written. Optional `reference` is a full-size PNG; `compare_region` selects image-relative pixels, and `difference_threshold` is an integer 0..255 (default 24). The result reports changed-pixel fraction and mean absolute RGB error. A pixel changes when any channel's absolute difference exceeds the threshold. References must match source dimensions; the read-root policy applies.
+`framelet_frame_at` takes GIF `input` and `at` in seconds (0..3600 for one GIF; group global timestamps up to 86400). With the default `include_image:true`, a new PNG `output` is required. With `include_image:false`, `output` may be omitted: no image block is sent and no PNG is written. Optional `reference` is a full-size PNG; `compare_region` selects image-relative pixels, and `difference_threshold` is an integer 0..255 (default 24). The result reports changed-pixel fraction and mean absolute RGB error. A pixel changes when any channel's absolute difference exceeds the threshold. References must match source dimensions; the read-root policy applies.
 
 The returned frame index and half-open playback interval support interval caching. Exactly at GIF duration is out of range. Invalid timestamps, references or regions publish no output. Image responses include original/preview dimensions for coordinate mapping. See the [efficient agent recipe](agent-guide.md) and [real Bilibili example](demo.md).
 
-`framelet_frame_at` 接收 GIF 输入与秒数 `at`（0..3600）。默认 `include_image:true` 时必须提供新的 PNG `output`；传 `include_image:false` 后可以省略 `output`，不发送图片、不写 PNG。可选 `reference` 为原尺寸 PNG，`compare_region` 指定图像内的相对像素区域，`difference_threshold` 为 0..255 的整数（默认 24）。返回变化像素占比与 RGB 平均绝对差；任一通道绝对差超过阈值才计作变化像素。参考图尺寸必须匹配输入，且受读取根目录限制。
+`framelet_frame_at` 接收 GIF 输入与秒数 `at`（单 GIF 为 0..3600，分组全局时间可至 86400）。默认 `include_image:true` 时必须提供新的 PNG `output`；传 `include_image:false` 后可以省略 `output`，不发送图片、不写 PNG。可选 `reference` 为原尺寸 PNG，`compare_region` 指定图像内的相对像素区域，`difference_threshold` 为 0..255 的整数（默认 24）。返回变化像素占比与 RGB 平均绝对差；任一通道绝对差超过阈值才计作变化像素。参考图尺寸必须匹配输入，且受读取根目录限制。
 
 帧号与左闭右开的播放区间可用于缓存和跳跃，恰好等于 GIF 总时长的时间点越界。无效时间点、参考图或区域不会发布输出。图片响应还包含原图与预览尺寸，用于坐标映射。见 [Agent 高效剪辑指引](agent-guide.md) 和 [Bilibili 真实示例](demo.md)。
 

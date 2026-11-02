@@ -1,0 +1,4 @@
+interface:
+  display_name: "Framelet"
+  short_description: "Record and review Windows tests and demos"
+  default_prompt: "Use $framelet to record this Windows workflow, review its action boundaries and save a concise GIF."

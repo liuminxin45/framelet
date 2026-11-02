@@ -32,6 +32,7 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 | Capability | What it gives you |
 | --- | --- |
 | Native capture frame | Move, resize, record, pause and save; F8 control |
+| [Client installation + Skill](docs/installation.md) | Native setup/check/uninstall, MCPB and reusable AI recording recipes |
 | CLI + local MCP | Background recording while an agent operates your app |
 | [Reliable long recording](docs/long-recording.md) | Numbered GIFs of at most 300 seconds, automatic rotation and checkpoint recovery |
 | Keyboard/mouse/frame timeline | Locate failed steps and review action results |

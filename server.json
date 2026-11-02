@@ -1,0 +1,21 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.liuminxin45/framelet",
+  "title": "Framelet",
+  "description": "Tiny native Windows screen recorder with keyboard/mouse/frame sync and GIF review.",
+  "version": "0.4.0",
+  "repository": {
+    "url": "https://github.com/liuminxin45/framelet",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "mcpb",
+      "identifier": "https://github.com/liuminxin45/framelet/releases/download/v0.4.0/framelet-v0.4.0-windows-x64.mcpb",
+      "fileSha256": "e8cf77705d7e3b863b4eebf0b0cb26f4cb60a3332e2b7012877ec3c28d9abf54",
+      "transport": {
+        "type": "stdio"
+      }
+    }
+  ]
+}

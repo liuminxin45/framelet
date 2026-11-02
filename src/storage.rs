@@ -130,6 +130,13 @@ pub fn publish_file(file: &File, target: &Path) -> Result<()> {
 pub fn replace_json(target: &Path, value: &impl serde::Serialize) -> Result<()> {
     replace_json_bounded(target, value, 64 * 1024 * 1024)
 }
+pub fn replace_bytes(target: &Path, bytes: &[u8]) -> Result<()> {
+    let mut stage = StagedFile::new(target)?;
+    stage.file.write_all(bytes)?;
+    stage.file.flush()?;
+    stage.file.sync_all()?;
+    rename_file(&stage.file, target, true)
+}
 pub fn replace_json_bounded(
     target: &Path,
     value: &impl serde::Serialize,

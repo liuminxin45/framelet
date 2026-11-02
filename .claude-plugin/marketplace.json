@@ -1,0 +1,6 @@
+{
+  "name": "framelet",
+  "metadata": {"description": "Tiny Windows recording and GIF review for AI software tests and demos."},
+  "owner": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
+  "plugins": [{"name": "framelet", "source": "./", "description": "Windows keyboard/mouse/frame recording and GIF review for software testing and demos."}]
+}

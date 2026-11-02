@@ -7,6 +7,7 @@ mod frames;
 mod gui;
 mod hash_writer;
 mod identity;
+mod integration;
 mod json_io;
 mod mcp;
 mod recording;

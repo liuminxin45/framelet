@@ -35,6 +35,14 @@ try {
   assert.equal(tools.length, 23);
   assert(!tools.some(t => t.name === 'framelet_record'));
   checks.push('SDK initialization and tool discovery');
+  const resources=(await client.listResources()).resources;
+  assert.equal(resources.length,5);
+  const guide=await client.readResource({uri:'framelet://guides/editing'});
+  assert(guide.contents[0].text.includes('monotonic'));
+  assert.deepEqual((await client.listResourceTemplates()).resourceTemplates,[]);
+  await assert.rejects(()=>client.readResource({uri:'file:///private-config'}));
+  await client.ping();
+  checks.push('embedded workflow resources, empty template catalog and unsupported URI rejection');
   {
     const context = (await call('framelet_context', {})).structuredContent.result;
     const guidance = context.capture_guidance;

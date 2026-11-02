@@ -1,0 +1,26 @@
+{
+  "manifest_version": "0.3",
+  "name": "framelet",
+  "display_name": "Framelet",
+  "version": "0.4.0",
+  "description": "Tiny Windows keyboard/mouse/frame recording and GIF review through local MCP. 原生 Windows 键鼠帧同步录制与 GIF 抽帧剪辑。",
+  "author": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
+  "homepage": "https://github.com/liuminxin45/framelet",
+  "repository": {"type": "git", "url": "https://github.com/liuminxin45/framelet"},
+  "license": "MIT",
+  "server": {
+    "type": "binary",
+    "entry_point": "framelet.exe",
+    "mcp_config": {
+      "command": "${__dirname}/framelet.exe",
+      "args": ["mcp"],
+      "env": {"FRAMELET_MCP_ROOT": "${user_config.capture_directory}", "FRAMELET_MCP_READ_ROOTS": "[]"}
+    }
+  },
+  "compatibility": {"platforms": ["win32"]},
+  "user_config": {
+    "capture_directory": {"type": "directory", "title": "Recording directory / 录屏目录", "description": "Local outputs and allowed reads. Contains keyboard/mouse/frame sidecars.", "required": true, "default": "${DOCUMENTS}/Framelet"}
+  },
+  "tools_generated": true,
+  "keywords": ["windows", "screen-recording", "gif", "testing", "ai-native"]
+}

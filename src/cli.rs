@@ -27,6 +27,8 @@ struct Cli {
 }
 #[derive(Subcommand)]
 enum Command {
+    /// Install, check or remove a user-scoped MCP/Skill integration.
+    Integrate(crate::integration::Args),
     /// Open a resizable, click-through capture frame.
     Gui,
     #[command(hide = true)]
@@ -141,6 +143,7 @@ pub fn run() -> Result<()> {
         }
     };
     match cli.command.unwrap_or(Command::Gui) {
+        Command::Integrate(a) => print(json!({"ok":true,"result":crate::integration::run(&a)?}))?,
         Command::WorkerRecord => crate::worker::child_main()?,
         Command::WorkerAnalyze => crate::mcp::analysis::child_main()?,
         Command::Gui => crate::gui::run()?,

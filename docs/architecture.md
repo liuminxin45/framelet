@@ -86,3 +86,7 @@ GUI manual single-frame requests now pass through the same supervised recording 
 ## Performance services
 
 `json_io.rs` owns buffered serialization and explicit flush propagation. `mcp/analysis.rs` owns one persistent job-supervised analysis child, asynchronous pipe writes, bounded queue, cancellation and deadline; `mcp/wait.rs` holds active waits in the host event loop. Recording controls never enter the analysis queue. Responses are correlated by ID. `review_cache.rs` provides bounded typed immutable snapshots, verified by leased hashes on every lookup. `review/{probe,analyze,visual}.rs` own one-pass probes, spatial/input intervals and contact-sheet export. `frames.rs::scan` separates compositing from RGB conversion. `hash_writer.rs` streams SHA-256 state with committed bytes; `encode_metrics.rs` describes nested stage timings. Recovery independently validates content; cached metadata is never permission to bypass path/format checks.
+
+## Native integrations
+
+`integration/mod.rs` resolves explicit client/profile targets; `config.rs` edits one server entry with TOML formatting/JSON semantic preservation; `transaction.rs` owns private receipts, backups, before/after journals and bounded process locks; `probe.rs` checks the configured self executable over supervised stdio without capture or arbitrary command execution. Skills/resources share source references; packaging adapters keep client manifests separate from recorder business logic.

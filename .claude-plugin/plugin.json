@@ -1,0 +1,10 @@
+{
+  "name": "framelet",
+  "version": "0.4.0",
+  "description": "Tiny Windows screen recording with synchronized keyboard/mouse/frame evidence and efficient GIF review. Windows 键鼠帧同步录制与抽帧剪辑。",
+  "author": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
+  "homepage": "https://github.com/liuminxin45/framelet",
+  "repository": "https://github.com/liuminxin45/framelet",
+  "license": "MIT",
+  "mcpServers": "https://github.com/liuminxin45/framelet/releases/download/v0.4.0/framelet-v0.4.0-windows-x64.mcpb"
+}

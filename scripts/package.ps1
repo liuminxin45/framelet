@@ -17,6 +17,7 @@ try {
     if ([string]::IsNullOrWhiteSpace($version)) { throw "Missing package version" }
     Copy-Item -LiteralPath (Join-Path $root 'target\release\framelet.exe') -Destination $packageStage
     Copy-Item -LiteralPath (Join-Path $root 'README.md'), (Join-Path $root 'README.zh-CN.md'), (Join-Path $root 'ABOUT.md'), (Join-Path $root 'AGENTS.md'), (Join-Path $root 'LICENSE'), (Join-Path $root 'CHANGELOG.md') -Destination $packageStage
+    Copy-Item -LiteralPath (Join-Path $root 'skills') -Destination $packageStage -Recurse
     # Recorder + text docs + notices. Demo GIFs/PNGs are separate release assets.
     $docsSource = Join-Path $root 'docs'
     Get-ChildItem -LiteralPath $docsSource -File -Recurse | Where-Object { $_.Extension -in @('.md','.json') } | ForEach-Object {
@@ -35,7 +36,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Dependency license collection failed' }
     $binary = Join-Path $packageStage 'framelet.exe'
     (Get-FileHash -LiteralPath $binary -Algorithm SHA256).Hash.ToLower() + '  framelet.exe' | Set-Content -Encoding ascii (Join-Path $packageStage 'SHA256SUMS.txt')
-    $payload = @('framelet.exe','README.md','README.zh-CN.md','ABOUT.md','AGENTS.md','LICENSE','CHANGELOG.md','SHA256SUMS.txt','dependencies.json','THIRD_PARTY_NOTICES.md','licenses','docs') | ForEach-Object { Join-Path $packageStage $_ }
+    $payload = @('framelet.exe','README.md','README.zh-CN.md','ABOUT.md','AGENTS.md','LICENSE','CHANGELOG.md','SHA256SUMS.txt','dependencies.json','THIRD_PARTY_NOTICES.md','licenses','docs','skills') | ForEach-Object { Join-Path $packageStage $_ }
     $archive = Join-Path $Destination ('framelet-v'+$version+'-windows-x64.zip')
     $archiveStage = Join-Path $Destination ('archive-' + [guid]::NewGuid().ToString('N') + '.zip')
     try {
@@ -46,4 +47,6 @@ try {
         throw "Package publication failed (staging: $archiveStage): $_"
     }
     [pscustomobject]@{archive=$archive;exe_bytes=(Get-Item -LiteralPath $binary).Length;zip_bytes=(Get-Item -LiteralPath $archive).Length;sha256=(Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLower()} | ConvertTo-Json -Compress
+    python scripts/build_distribution.py $packageStage $Destination
+    if ($LASTEXITCODE -ne 0) { throw 'Client distribution packaging failed' }
 } finally { Pop-Location }

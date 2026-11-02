@@ -18,5 +18,5 @@ root.mkdir(parents=True, exist_ok=True)
 exe = (root / "actionlint.exe").resolve()
 with zipfile.ZipFile(io.BytesIO(payload)) as archive:
     exe.write_bytes(archive.read("actionlint.exe"))
-subprocess.run([str(exe), "-color", ".github/workflows/ci.yml"], check=True, timeout=30)
+subprocess.run([str(exe), "-color", *map(str,Path('.github/workflows').glob('*.yml'))], check=True, timeout=30)
 print(f"PASS actionlint {version} (verified SHA-256)")

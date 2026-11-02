@@ -1,0 +1,11 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "framelet",
+  "version": "0.4.0",
+  "description": "Record Windows software tests and demos, review synchronized actions and trim GIFs. Windows 键鼠帧同步录制与高效剪辑。",
+  "author": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
+  "repository": "https://github.com/liuminxin45/framelet",
+  "license": "MIT",
+  "keywords": ["recording", "windows", "testing", "gif"],
+  "extensions": {"com.openai": {"requires_local_executor": true, "interface": {"displayName": "Framelet", "shortDescription": "Tiny native Windows recording for AI", "developerName": "Neo / 刘民心"}}}
+}

@@ -1,6 +1,7 @@
 pub(crate) mod analysis;
 mod catalog;
 mod dispatch;
+mod resources;
 mod wait;
 use anyhow::Result;
 pub use catalog::catalog;
@@ -130,9 +131,17 @@ fn request(
     let response = match method {
         "initialize" => {
             let version = "2025-11-25";
-            json!({"result":{"protocolVersion":version,"capabilities":{"tools":{}},"serverInfo":{"name":"framelet","version":env!("CARGO_PKG_VERSION")},"instructions":"Framelet runs locally on Windows with an interactive desktop. Call framelet_context first to discover paths, documentation and capture_guidance FPS presets. Recording saves GIF + key/mouse/frame timeline + hash-bound capture manifest by default. Query framelet_timeline with event_id, at or utc_us for unique event/sample/frame IDs and offsets. Use framelet_recover after an interrupted worker exits. Recording runs in a supervised child process. Use windows/monitors to choose a region. For UI demos use start_recording, wait_recording until ready, operate your browser/app, stop_recording, then wait_recording until terminal. Waits and analysis never own the control loop. Relative paths use output_root. Never capture secrets; masks are fixed rectangles relative to the selected region, not automatic detection. No capture starts during initialization. For efficient GIF editing: query filtered timeline events first, analyze once for candidate intervals, then probe_frames with multiple timestamps in one pass. Default to numeric structured output; request a contact sheet only for visual review. Bisect only a known single monotonic boundary with a fixed reference/compare_region, and skip repeated frame intervals. Review opening and closing context before editing. See framelet_context efficient_review and docs/performance.md."}})
+            json!({"result":{"protocolVersion":version,"capabilities":{"tools":{},"resources":{}},"serverInfo":{"name":"framelet","version":env!("CARGO_PKG_VERSION")},"instructions":"Framelet runs locally on Windows with an interactive desktop. Call framelet_context first to discover paths, documentation and capture_guidance FPS presets. Recording saves GIF + key/mouse/frame timeline + hash-bound capture manifest by default. Query framelet_timeline with event_id, at or utc_us for unique event/sample/frame IDs and offsets. Use framelet_recover after an interrupted worker exits. Recording runs in a supervised child process. Use windows/monitors to choose a region. For UI demos use start_recording, wait_recording until ready, operate your browser/app, stop_recording, then wait_recording until terminal. Waits and analysis never own the control loop. Relative paths use output_root. Never capture secrets; masks are fixed rectangles relative to the selected region, not automatic detection. No capture starts during initialization. For efficient GIF editing: query filtered timeline events first, analyze once for candidate intervals, then probe_frames with multiple timestamps in one pass. Default to numeric structured output; request a contact sheet only for visual review. Bisect only a known single monotonic boundary with a fixed reference/compare_region, and skip repeated frame intervals. Review opening and closing context before editing. See framelet_context efficient_review and docs/performance.md."}})
         }
         "ping" => json!({"result":{}}),
+        "resources/list" => json!({"result":resources::list()}),
+        "resources/templates/list" => json!({"result":{"resourceTemplates":[]}}),
+        "resources/read" => {
+            match resources::read(request["params"]["uri"].as_str().unwrap_or("")) {
+                Some(value) => json!({"result":value}),
+                None => json!({"error":{"code":-32602,"message":"Unknown Framelet guide URI"}}),
+            }
+        }
         "tools/list" => json!({"result":{"tools":catalog()["tools"]}}),
         "tools/call" => {
             let p = &request["params"];

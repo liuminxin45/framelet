@@ -1,5 +1,7 @@
 # Framelet agent entry point
 
+For installation/distribution use [docs/installation.md](docs/installation.md). The official workflow skill is [skills/framelet/SKILL.md](skills/framelet/SKILL.md). Native integrate install/check/uninstall owns only its receipt-bound client entry and skill files; preserve private backups and captures.
+
 For efficient current MCP calls, read [docs/performance.md](docs/performance.md): await recording readiness/terminal state without model polling, discover action events, analyze intervals once and batch numeric probes before sending images. MCP 2025-11-25, current catalog 3.0 / 23 tools; responses may arrive out of order.
 
 Read [docs/engineering-standard.md](docs/engineering-standard.md) before modifying any code, tests, interface or documentation. It is the mandatory engineering contract: one current API/format, bounded failure handling, restartable recovery and SHA-bound verification.

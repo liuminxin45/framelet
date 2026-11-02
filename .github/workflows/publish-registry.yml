@@ -1,0 +1,47 @@
+name: Publish MCP Registry
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Immutable public Release tag, for example v0.4.0
+        required: true
+        type: string
+      source_commit:
+        description: Full commit SHA bound to that tag
+        required: true
+        type: string
+      package_sha256:
+        description: SHA-256 of the published MCPB asset
+        required: true
+        type: string
+permissions:
+  contents: read
+  id-token: write
+concurrency:
+  group: registry-${{ inputs.release_tag }}
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: windows-2025
+    timeout-minutes: 10
+    env:
+      PYTHONUTF8: "1"
+      RELEASE_TAG: ${{ inputs.release_tag }}
+      SOURCE_COMMIT: ${{ inputs.source_commit }}
+      PACKAGE_SHA256: ${{ inputs.package_sha256 }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_commit }}
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - name: Verify public Release and publish through OIDC
+        shell: pwsh
+        run: python scripts/publish_registry.py --tag $env:RELEASE_TAG --source $env:SOURCE_COMMIT --package-sha $env:PACKAGE_SHA256
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: registry-publication
+          path: work/registry-publication.json
+          retention-days: 30
