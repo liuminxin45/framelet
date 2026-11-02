@@ -91,10 +91,14 @@ pub struct Report {
     pub suggested_ranges: Vec<ClipRange>,
 }
 // Reconstruct cropped GIF frames before scoring or exporting. Keep only a canvas and optional Previous snapshot.
+pub fn validate_all(path: &Path) -> Result<()> {
+    decode(|_, _, _, _, _, _| Ok(true), path)
+}
 pub(crate) fn decode(
     mut visit: impl FnMut(usize, u64, u64, u32, u32, &[u8]) -> Result<bool>,
     path: &Path,
 ) -> Result<()> {
+    let _lease = crate::file_guard::Lease::input(path)?;
     ensure!(
         std::fs::metadata(path)?.len() <= 512 * 1024 * 1024,
         "GIF input exceeds 512 MiB budget"
@@ -143,6 +147,10 @@ pub(crate) fn decode(
                 *p = background;
             }
         }
+        ensure!(
+            f.buffer.len() == usize::from(f.width) * usize::from(f.height) * 4,
+            "invalid GIF frame pixel buffer"
+        );
         let saved = (f.dispose == gif::DisposalMethod::Previous).then(|| canvas.clone());
         for y in 0..usize::from(f.height) {
             for x in 0..usize::from(f.width) {
@@ -191,7 +199,7 @@ pub(crate) fn decode(
     ensure!(index > 0, "GIF contains no frames");
     Ok(())
 }
-fn resize(rgb: &[u8], w: u32, h: u32, tw: u32, th: u32) -> Vec<u8> {
+pub(crate) fn resize(rgb: &[u8], w: u32, h: u32, tw: u32, th: u32) -> Vec<u8> {
     let mut out = Vec::with_capacity(tw as usize * th as usize * 3);
     for y in 0..th {
         for x in 0..tw {
@@ -279,7 +287,7 @@ fn png_bytes(rgb: &[u8], w: u32, h: u32) -> Result<Vec<u8>> {
     Ok(out)
 }
 // Tiny numeric labels map each sheet tile to the corresponding manifest entry.
-fn label(canvas: &mut [u8], w: usize, x: usize, y: usize, n: usize) {
+pub(crate) fn label(canvas: &mut [u8], w: usize, x: usize, y: usize, n: usize) {
     const DIGITS: [[u8; 5]; 10] = [
         [7, 5, 5, 5, 7],
         [2, 6, 2, 2, 7],
@@ -327,6 +335,7 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
         a.padding.is_finite() && (0.0..=60.0).contains(&a.padding),
         "padding must be 0..60 seconds"
     );
+    let _output_lease = crate::file_guard::Lease::output(&a.output)?;
     let input = a.input.canonicalize().context("open input GIF")?;
     ensure!(
         std::fs::metadata(&input)?.len() <= 512 * 1024 * 1024,
@@ -370,7 +379,8 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
         },
         &input,
     )?;
-    let total = samples.last().unwrap().at + samples.last().unwrap().delay;
+    let last_sample = samples.last().context("GIF contains no samples")?;
+    let total = last_sample.at + last_sample.delay;
     let chosen = choose(&samples, a, total);
     let selected: BTreeMap<_, _> = chosen
         .iter()
@@ -464,6 +474,13 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
     std::fs::rename(&stage.0, &output).context("publish frame directory")?;
     Ok(report)
 }
+pub fn extract_value(a: &ExtractArgs) -> Result<serde_json::Value> {
+    if crate::series::is_group(&a.input) {
+        crate::series::extract(a)
+    } else {
+        Ok(serde_json::to_value(extract(a)?)?)
+    }
+}
 /// GIFs have no general random-access index: decode the prefix, but return only one image.
 /// This saves model context during bisection; it does not promise logarithmic decoder work.
 pub struct ProbeOptions {
@@ -486,6 +503,14 @@ pub fn at(
     output: Option<&Path>,
     options: ProbeOptions,
 ) -> Result<serde_json::Value> {
+    if crate::series::is_group(input) {
+        let (file, local, start) = crate::series::locate(input, seconds)?;
+        let mut value = at(&file, local, output, options)?;
+        value["recording_group"] = serde_json::json!(input);
+        value["segment_start_ms"] = serde_json::json!(start);
+        value["global_requested_ms"] = serde_json::json!((seconds * 1000.0).floor() as u64);
+        return Ok(value);
+    }
     ensure!(
         seconds.is_finite() && (0.0..=3600.0).contains(&seconds),
         "at must be 0..3600 seconds"
@@ -533,7 +558,8 @@ pub fn at(
                                 rgb[at + 1].abs_diff(ref_pixels[at + 1]),
                                 rgb[at + 2].abs_diff(ref_pixels[at + 2]),
                             ];
-                            changed += u64::from(*diffs.iter().max().unwrap() > options.threshold);
+                            changed +=
+                                u64::from(diffs[0].max(diffs[1]).max(diffs[2]) > options.threshold);
                             sum += diffs.iter().map(|d| u64::from(*d)).sum::<u64>();
                         }
                     }
@@ -567,7 +593,8 @@ pub fn at(
     result.context("timestamp is outside GIF playback duration")
 }
 
-fn read_png(path: &Path) -> Result<(u32, u32, Vec<u8>)> {
+pub(crate) fn read_png(path: &Path) -> Result<(u32, u32, Vec<u8>)> {
+    let _lease = crate::file_guard::Lease::input(path)?;
     ensure!(
         std::fs::metadata(path)?.len() <= 32 * 1024 * 1024,
         "PNG exceeds 32 MiB budget"

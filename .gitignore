@@ -4,3 +4,6 @@
 /work/
 *.tmp
 *.partial
+
+__pycache__/
+*.pyc

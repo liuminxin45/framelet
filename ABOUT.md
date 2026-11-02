@@ -1,15 +1,19 @@
 # About Framelet · 关于 Framelet
 
-**Tiny. Self-contained. Callable by AI.**<br>
-**小体积，无需额外运行时，AI 可通过 MCP 调用。**
+**CLI First · AI Native · Keyboard–Mouse–Frame synchronization**<br>
+**CLI 优先 · 本地 MCP · 键鼠帧同步的 Windows 录制工具。**
 
-Framelet is a native Windows GIF/PNG screen recorder built with Rust and Win32. The v0.2 preview EXE is about **1.1 MiB**. Unzip and run; no Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required. Windows system APIs and a static CRT provide the local runtime foundation. Open-source Rust libraries are compiled in; their license notices are included in the portable package.
+Built for AI-driven software automation tests, bug reproduction, product showcases and walkthroughs. Record screen and input together, locate actions by unique identity or time, then extract frames and trim GIFs. / 面向基于 AI 的软件自动化测试、问题复现、产品展示与操作演示；同步录制键鼠与画面，按唯一标识或时间定位操作，再抽帧、复核与剪辑。
 
-Framelet 是使用 Rust + Win32 编写的原生 Windows GIF/PNG 录屏工具。v0.2 预览版单个 EXE 约 **1.1 MiB**，解压即用，无需额外安装 Python、Node.js、.NET、FFmpeg 或浏览器运行时，也无需账号和模型 API Key。程序使用 Windows 系统 API 和静态 CRT；编译进程序的开源 Rust 库及其许可证声明随便携包提供。
+Framelet is a native Windows GIF/PNG screen recorder built with Rust and Win32. It ships as one small native EXE. Unzip and run; no Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required. Windows system APIs and a static CRT provide the local runtime foundation. Open-source Rust libraries are compiled in; their license notices are included in the portable package.
 
-Three entrances share the same local capture/encoding foundation: a small native window, a JSON-oriented CLI, and a stdio MCP server with 17 tools. An AI host launches the EXE, discovers its paths with `framelet_context`, then records, probes timestamps, reviews images and trims clips. No model or cloud upload service is embedded.
+Framelet 是使用 Rust + Win32 编写的原生 Windows GIF/PNG 录屏工具。使用一个小巧原生 EXE，解压即用，无需额外安装 Python、Node.js、.NET、FFmpeg 或浏览器运行时，也无需账号和模型 API Key。程序使用 Windows 系统 API 和静态 CRT；编译进程序的开源 Rust 库及其许可证声明随便携包提供。
 
-同一套本地捕获与编码基础提供三种入口：原生小窗口、面向 JSON 的 CLI、包含 17 个工具的 MCP stdio 服务。AI 客户端启动 EXE 后，用 `framelet_context` 发现路径，即可录制、按时间点取帧、看图和裁片。程序不内嵌大模型或云端上传服务。
+CLI and the local MCP server are the core interfaces; a native capture frame is also available. Local development provides 21 MCP tools, default input/frame timelines, unique event/sample/frame links, supervised recording workers and hash-bound recovery manifests. Reliable long recordings rotate into a named group of GIFs, each at most 300 seconds, with durable checkpoints. No model or cloud upload service is embedded.
+
+CLI 与本地 MCP 是核心入口，同时保留原生捕获框。本地开发版提供 21 个 MCP 工具、默认键鼠帧时间线、唯一事件/采样/画面关联、受监督录制子进程与内容校验恢复清单。可靠长录制按组命名，每段最长 300 秒自动轮转，并保留持久检查点。不内嵌大模型或云端上传服务。
+
+Input events retain original IDs and computer time through native editing; derived GIFs have new asset IDs. Sampling differences are explicit offsets. Keyboard recording is key-level input, not clipboard or IME text extraction. 按键、鼠标事件经剪辑后保留原始身份和电脑时间，派生 GIF 使用新资产标识，并明确返回采样偏差；键盘记录是按键级事件，不读取剪贴板或输入法提交文本。[Timeline / 时间线](docs/timeline.md)。
 
 [Real Bilibili walkthrough / Bilibili 真实案例](docs/demo.md) · [MCP guide / MCP 配置](docs/mcp.md) · [Changelog / 变更记录](CHANGELOG.md)
 

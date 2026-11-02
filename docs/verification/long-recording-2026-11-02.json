@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "version": "0.3.0-dev",
+  "exe_sha256": "6195740543d35aa305bdadc6d22e114b901bbefb5bc7494eb36f7d7aad6717a5",
+  "exe_bytes": 2683904,
+  "unit_tests": 16,
+  "verification_command_groups": 14,
+  "mutation_iterations": 1000,
+  "mcp_tools": 21,
+  "scenario": "Real 64x64 GDI capture with full-region privacy mask, 1 FPS; lifecycle and persistence validation, not a motion benchmark.",
+  "results": {
+    "cli600": {
+      "part_durations_ms": [
+        300000,
+        300000
+      ],
+      "elapsed_seconds": 601.8120000000345,
+      "empty_work_directory": true,
+      "summed_rss_peak_bytes": 22298624
+    },
+    "mcp650": {
+      "part_durations_ms": [
+        300000,
+        300000,
+        50000
+      ],
+      "elapsed_seconds": 653.2030000000377,
+      "empty_work_directory": true,
+      "summed_rss_peak_bytes": 22392832
+    }
+  },
+  "memory_note": "Host + worker RSS sum includes shared pages; not unique physical memory.",
+  "fixed_during_acceptance": [
+    "Rounded total-duration boundary created an unpublished empty part header in .work; prevent next-part allocation and remove empty stages.",
+    "Cross-connection duplicate requests must not report a live recording as terminal or start another worker.",
+    "Low-FPS checkpoint writes must retain the held source until the next sample/boundary, avoiding shortened intermediate parts.",
+    "Disk accounting uses Windows enumeration metadata to tolerate asynchronous temporary-file rename/deletion."
+  ],
+  "limits": [
+    "Each GIF is at most 300 seconds; capacity/metadata/decoder budgets can rotate sooner.",
+    "Checkpoint target is approximately five seconds, not zero-loss power-failure protection.",
+    "Normal EOF saves. Forced host/worker termination requires recovery. Detached capture is not implemented."
+  ],
+  "committed_part_readable_while_recording": true
+}

@@ -1,7 +1,4 @@
-use crate::{
-    capture::{Grabber, Region},
-    encode::{GifWriter, Stats},
-};
+use crate::{capture::Region, encode::Stats};
 use anyhow::{Result, ensure};
 use std::{
     mem::size_of,
@@ -12,7 +9,7 @@ use std::{
         atomic::{AtomicU64, Ordering},
         mpsc::{self, Receiver, Sender},
     },
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 use windows_sys::Win32::{
     Foundation::*,
@@ -51,6 +48,14 @@ struct App {
     controls: Vec<HWND>,
     folder: PathBuf,
 }
+struct FontGuard(HFONT);
+impl Drop for FontGuard {
+    fn drop(&mut self) {
+        unsafe {
+            DeleteObject(self.0);
+        }
+    }
+}
 pub fn run() -> Result<()> {
     unsafe {
         FreeConsole();
@@ -86,6 +91,8 @@ pub fn run() -> Result<()> {
             0,
             wide("Segoe UI").as_ptr(),
         );
+        ensure!(!font.is_null(), "CreateFont failed");
+        let _font_guard = FontGuard(font);
         let mut app = Box::new(App {
             session: None,
             last: None,
@@ -114,10 +121,22 @@ pub fn run() -> Result<()> {
         } // QA override permits screenshots of the frame itself.
         ShowWindow(hwnd, SW_SHOWNORMAL);
         UpdateWindow(hwnd);
-        SetTimer(hwnd, 1, 150, None);
-        RegisterHotKey(hwnd, 1, MOD_NOREPEAT, 0x77); // F8: global start/stop
+        if SetTimer(hwnd, 1, 150, None) == 0 {
+            DestroyWindow(hwnd);
+            anyhow::bail!("GUI status timer unavailable");
+        }
+        if RegisterHotKey(hwnd, 1, MOD_NOREPEAT, 0x77) == 0 {
+            crate::runtime::report("gui.hotkey", &anyhow::anyhow!("F8 registration failed"));
+            app.status = "F8 unavailable; use Record button".into();
+        } // F8: global start/stop
         let mut msg: MSG = std::mem::zeroed();
-        while GetMessageW(&mut msg, null_mut(), 0, 0) > 0 {
+        loop {
+            let received = GetMessageW(&mut msg, null_mut(), 0, 0);
+            ensure!(received >= 0, "GetMessage failed: {}", GetLastError());
+            if received == 0 {
+                break;
+            }
+
             if IsDialogMessageW(hwnd, &msg) == 0 {
                 TranslateMessage(&msg);
                 DispatchMessageW(&msg);
@@ -127,7 +146,6 @@ pub fn run() -> Result<()> {
             let _ = s.tx.send(Cmd::Stop);
             let _ = s.rx.recv_timeout(Duration::from_secs(30));
         }
-        DeleteObject(font);
         Ok(())
     }
 }
@@ -208,81 +226,35 @@ unsafe fn region(hwnd: HWND) -> Region {
         }
     }
 }
-fn start_worker(r: Region, fps: u32, cursor: bool, path: PathBuf, paused: bool) -> Session {
+fn start_worker(r: Region, fps: u32, cursor: bool, path: PathBuf, paused: bool) -> Result<Session> {
     let (tx, commands) = mpsc::channel();
     let (done, rx) = mpsc::channel();
     let count = Arc::new(AtomicU64::new(0));
     let progress = count.clone();
-    std::thread::spawn(move || {
-        let result = (|| -> Result<Stats> {
-            let grab = Grabber::new(r, cursor)?;
-            let mut writer = GifWriter::new(&path, r.width, r.height, 10)?;
-            let mut paused = paused;
-            let mut single = paused;
-            let began = Instant::now();
-            let mut pending: Option<(Vec<u8>, Instant)> = None;
-            let mut timing_error = 0.0;
-            let mut flush = |pending: &mut Option<(Vec<u8>, Instant)>,
-                             writer: &mut GifWriter,
-                             until: Instant|
-             -> Result<()> {
-                if let Some((pixels, at)) = pending.take() {
-                    let desired = until.duration_since(at).as_secs_f64() * 100.0 + timing_error;
-                    let delay = desired.round().clamp(1.0, 65535.0);
-                    timing_error = desired - delay;
-                    writer.push(pixels, delay as u16)?;
-                }
-                Ok(())
-            };
-            loop {
-                let tick = Instant::now();
-                let mut stop = false;
-                for cmd in commands.try_iter() {
-                    match cmd {
-                        Cmd::Stop => stop = true,
-                        Cmd::Pause(v) => {
-                            if v && !paused {
-                                flush(&mut pending, &mut writer, Instant::now())?;
-                            }
-                            paused = v;
-                        }
-                        Cmd::Frame => single = true,
-                    }
-                }
-                if stop {
-                    break;
-                }
-                if !paused {
-                    let captured_at = Instant::now();
-                    let pixels = grab.rgb()?;
-                    flush(&mut pending, &mut writer, captured_at)?;
-                    pending = Some((pixels, captured_at));
-                    progress.store(writer.samples + 1, Ordering::Relaxed);
-                    single = false;
-                } else if single {
-                    writer.push(grab.rgb()?, 10)?;
-                    progress.store(writer.samples, Ordering::Relaxed);
-                    single = false;
-                }
-                if began.elapsed() >= Duration::from_secs(3600) {
-                    break;
-                }
-                std::thread::sleep(
-                    Duration::from_secs_f64(1.0 / f64::from(fps)).saturating_sub(tick.elapsed()),
-                );
-            }
-            flush(&mut pending, &mut writer, Instant::now())?;
-            writer.finish()
-        })();
-        let _ = done.send(result.map_err(|e| format!("{e:#}")));
-    });
-    Session {
+    std::thread::Builder::new()
+        .name("framelet-gui-capture".into())
+        .spawn(move || {
+            let result=crate::runtime::guard("gui.recording",||{
+            let args:crate::recording::RecordArgs=serde_json::from_value(serde_json::json!({"region":r,"fps":fps,"cursor":cursor,"output":path,"duration":3600}))?;
+            let control=crate::recording::Control::default();control.paused.store(paused,Ordering::Relaxed);control.single.store(paused,Ordering::Relaxed);
+            crate::recording::run(&args,&control,||{
+                progress.store(control.samples.load(Ordering::Relaxed),Ordering::Relaxed);
+                let mut stop=false;for command in commands.try_iter(){match command{Cmd::Stop=>stop=true,Cmd::Pause(p)=>control.paused.store(p,Ordering::Relaxed),Cmd::Frame=>control.single.store(true,Ordering::Relaxed)}}
+                stop
+            })
+        });
+        let _ = done.send(result.map_err(|e| {
+                crate::runtime::report("gui.recording", &e);
+                format!("{e:#}")
+            }));
+        })?;
+    Ok(Session {
         tx,
         rx,
         count,
         paused,
         stopping: false,
-    }
+    })
 }
 unsafe fn start(hwnd: HWND, paused: bool) {
     unsafe {
@@ -306,10 +278,17 @@ unsafe fn start(hwnd: HWND, paused: bool) {
             == BST_CHECKED as isize;
         let stamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_millis();
+            .unwrap_or_default()
+            .as_nanos();
         let path = a.folder.join(format!("framelet-{stamp}.gif"));
-        a.session = Some(start_worker(r, fps, cursor, path, paused));
+        match start_worker(r, fps, cursor, path, paused) {
+            Ok(worker) => a.session = Some(worker),
+            Err(e) => {
+                crate::runtime::report("gui.spawn", &e);
+                a.status = format!("Cannot start: {e}");
+                return;
+            }
+        }
         a.status = "Recording".into();
         text(hwnd, RECORD, "Stop  [F8]");
         text(hwnd, PAUSE, if paused { "Resume" } else { "Pause" });
@@ -351,7 +330,7 @@ unsafe fn command(hwnd: HWND, id: u16) {
             SAVE => {
                 if let Some(path) = app(hwnd).last.clone() {
                     let mut buffer = [0u16; 32768];
-                    let name = path.file_name().unwrap().to_string_lossy();
+                    let name = path.file_name().unwrap_or_default().to_string_lossy();
                     let n = wide(&name);
                     buffer[..n.len()].copy_from_slice(&n);
                     let filter = wide("Animated GIF (*.gif)\0*.gif\0");
@@ -365,36 +344,94 @@ unsafe fn command(hwnd: HWND, id: u16) {
                     let ext = wide("gif");
                     dialog.lpstrDefExt = ext.as_ptr();
                     if GetSaveFileNameW(&mut dialog) != 0 {
-                        let end = buffer.iter().position(|v| *v == 0).unwrap();
+                        let end = buffer.iter().position(|v| *v == 0).unwrap_or(buffer.len());
                         let dest = PathBuf::from(String::from_utf16_lossy(&buffer[..end]));
-                        let result = (|| -> Result<()> {
-                            let mut input = std::fs::File::open(&path)?;
-                            let mut out = std::fs::OpenOptions::new()
-                                .write(true)
-                                .create_new(true)
-                                .open(&dest)?;
-                            std::io::copy(&mut input, &mut out)?;
-                            out.sync_all()?;
-                            Ok(())
+                        let result = (|| -> Result<Vec<String>> {
+                            crate::timeline::available(&dest)?;
+                            let timeline = crate::timeline::load(&path)?;
+                            let _pending = if timeline.is_some() {
+                                Some(crate::transaction::begin(&dest)?)
+                            } else {
+                                None
+                            };
+                            let warnings = crate::storage::copy(&path, &dest)?;
+                            if let Some(data) = timeline {
+                                crate::timeline::publish(&dest, &data)?;
+                                crate::transaction::complete(&dest)?;
+                            }
+                            Ok(warnings)
                         })();
                         app(hwnd).status = match result {
-                            Ok(()) => format!("Saved: {}", dest.display()),
-                            Err(e) => format!("Save failed: {e}"),
+                            Ok(warnings) => format!(
+                                "Saved: {}{}",
+                                dest.display(),
+                                if warnings.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!(" / warning: {}", warnings.join("; "))
+                                }
+                            ),
+                            Err(e) => {
+                                crate::runtime::report("gui.save_as", &e);
+                                format!("Save failed (check saved files): {e}")
+                            }
                         };
                     }
                 }
             }
             FOLDER => {
-                let _ = std::process::Command::new("explorer.exe")
+                if let Err(e) = std::process::Command::new("explorer.exe")
                     .arg(&app(hwnd).folder)
-                    .spawn();
+                    .spawn()
+                {
+                    crate::runtime::report("gui.open_folder", &e.into());
+                    app(hwnd).status = "Cannot open folder; inspect diagnostics".into();
+                }
             }
             _ => {}
         }
         InvalidateRect(hwnd, null(), 1);
     }
 }
+thread_local! {static IN_CALLBACK:std::cell::Cell<bool>=const{std::cell::Cell::new(false)};}
+struct CallbackGuard;
+impl Drop for CallbackGuard {
+    fn drop(&mut self) {
+        IN_CALLBACK.with(|c| c.set(false));
+    }
+}
 unsafe extern "system" fn proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
+    // SendMessage/modal dialogs re-enter synchronously. Do not create another App
+    // reference while the outer callback may still hold a mutable reference.
+    if IN_CALLBACK.with(|c| c.replace(true)) {
+        return unsafe {
+            match msg {
+                WM_CLOSE | WM_COMMAND | WM_HOTKEY | WM_TIMER => 0,
+                WM_DESTROY => {
+                    UnregisterHotKey(hwnd, 1);
+                    KillTimer(hwnd, 1);
+                    PostQuitMessage(0);
+                    0
+                }
+                _ => DefWindowProcW(hwnd, msg, w, l),
+            }
+        };
+    }
+    let _guard = CallbackGuard;
+    match crate::runtime::guard("gui.callback", || Ok(unsafe { proc_impl(hwnd, msg, w, l) })) {
+        Ok(v) => v,
+        Err(e) => {
+            crate::runtime::report("gui.callback", &e);
+            unsafe {
+                if GetWindowLongPtrW(hwnd, GWLP_USERDATA) != 0 {
+                    app(hwnd).status = "Operation failed; inspect diagnostics".into();
+                }
+                DefWindowProcW(hwnd, msg, w, l)
+            }
+        }
+    }
+}
+unsafe fn proc_impl(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
     unsafe {
         if msg == WM_NCCREATE {
             let cs = &*(l as *const CREATESTRUCTW);
@@ -435,6 +472,13 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LR
                     BS_AUTOCHECKBOX as u32,
                 );
                 EnableWindow(GetDlgItem(hwnd, SAVE as i32), 0);
+                if app(hwnd).controls.iter().any(|h| h.is_null()) {
+                    crate::runtime::report(
+                        "gui.controls",
+                        &anyhow::anyhow!("CreateWindowEx failed for a control"),
+                    );
+                    return -1;
+                }
                 layout(hwnd);
                 0
             }
@@ -456,6 +500,10 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LR
                 0
             }
             WM_SYSCOMMAND => {
+                if (w as u32 & 0xfff0) == SC_CLOSE {
+                    PostMessageW(hwnd, WM_CLOSE, 0, 0);
+                    return 0;
+                }
                 if app(hwnd).session.is_some()
                     && ((w as u32 & 0xfff0) == SC_MOVE || (w as u32 & 0xfff0) == SC_SIZE)
                 {
@@ -467,9 +515,17 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LR
                 let completion = app(hwnd)
                     .session
                     .as_ref()
-                    .and_then(|s| s.rx.try_recv().ok());
+                    .and_then(|s| match s.rx.try_recv() {
+                        Ok(v) => Some(v),
+                        Err(mpsc::TryRecvError::Empty) => None,
+                        Err(mpsc::TryRecvError::Disconnected) => Some(Err(
+                            "Recording worker disconnected; inspect diagnostics and output files"
+                                .into(),
+                        )),
+                    });
                 if let Some(result) = completion {
                     app(hwnd).session = None;
+                    SetFocus(GetDlgItem(hwnd, RECORD as i32));
                     text(hwnd, RECORD, "Record  [F8]");
                     text(hwnd, PAUSE, "Pause");
                     EnableWindow(GetDlgItem(hwnd, FPS as i32), 1);
@@ -482,10 +538,18 @@ unsafe extern "system" fn proc(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LR
                                 s.duration_ms as f64 / 1000.0,
                                 s.bytes as f64 / 1024.0
                             );
+                            if !s.warnings.is_empty() {
+                                app(hwnd)
+                                    .status
+                                    .push_str(&format!(" / warning: {}", s.warnings.join("; ")));
+                            }
                             app(hwnd).last = Some(s.output);
                             EnableWindow(GetDlgItem(hwnd, SAVE as i32), 1);
                         }
-                        Err(e) => app(hwnd).status = e,
+                        Err(e) => {
+                            crate::runtime::report("gui.worker", &anyhow::anyhow!("{e}"));
+                            app(hwnd).status = e;
+                        }
                     }
                 } else if let Some(s) = &app(hwnd).session
                     && !s.stopping

@@ -84,6 +84,11 @@ with tempfile.TemporaryDirectory(prefix='framelet-safety-') as tmp:
             done = terminal(sid)
             assert done['result']['state'] == 'completed', done
             saved = root/'paused.gif'
+            timeline = json.loads(saved.with_suffix('.timeline.json').read_text(encoding='utf-8'))
+            pairs=list(zip(timeline['samples'],timeline['samples'][1:]))
+            assert any(b['capture_us']-a['hold_end_us']>200000 for a,b in pairs), timeline
+            assert all(a['media_end_us']==b['media_start_us'] for a,b in pairs)
+            assert all(s['cursor'] is None for s in timeline['samples'])
             data = saved.read_bytes()
             assert tool('framelet_stop_recording', {'session_id':sid}) == done
             assert tool('framelet_cancel_recording', {'session_id':sid}) == done

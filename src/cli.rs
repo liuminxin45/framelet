@@ -1,11 +1,12 @@
+pub use crate::recording::RecordArgs;
 use crate::{
-    capture::{self, Grabber, Region},
+    capture::{self, Region},
     encode,
 };
 use anyhow::{Result, ensure};
 use clap::{Parser, Subcommand};
-use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde::Serialize;
+use serde_json::json;
 use std::{
     io::Write,
     path::PathBuf,
@@ -28,8 +29,20 @@ struct Cli {
 enum Command {
     /// Open a resizable, click-through capture frame.
     Gui,
+    #[command(hide = true)]
+    WorkerRecord,
     /// Record a GIF. Ctrl+C finalizes and saves a valid file.
     Record(RecordArgs),
+    /// Record a uniquely named group of GIFs; each part is at most 300 seconds.
+    RecordSeries(crate::series::SeriesArgs),
+    /// List recording groups in an output directory (bounded, paginated).
+    Recordings {
+        root: PathBuf,
+        #[arg(long, default_value_t = 0)]
+        offset: usize,
+        #[arg(long, default_value_t = 16)]
+        limit: usize,
+    },
     /// Capture a single PNG.
     Shot {
         #[arg(long, allow_hyphen_values = true)]
@@ -45,6 +58,18 @@ enum Command {
     Windows,
     /// Inspect an animated GIF.
     Inspect { input: PathBuf },
+    /// Recover a finalized pending GIF/timeline pair without inventing missing data.
+    Recover { input: PathBuf },
+    /// Query capture timestamps and mouse interaction (bounded JSON).
+    Timeline {
+        input: PathBuf,
+        #[arg(long)]
+        at: Option<f64>,
+        #[arg(long)]
+        utc_us: Option<u64>,
+        #[arg(long)]
+        event_id: Option<u64>,
+    },
     /// Extract reviewable PNG frames, a contact sheet and timestamp/clip suggestions from a GIF.
     Frames(crate::frames::ExtractArgs),
     /// Return the composited frame covering a timestamp (seconds); useful for binary-search review.
@@ -87,64 +112,6 @@ enum Command {
     /// Serve Model Context Protocol using JSON-RPC on stdin/stdout.
     Mcp,
 }
-#[derive(Parser, Clone, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct RecordArgs {
-    #[arg(long, allow_hyphen_values = true)]
-    #[serde(default)]
-    pub region: Option<Region>,
-    #[arg(long, default_value_t = 10)]
-    #[serde(default = "default_fps")]
-    pub fps: u32,
-    #[arg(long, default_value_t = 5.0)]
-    #[serde(default = "default_duration")]
-    pub duration: f64,
-    #[arg(short, long)]
-    pub output: PathBuf,
-    #[arg(long)]
-    #[serde(default)]
-    pub cursor: bool,
-    /// 1 = best color quantization, 30 = fastest.
-    #[arg(long, default_value_t = 10)]
-    #[serde(default = "default_quality")]
-    pub quality: i32,
-    /// Named stop handle, e.g. demo. Stop with `framelet stop --session demo`.
-    #[arg(long)]
-    #[serde(default)]
-    pub session: Option<String>,
-    /// Emit JSON Lines progress on stderr; final result is always JSON on stdout.
-    #[arg(long)]
-    #[serde(default)]
-    pub events: bool,
-    /// Scale down to this width, preserving aspect ratio. Never upscale.
-    #[arg(long)]
-    #[serde(default)]
-    pub max_width: Option<u32>,
-    /// Solid privacy rectangles, relative to the capture region: x,y,width,height. Repeatable.
-    #[arg(long = "mask", allow_hyphen_values = true)]
-    #[serde(default)]
-    pub masks: Vec<Region>,
-    /// Countdown before capture, in seconds (0..30).
-    #[arg(long, default_value_t = 0.0)]
-    #[serde(default)]
-    pub delay: f64,
-    /// Maximum GIF bytes in MiB; exceeding the budget discards unfinished output.
-    #[arg(long, default_value_t = 256)]
-    #[serde(default = "default_max_mib")]
-    pub max_mib: u64,
-}
-fn default_max_mib() -> u64 {
-    256
-}
-fn default_fps() -> u32 {
-    10
-}
-fn default_duration() -> f64 {
-    5.0
-}
-fn default_quality() -> i32 {
-    10
-}
 pub fn print(v: impl Serialize) -> Result<()> {
     let mut out = std::io::stdout().lock();
     serde_json::to_writer(&mut out, &v)?;
@@ -152,8 +119,21 @@ pub fn print(v: impl Serialize) -> Result<()> {
     Ok(())
 }
 pub fn run() -> Result<()> {
-    let cli = Cli::parse();
+    let cli = match Cli::try_parse() {
+        Ok(cli) => cli,
+        Err(e) => {
+            if matches!(
+                e.kind(),
+                clap::error::ErrorKind::DisplayHelp | clap::error::ErrorKind::DisplayVersion
+            ) {
+                e.print()?;
+                return Ok(());
+            }
+            return Err(anyhow::anyhow!("invalid CLI arguments: {e}"));
+        }
+    };
     match cli.command.unwrap_or(Command::Gui) {
+        Command::WorkerRecord => crate::worker::child_main()?,
         Command::Gui => crate::gui::run()?,
         Command::Record(a) => {
             let cancel = Arc::new(AtomicBool::new(false));
@@ -161,15 +141,45 @@ pub fn run() -> Result<()> {
             ctrlc::set_handler(move || c.store(true, Ordering::Relaxed))?;
             print(json!({"ok":true,"result":record(&a,Some(&cancel))?}))?;
         }
+        Command::RecordSeries(a) => {
+            let cancel = Arc::new(AtomicBool::new(false));
+            let flag = cancel.clone();
+            ctrlc::set_handler(move || flag.store(true, Ordering::Relaxed))?;
+            let event = a.session.as_deref().map(StopEvent::create).transpose()?;
+            let plan = crate::series::create(&a)?;
+            ensure!(
+                plan.index.state == "starting" && plan.index.owner_pid == std::process::id(),
+                "request_id already exists; inspect/recover its recording group"
+            );
+            print(
+                json!({"ok":true,"result":crate::series::run(&plan,&crate::recording::Control::default(),||cancel.load(Ordering::Relaxed)||event.as_ref().is_some_and(|e|e.signaled()))?}),
+            )?;
+        }
+        Command::Recordings {
+            root,
+            offset,
+            limit,
+        } => print(json!({"ok":true,"result":crate::series::discover(&root,offset,limit)?}))?,
         Command::Shot {
             region,
             output,
             cursor,
-        } => print(json!({"ok":true,"result":shot(region,&output,cursor)?}))?,
+        } => print(json!({"ok":true,"result":crate::recording::shot(region,&output,cursor)?}))?,
         Command::Monitors => print(json!({"ok":true,"result":capture::monitors()}))?,
         Command::Windows => print(json!({"ok":true,"result":capture::windows()}))?,
-        Command::Inspect { input } => print(json!({"ok":true,"result":encode::inspect(&input)?}))?,
-        Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract(&a)?}))?,
+        Command::Recover { input } => print(
+            json!({"ok":true,"result":if crate::series::is_group(&input){crate::series::recover(&input)?}else{crate::transaction::recover(&input)?}}),
+        )?,
+        Command::Inspect { input } => print(
+            json!({"ok":true,"result":if crate::series::is_group(&input){crate::series::inspect(&input,0,16)?}else{encode::inspect(&input)?}}),
+        )?,
+        Command::Timeline {
+            input,
+            at,
+            utc_us,
+            event_id,
+        } => print(json!({"ok":true,"result":crate::timeline::query(&input,at,utc_us,event_id)?}))?,
+        Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract_value(&a)?}))?,
         Command::FrameAt {
             input,
             at,
@@ -191,30 +201,11 @@ pub fn run() -> Result<()> {
             stop(&session)?;
             print(json!({"ok":true,"session":session,"stop_requested":true}))?;
         }
-        Command::Doctor => print(doctor())?,
+        Command::Doctor => print(crate::recording::doctor())?,
         Command::Schema => print(crate::mcp::catalog())?,
         Command::Mcp => crate::mcp::serve()?,
     }
     Ok(())
-}
-pub fn doctor() -> Value {
-    let d = capture::desktop();
-    let probe = Grabber::new(
-        Region {
-            x: d.x,
-            y: d.y,
-            width: 1,
-            height: 1,
-        },
-        false,
-    )
-    .and_then(|g| g.rgb());
-    json!({"ok":probe.is_ok(),"version":env!("CARGO_PKG_VERSION"),"platform":"windows-x64","backend":"GDI BitBlt + DIB","desktop":d,"capture_probe":probe.is_ok(),"error":probe.err().map(|e|e.to_string()),"formats":["gif","png"],"network_required":false,"audio":false})
-}
-pub fn shot(region: Option<Region>, path: &std::path::Path, cursor: bool) -> Result<Value> {
-    let r = region.unwrap_or_else(capture::desktop);
-    let g = Grabber::new(r, cursor)?;
-    encode::screenshot(path, r.width, r.height, &g.rgb()?)
 }
 pub fn record(a: &RecordArgs, cancel: Option<&AtomicBool>) -> Result<encode::Stats> {
     let event = a.session.as_deref().map(StopEvent::create).transpose()?;

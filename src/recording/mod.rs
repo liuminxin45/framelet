@@ -1,9 +1,12 @@
+mod options;
+mod services;
 use crate::{
     capture::{self, Grabber, Region},
-    cli::RecordArgs,
     encode::{GifWriter, Stats},
 };
 use anyhow::{Result, ensure};
+pub use options::RecordArgs;
+pub use services::{doctor, shot};
 use std::{
     sync::atomic::{AtomicBool, AtomicU8, AtomicU64, Ordering},
     time::{Duration, Instant},
@@ -11,7 +14,9 @@ use std::{
 
 #[derive(Default)]
 pub struct Control {
+    pub series: std::sync::Mutex<Option<serde_json::Value>>,
     pub stop: AtomicBool,
+    pub single: AtomicBool,
     pub cancel: AtomicBool,
     pub paused: AtomicBool,
     pub phase: AtomicU8, // 0 preparing/countdown, 1 recording, 2 paused, 3 finalizing
@@ -96,7 +101,16 @@ pub fn transform(mut rgb: Vec<u8>, r: Region, w: u32, h: u32, masks: &[Region]) 
     out
 }
 pub fn run(a: &RecordArgs, c: &Control, external_stop: impl Fn() -> bool) -> Result<Stats> {
+    crate::worker::supervise(a, c, external_stop)
+}
+pub(crate) fn run_local(
+    a: &RecordArgs,
+    c: &Control,
+    external_stop: impl Fn() -> bool,
+    mut notify: impl FnMut(&Control),
+) -> Result<Stats> {
     let (r, w, h) = validate(a)?;
+    crate::timeline::available(&a.output)?;
     let wait = Instant::now();
     while wait.elapsed().as_secs_f64() < a.delay {
         ensure!(
@@ -105,10 +119,12 @@ pub fn run(a: &RecordArgs, c: &Control, external_stop: impl Fn() -> bool) -> Res
                 && !external_stop(),
             "recording cancelled before capture"
         );
+        notify(c);
         std::thread::sleep(Duration::from_millis(20));
     }
     let grab = Grabber::new(r, a.cursor)?;
     let mut writer = GifWriter::new(&a.output, w, h, a.quality)?;
+    writer.track(r, &a.masks)?;
     writer.set_limit(a.max_mib * 1024 * 1024);
     let start = Instant::now();
     let duration = Duration::from_secs_f64(a.duration);
@@ -121,12 +137,12 @@ pub fn run(a: &RecordArgs, c: &Control, external_stop: impl Fn() -> bool) -> Res
     let mut was_paused = false;
     let mut progress = Instant::now();
     if a.events {
-        eprintln!(
-            "{}",
-            serde_json::json!({"event":"started","region":r,"width":w,"height":h})
+        crate::runtime::progress(
+            serde_json::json!({"event":"started","region":r,"width":w,"height":h}),
         );
     }
     loop {
+        notify(c);
         let now = Instant::now();
         if !was_paused {
             active +=
@@ -138,47 +154,66 @@ pub fn run(a: &RecordArgs, c: &Control, external_stop: impl Fn() -> bool) -> Res
             "recording cancelled; unfinished output discarded"
         );
         let paused = c.paused.load(Ordering::Relaxed);
-        let stopping =
-            start.elapsed() >= duration || c.stop.load(Ordering::Relaxed) || external_stop();
+        let stopping = start.elapsed() >= duration
+            || active >= duration
+            || c.stop.load(Ordering::Relaxed)
+            || external_stop();
         c.elapsed_ms
             .store(active.as_millis() as u64, Ordering::Relaxed);
         if a.events && progress.elapsed() >= Duration::from_secs(1) {
-            eprintln!(
-                "{}",
-                serde_json::json!({"event":"progress","elapsed_ms":start.elapsed().as_millis(),"recorded_ms":active.as_millis(),"samples":c.samples.load(Ordering::Relaxed),"paused":paused})
+            crate::runtime::progress(
+                serde_json::json!({"event":"progress","elapsed_ms":start.elapsed().as_millis(),"recorded_ms":active.as_millis(),"samples":c.samples.load(Ordering::Relaxed),"paused":paused}),
             );
             progress = Instant::now();
         }
         if (paused || stopping || active >= next) && previous.is_some() {
             let target = (active.as_secs_f64() * 100.0).round() as u64;
             let delay = target.saturating_sub(accounted).clamp(1, 65535) as u16;
-            writer.push(previous.take().unwrap(), delay)?;
+            if let Some(pixels) = previous.take() {
+                writer.push(pixels, delay)?;
+            }
             accounted += u64::from(delay);
         }
         if stopping {
             if writer.samples == 0 {
-                writer.push(transform(grab.rgb()?, r, w, h, &a.masks), 1)?;
+                let pixels = writer.capture(&grab)?;
+                writer.push(transform(pixels, r, w, h, &a.masks), 1)?;
             }
             break;
+        }
+        if paused && c.single.swap(false, Ordering::Relaxed) {
+            let pixels = writer.capture(&grab)?;
+            writer.push(transform(pixels, r, w, h, &a.masks), 10)?;
+            accounted += 10;
+            active += Duration::from_millis(100);
+            c.samples.fetch_add(1, Ordering::Relaxed);
         }
         if paused {
             c.phase.store(2, Ordering::Relaxed);
         }
         if !paused && (was_paused || active >= next) {
-            let rgb = transform(grab.rgb()?, r, w, h, &a.masks);
+            let rgb = transform(writer.capture(&grab)?, r, w, h, &a.masks);
             previous = Some(rgb);
             c.samples.fetch_add(1, Ordering::Relaxed);
             c.phase.store(1, Ordering::Relaxed);
-            next = active + period;
+            next = if was_paused {
+                active + period
+            } else {
+                next + period
+            };
+            if next <= active {
+                next = active + period;
+            }
         }
         was_paused = paused;
         // Bounded polling keeps pause/stop/EOF responsive, including at 1 fps.
         std::thread::sleep(Duration::from_millis(10));
     }
     c.phase.store(3, Ordering::Relaxed);
+    notify(c);
     let stats = writer.finish()?;
     if a.events {
-        eprintln!("{}", serde_json::json!({"event":"saved","result":stats}));
+        crate::runtime::progress(serde_json::json!({"event":"saved","result":stats}));
     }
     Ok(stats)
 }

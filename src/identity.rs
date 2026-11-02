@@ -1,0 +1,123 @@
+use anyhow::{Result, ensure};
+use std::{io::Read, path::Path};
+use windows_sys::Win32::Security::Cryptography::*;
+pub fn new_id() -> Result<String> {
+    let mut bytes = [0u8; 16];
+    ensure!(
+        unsafe {
+            BCryptGenRandom(
+                std::ptr::null_mut(),
+                bytes.as_mut_ptr(),
+                16,
+                BCRYPT_USE_SYSTEM_PREFERRED_RNG,
+            )
+        } >= 0,
+        "Windows random ID generation failed"
+    );
+    Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
+}
+struct Hasher {
+    algorithm: BCRYPT_ALG_HANDLE,
+    hash: BCRYPT_HASH_HANDLE,
+    _object: Vec<u8>,
+}
+impl Drop for Hasher {
+    fn drop(&mut self) {
+        unsafe {
+            if !self.hash.is_null() {
+                BCryptDestroyHash(self.hash);
+            }
+            if !self.algorithm.is_null() {
+                BCryptCloseAlgorithmProvider(self.algorithm, 0);
+            }
+        }
+    }
+}
+pub fn sha256(path: &Path) -> Result<String> {
+    let _lease = crate::file_guard::Lease::input(path)?;
+    sha256_reader(std::fs::File::open(path)?)
+}
+pub fn sha256_reader(mut source: impl Read) -> Result<String> {
+    let mut h = Hasher {
+        algorithm: std::ptr::null_mut(),
+        hash: std::ptr::null_mut(),
+        _object: vec![],
+    };
+    ensure!(
+        unsafe {
+            BCryptOpenAlgorithmProvider(
+                &mut h.algorithm,
+                BCRYPT_SHA256_ALGORITHM,
+                std::ptr::null(),
+                0,
+            )
+        } >= 0,
+        "SHA-256 provider unavailable"
+    );
+    let mut len = 0u32;
+    let mut got = 0;
+    ensure!(
+        unsafe {
+            BCryptGetProperty(
+                h.algorithm,
+                BCRYPT_OBJECT_LENGTH,
+                (&mut len as *mut u32).cast(),
+                4,
+                &mut got,
+                0,
+            )
+        } >= 0
+            && len <= 1024 * 1024,
+        "SHA-256 object size failed"
+    );
+    h._object = vec![0; len as usize];
+    ensure!(
+        unsafe {
+            BCryptCreateHash(
+                h.algorithm,
+                &mut h.hash,
+                h._object.as_mut_ptr(),
+                len,
+                std::ptr::null(),
+                0,
+                0,
+            )
+        } >= 0,
+        "SHA-256 initialization failed"
+    );
+    let mut buffer = [0u8; 65536];
+    loop {
+        let n = source.read(&mut buffer)?;
+        if n == 0 {
+            break;
+        }
+        ensure!(
+            unsafe { BCryptHashData(h.hash, buffer.as_ptr(), n as u32, 0) } >= 0,
+            "SHA-256 update failed"
+        );
+    }
+    let mut digest = [0u8; 32];
+    ensure!(
+        unsafe { BCryptFinishHash(h.hash, digest.as_mut_ptr(), 32, 0) } >= 0,
+        "SHA-256 finish failed"
+    );
+    Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn native_hash_and_ids() {
+        let a = new_id().unwrap();
+        let b = new_id().unwrap();
+        assert_ne!(a, b);
+        assert_eq!(a.len(), 32);
+        let path = std::env::temp_dir().join(format!("framelet-hash-{a}"));
+        std::fs::write(&path, b"abc").unwrap();
+        assert_eq!(
+            sha256(&path).unwrap(),
+            "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"
+        );
+        std::fs::remove_file(path).unwrap();
+    }
+}

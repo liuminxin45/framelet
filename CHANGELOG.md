@@ -1,5 +1,28 @@
 # Changelog
 
+## v0.3.0-dev — local, unreleased
+
+- Reliable rotating recordings: `record-series` / `framelet_start_series`, GIF parts of at most 300 seconds, named `.framelet` groups, global observation identity and relative-path indexes.
+- Durable frame-prefix SHA-256 checkpoints, independently committed segment receipts, index backup/recovery, bounded asynchronous finalization and normal MCP EOF save; cancel preserves committed parts.
+- Group discovery, global timestamp/frame queries and bounded contact-sheet overviews. Native scene ranking and editing remain per GIF. Catalog 1.7 exposes 21 tools.
+- Real rotation/fault tests and opt-in CLI/MCP 650-second acceptance scripts; checkpoints do not promise zero loss under power or storage failure.
+- Default keyboard/mouse/frame synchronization: shared observation IDs, key transitions, sample/frame links, signed offsets and exact event-ID queries.
+- Supervised recording child processes and kill-on-close jobs shared by CLI, MCP and GUI; worker crash/hang recovery and a new MCP recovery tool.
+- Directory/input leases, no-overwrite rename publication, native SHA-256 binding and capture completion/recovery manifests.
+- Per-process diagnostic rotation, license subtree preservation, pinned CI Actions, scheduled mutation campaigns and dependency checks; workload-specific resource benchmark.
+- Product-focused bilingual README/About for AI software automation testing, demonstrations and frame extraction/editing.
+
+- Split MCP/timeline responsibilities, move recording models/services out of CLI, and add architecture/audit docs.
+- Add unwind task boundaries, structured failures, rotating diagnostics and staged no-overwrite copying.
+- Harden GUI worker/reentrancy/failure reporting, GDI synchronization, bounded mouse shutdown and sidecar frame/coordinate validation.
+- Add failure-injection, malformed-metadata and small GIF mutation regression checks.
+
+- Default GUI/CLI/MCP interaction sidecars: original UTC/monotonic capture intervals, mouse events, merged-sample mapping and bounded positional dwell queries.
+- Native trim/speed remapping preserves original capture/event identity; GUI Save As copies metadata.
+- Scoped, bounded MCP timeline queries, automatic document discovery and AGENTS.md; product-focused bilingual READMEs.
+- Timeline regression checks cover rounded playback intervals, repeated edits, privacy masks and malformed/mismatched metadata.
+
+
 ## v0.2.0-rc.2 — 2026-11-02
 
 - Add bilingual FPS recommendations to README and the agent guide: 1 FPS for stable states, 3–5 for development workflows, 10–15 for compact GIFs, 30 for polished demos and 40–50 for fast motion checks.

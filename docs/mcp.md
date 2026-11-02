@@ -1,8 +1,16 @@
 # MCP · Local recording for AI / AI 本地录屏
 
+Local development now exposes 21 tools, including `framelet_start_series`, `framelet_recording_list` and `framelet_recover`. `framelet_timeline` accepts `event_id` and returns keyboard/mouse events, unique observation/sample/frame links and timing offsets. Each explicit recording runs in a supervised child process and writes GIF + timeline + content-hash manifest. Keyboard observation is active only during recording, never on MCP initialization. See [timeline.md](timeline.md) and [reliable long recording](long-recording.md) for scope and semantics. Ordinary single-GIF calls retain their 300-second MCP bound; series return immediately and rotate at most every 300 active seconds, with a separate task lifetime. Normal EOF saves a series; a killed process requires recovery.
+
 The portable EXE **is** the MCP server: your AI client launches `framelet.exe mcp` and exchanges JSON-RPC over stdin/stdout. It runs on the Windows computer whose visible desktop you want to capture. There is no daemon to start, model API key or server runtime to install. Initialization alone never starts capture.
 
 便携 EXE **本身就是 MCP 服务**。AI 客户端按配置自动启动 `framelet.exe mcp`，通过标准输入输出通信。它必须运行在被录制的 Windows 电脑上，并有交互式桌面。无需单独启动常驻服务、安装服务运行时或填写模型 API Key；连接 MCP 不会自动录屏。
+
+## Discover local guidance / 默认发现文档
+
+Call `framelet_context` first. `documentation` returns relative document paths, a local document root and a repository fallback URL. The local development version records timestamps/mouse events by default and adds `framelet_timeline`; see [timeline.md](timeline.md). Older releases may lack this tool.
+
+先调用 context 获取路径、文档与帧率建议。本地开发版默认记录时间线；先查点击，再抽取操作前后画面。文档随便携包提供，源码目录也有 AGENTS.md 入口。
 
 ## Install / 安装
 
@@ -85,13 +93,13 @@ v0.2 预览版共 17 个工具；v0.1.0 保留原来的 7 个。以下新增能�
 
 - MCP capture requires an explicit `region` or `full_screen:true`. Outputs resolve under the configured root; existing files are never overwritten. Parent directories must exist. Inputs are limited to configured read roots. Traversal, UNC/device paths and alternate data streams are rejected. Canonical parent paths prevent ordinary junction escapes. These are mistake guards for trusted local clients, not an OS security sandbox against another local process racing directory changes.
 - Privacy masks are fixed solid rectangles **relative to the source region**, applied before scaling/encoding. They do not detect secrets, track moving elements or stop unrelated windows from covering the region. Review the recording before sharing.
-- Background sessions have a maximum 300-second wall-clock duration (plus an optional 0–30-second countdown). Native capture/encoding must return before a stop can finish; the 10-second stop wait is not a hard kill of a stalled Windows driver. A finalized file is published without replacement; handled cancellation/errors discard the session's partial output. An OS crash/power loss can leave a uniquely named `.partial` file.
+- Ordinary single-GIF background sessions have a maximum 300-second wall-clock duration (plus an optional 0–30-second countdown). The tool waits up to 10 seconds on stop; the supervisor separately enforces worker heartbeat/stop deadlines and terminates a stalled child. A finalized file is published without replacement; ordinary cancellation discards unfinished single-GIF output. Series use separate task budgets, save on normal EOF and preserve committed parts on cancel; see [long-recording.md](long-recording.md).
 - Capture: 16 MP, 8192 pixels per side, 1–50 fps, 80 MP/s encoded-pixel budget; output defaults to 256 MiB, configurable 1–1024 MiB. GIF processing: 512 MiB input, 100000 frames, 2 billion composited canvas pixels, 60 seconds per decode pass. Oversized/invalid JSON-RPC requests return an error while preserving the next request.
 - No network upload, telemetry, shell execution or audio capture is built in. GIF/PNG output currently; MP4, semantic highlight detection, a visual timeline and background-window capture are not implemented.
 
 - MCP 必须明确区域或传 `full_screen:true`；输出限定在配置根目录内，已有文件不可覆盖，父目录需已存在；读取也受目录限制。拒绝路径穿越、UNC/设备路径、备用数据流，并核对父目录的真实路径。这是防误操作机制，不能代替操作系统沙箱防范其他本地进程竞态替换目录。
 - 遮挡是相对源区域左上角的固定纯色矩形，先遮挡再缩放编码；不自动识别秘密、不跟随元素移动，也不能阻止其他窗口遮住录制区域。分享前仍需检查录像。
-- 后台会话最长 300 秒，另可设置 0–30 秒倒计时。暂停也受最长时间约束；停止需要等待原生调用返回，10 秒等待上限不能硬中断卡住的 Windows 驱动。正常错误和取消清理本会话的临时文件；系统崩溃或断电可能留下 `.partial`。
+- 普通单 GIF 后台会话最长 300 秒，另可设置 0–30 秒倒计时，暂停仍受墙钟上限约束。停止工具最多等待 10 秒；监督层另有心跳和停止期限，失效子进程会被结束。分段任务采用独立总预算，正常断连停止保存，取消保留已提交段；详见 [长录制指引](long-recording.md)。
 - 像素、帧率、文件大小、GIF 解码工作量均有上限；格式错误或过大的 JSON-RPC 请求不会破坏后续请求的处理。
 - 不内置上传、遥测、shell 执行或音频采集。当前输出 GIF/PNG；尚无 MP4、语义选片、可视时间轴或后台窗口录制。
 

@@ -108,7 +108,19 @@ impl Grabber {
                 ReleaseDC(null_mut(), screen);
                 bail!("CreateDIBSection failed")
             }
+            if bits.is_null() {
+                DeleteObject(bitmap);
+                DeleteDC(memory);
+                ReleaseDC(null_mut(), screen);
+                bail!("CreateDIBSection returned null pixels");
+            }
             let old = SelectObject(memory, bitmap);
+            if old.is_null() || old as isize == -1 {
+                DeleteObject(bitmap);
+                DeleteDC(memory);
+                ReleaseDC(null_mut(), screen);
+                bail!("SelectObject failed");
+            }
             Ok(Self {
                 screen,
                 memory,
@@ -164,6 +176,7 @@ impl Grabber {
                     }
                 }
             }
+            ensure!(GdiFlush() != 0, "GdiFlush failed before pixel read");
             let src =
                 std::slice::from_raw_parts(self.bits, r.width as usize * r.height as usize * 4);
             let mut rgb = Vec::with_capacity(src.len() / 4 * 3);

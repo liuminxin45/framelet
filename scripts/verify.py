@@ -25,7 +25,7 @@ def passed(name):
     print('PASS', name, flush=True)
 
 catalog = run('schema')
-assert len(catalog['tools']) == 17
+assert len(catalog['tools']) == 21
 passed('versioned tool catalog')
 
 with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
@@ -67,7 +67,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
     responses = [json.loads(line) for line in p.stdout.splitlines()]
     assert len(responses) == 6
     assert responses[0]['result']['protocolVersion'] == '2025-06-18'
-    assert len(responses[1]['result']['tools']) == 17
+    assert len(responses[1]['result']['tools']) == 21
     assert responses[2]['result']['structuredContent']['result']['frames'] == 3
     assert all(x['result']['isError'] for x in responses[3:])
     passed('MCP handshake, notification, discovery, tool result and input errors')
@@ -87,10 +87,10 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
             assert image.size == (160,120)
         passed('live PNG and timed GIF capture')
         session = f'verify-{time.time_ns()}'
-        child = subprocess.Popen([exe,'record','--region',region,'--duration','20','--session',session,'--output',str(folder/'stopped.gif')],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+        child = subprocess.Popen([exe,'record','--region',region,'--duration','20','--session',session,'--output',str(folder/'stopped.gif')],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding="utf-8")
         try:
             for _ in range(100):
-                stop = subprocess.run([exe,'stop','--session',session],capture_output=True,text=True)
+                stop = subprocess.run([exe,'stop','--session',session],capture_output=True,text=True,encoding="utf-8")
                 if stop.returncode == 0: break
                 time.sleep(0.05)
             else: raise AssertionError('session never became ready')

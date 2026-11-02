@@ -1,5 +1,7 @@
 # Efficient GIF editing for agents · Agent 高效 GIF 剪辑指引
 
+For recordings longer than one GIF, read [long-recording.md](long-recording.md): `framelet_start_series` returns immediately and rotates into a named group, each part at most 300 seconds. Query the group by global media time before selecting a part for scene ranking or editing. Normal EOF saves, forced termination requires recovery. / 长录制先读该指引：分段按组保存，先全局定位再局部抽帧剪辑，不要每 300 秒重新开始一个任务。
+
 **Use playback time, a stable image region and the returned frame interval. Send images only when a visual decision is needed.**
 
 **按播放时间二分，比较稳定区域，利用帧覆盖区间跳跃。只有需要视觉判断时才发送图片。**
@@ -7,6 +9,16 @@
 This workflow is advertised in MCP initialization instructions and `framelet_context.editing_recipe`. It uses Framelet's native tools; no Python, FFmpeg or image-analysis runtime needs to be installed with the recorder.
 
 MCP 初始化说明和 `framelet_context.editing_recipe` 会告知 Agent 这套流程。下面的差分由 Framelet 原生完成，运行录屏工具不需要额外安装 Python、FFmpeg 或图像分析运行时。
+
+## Default interaction timeline / 默认交互时间线
+
+Schema-2 recordings default to keyboard + mouse + frame synchronization. Call `framelet_timeline` with `event_id` to retrieve one event and its unique sample/frame identity and offset. Read [timeline.md](timeline.md) before interpreting links. Recordings run in a kill-on-close supervised worker; failed sessions include output/pending paths. Use `framelet_recover` after an interrupted worker has exited. Never repeat a click or keystroke just because metadata publication failed; inspect the GIF/manifest and failure first.
+
+新版默认记录键鼠帧。先查事件 ID，再查看对应及相邻画面；不要因元数据错误就重复点击或输入。读 `warnings`、`manifest` 和偏差字段，确认画面是否真正覆盖了动作。记录不包含剪贴板或输入法最终文本；按键内容仍可能敏感。
+
+Every new recording saves an adjacent `.timeline.json`. Query `framelet_timeline` with the GIF path, optionally `at` (GIF seconds) OR `utc_us` (original UTC microseconds). Read [timeline.md](timeline.md) for event codes, coordinates, pause and edit semantics. Use event media times with frame_at to inspect the picture before/after an action. Old recordings have no recoverable interaction history. [Development and validation](development.md) and [MCP setup](mcp.md) live outside README.
+
+每次新录制默认保存相邻时间线。先查 `framelet_timeline`，按点击缩小范围，再取图复核；低帧率可记录点击，但不能补回漏采的画面。运行时先调用 context 获取允许的路径和文档位置。
 
 ## 0. Choose capture FPS / 先选择采集帧率
 

@@ -8,6 +8,18 @@ pub struct Paths {
     reads: Vec<PathBuf>,
 }
 impl Paths {
+    pub fn output_root(&self) -> &std::path::Path {
+        &self.root
+    }
+    pub fn output_directory(&self, value: &str) -> Result<PathBuf> {
+        let path = self.resolve(value, false)?;
+        ensure!(
+            path.is_dir() && path.starts_with(&self.root),
+            "output_dir must be a directory inside output_root"
+        );
+        let _lease = crate::file_guard::Lease::output(&path.join(".framelet-directory"))?;
+        Ok(path)
+    }
     pub fn new() -> Result<Self> {
         let root = std::env::var_os("FRAMELET_MCP_ROOT")
             .map(PathBuf::from)
@@ -31,7 +43,7 @@ impl Paths {
         Ok(Self { root, reads })
     }
     pub fn context(&self) -> Value {
-        json!({"executable":std::env::current_exe().ok(),"working_directory":std::env::current_dir().ok(),"output_root":self.root,"read_roots":self.reads,"transport":"stdio","platform":"windows","formats":["gif","png"],"max_recording_seconds":300,"max_active_recordings":1,"network_required":false,"capture_guidance":{
+        let mut value = json!({"executable":std::env::current_exe().ok(),"working_directory":std::env::current_dir().ok(),"output_root":self.root,"read_roots":self.reads,"transport":"stdio","platform":"windows","formats":["gif","png"],"max_recording_seconds":300,"max_active_recordings":1,"network_required":false,"recovery_discovery":crate::transaction::discover(&self.root),"diagnostics":{"directory":crate::runtime::log_directory(),"format":"bounded rotating JSONL","failure_fields":["code","stage","message","unix_ms","retryable"]},"documentation":{"agent_guide":"docs/agent-guide.md","timeline":"docs/timeline.md","development":"docs/development.md","architecture":"docs/architecture.md","audit":"docs/code-audit.md","mcp":"docs/mcp.md","base":"https://github.com/liuminxin45/framelet/blob/main/","local_base":std::env::current_exe().ok().and_then(|p|p.ancestors().skip(1).find(|p|p.join("docs/agent-guide.md").is_file()).map(|p|p.to_path_buf()))},"timeline":{"default_enabled":true,"keyboard":true,"schema":2,"identity":"random session/asset IDs plus one shared observation counter","isolation":"kill-on-close recording worker process","recovery_tool":"framelet_recover","sidecar":"<GIF stem>.timeline.json","query_tool":"framelet_timeline","clocks":"UTC microseconds plus monotonic capture intervals","coordinates":"source-region-relative physical pixels; masked coordinates omitted","event_limit":100000},"capture_guidance":{
             "fps_range":{"min":1,"max":50},
             "presets":[
                 {"intent":"static_state_check","fps":1,"description_en":"Check stable UI states or long waits; use shot for one final state.","description_zh":"检查稳定界面或长时间等待；只验证最终状态时优先用 shot。"},
@@ -44,7 +56,24 @@ impl Paths {
             "performance_rule":"FPS is a sampling ceiling, not a measured guarantee. Start with a short trial at max_width 960 or 1280; inspect samples / recorded elapsed time from recording_status, not encoded GIF frame count (static frames may be merged). Reduce capture area or max_width before lowering presentation FPS; if lowering FPS is necessary, report the compromise. Encoded width * height * FPS must be <= 80000000.",
             "timing_note":"GIF delays use centisecond resolution; requested 30 FPS is not a guarantee of uniform 33.33 ms frame intervals.",
             "guide":"docs/agent-guide.md"
-        },"workflow":"windows/monitors -> start_recording -> operate UI -> recording_status -> stop_recording -> extract_frames -> read_image -> edit","editing_recipe":{"algorithm":"stable-region difference + bisection + frame-interval cache","steps":["inspect duration; identify a single action or extract 4-6 overview frames first","save opening and closing frame_at PNG anchors; select a stable image region that reflects page position","probe midpoint with reference, compare_region, include_image:false; omit output to avoid PNG writes","use comparison.changed_fraction for the boundary predicate; pixel threshold defaults to 24 but tune for content","reuse [timestamp_ms,timestamp_ms+duration_ms) and frame_index to skip repeated queries","stop near 200-500 ms uncertainty; visually confirm boundary images; trim with context and verify 3-4 final frames"],"assumption":"single monotonic action with stable endpoint regions; not semantic importance","decoder_note":"GIF prefix decoding remains sequential; this reduces model images, PNG writes and repeated probes"},"path_policy":"relative paths resolve under output_root; outputs and reads must stay inside configured roots"})
+        },"workflow":"windows/monitors -> start_recording -> operate UI -> recording_status -> stop_recording -> extract_frames -> read_image -> edit","editing_recipe":{"algorithm":"stable-region difference + bisection + frame-interval cache","steps":["inspect duration; identify a single action or extract 4-6 overview frames first","save opening and closing frame_at PNG anchors; select a stable image region that reflects page position","probe midpoint with reference, compare_region, include_image:false; omit output to avoid PNG writes","use comparison.changed_fraction for the boundary predicate; pixel threshold defaults to 24 but tune for content","reuse [timestamp_ms,timestamp_ms+duration_ms) and frame_index to skip repeated queries","stop near 200-500 ms uncertainty; visually confirm boundary images; trim with context and verify 3-4 final frames"],"assumption":"single monotonic action with stable endpoint regions; not semantic importance","decoder_note":"GIF prefix decoding remains sequential; this reduces model images, PNG writes and repeated probes"},"path_policy":"relative paths resolve under output_root; outputs and reads must stay inside configured roots"});
+        value["max_recording_seconds_scope"] =
+            json!("single GIF MCP calls; series have a separate bounded task lifetime");
+        value["long_recording"] = json!({"start_tool":"framelet_start_series","list_tool":"framelet_recording_list","per_part_max_seconds":300,"checkpoint_target_seconds":5,"max_wall_seconds":86400,"default_wall_seconds":28800,"directory_suffix":".framelet","index":"recording.json","guide":"docs/long-recording.md","disconnect":"normal EOF stops and saves; killed workers require recovery"});
+        value["documentation"]["long_recording"] = json!("docs/long-recording.md");
+        value
+    }
+    pub fn recovery_target(&self, value: &str) -> Result<PathBuf> {
+        match self.resolve(value, false) {
+            Ok(p) => {
+                ensure!(
+                    p.starts_with(&self.root),
+                    "recovery writes must remain inside output_root"
+                );
+                Ok(p)
+            }
+            Err(_) => self.resolve(value, true),
+        }
     }
     pub fn resolve(&self, value: &str, output: bool) -> Result<PathBuf> {
         // canonicalize() returns extended DOS paths. Accept our own returned file paths,

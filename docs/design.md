@@ -1,5 +1,9 @@
 # Design and implementation
 
+Proposed next steps (not implemented): [Long recording, visual fidelity and high-FPS capture / 长录制、清晰度与高帧率设计](recording-evolution-design.md).
+
+First-stage implementation: [Reliable long recording / 可靠长录制](long-recording.md), with a maximum of 300 seconds per GIF. [Original rotating-recording design / 原始轮转设计](segmented-recording-design.md).
+
 ## Direction
 
 Small native utility, with the recording area as the main interface. A real window-region hole gives click-through interaction. Segoe UI and standard Win32 controls preserve keyboard operation and accessible names. Neutral light chrome, a quiet boundary and red recording state. No web renderer, decorative dashboard or model setup wizard.

@@ -33,11 +33,12 @@ try {
   await client.connect(transport);
   const tools = (await client.listTools()).tools;
   const expanded = tools.some(t => t.name === 'framelet_extract_frames');
-  assert.equal(tools.length, expanded ? 17 : 7);
+  assert.equal(tools.length, expanded ? 21 : 7);
   checks.push('SDK initialization and tool discovery');
   if (expanded) {
     const context = (await call('framelet_context', {})).structuredContent.result;
     const guidance = context.capture_guidance;
+    assert(context.documentation.timeline && context.timeline.default_enabled);
     assert.deepEqual(guidance.fps_range, { min: 1, max: 50 });
     assert.deepEqual(guidance.presets.map(p => [p.intent, p.fps]), [
       ['static_state_check', 1], ['development_workflow', 5],
@@ -99,6 +100,11 @@ try {
     console.log(JSON.stringify({ shot_image_blocks: shot.content.filter(c => c.type === 'image').length }));
     const recording = await call('framelet_record', { region, duration: 0.6, fps: 10, output: path.join(output, 'capture.gif') });
     assert(Math.abs(recording.structuredContent.result.duration_ms - 600) <= 30);
+    const timeline=await call('framelet_timeline',{input:recording.structuredContent.result.output,at:0.1});
+    assert(timeline.structuredContent.result.sample_count>0 && timeline.structuredContent.result.sample);
+    const wrongTime=await client.callTool({name:'framelet_timeline',arguments:{input:recording.structuredContent.result.output,at:'wrong'}});
+    assert.equal(wrongTime.isError,true);
+    checks.push('default live timeline, MCP time query and invalid query validation');
     checks.push('SDK doctor, monitors, windows, live screenshot and recording');
   }
   console.log(JSON.stringify({ ok: true, server: client.getServerVersion(), tools: tools.map(t => t.name), checks, artifacts: output }));
