@@ -10,8 +10,17 @@ with tempfile.TemporaryDirectory(prefix='framelet-fuzz-') as tmp:
   process=psutil.Process(proc.pid)
   while not done.wait(.02):
    try:
-    peak[0]=max(peak[0],process.memory_info().rss)
-    if time.monotonic()-started>120 or peak[0]>512*1024*1024:process.kill();break
+    family=[process]+process.children(recursive=True)
+    rss=0
+    for member in family:
+     try:rss+=member.memory_info().rss
+     except psutil.NoSuchProcess:pass
+    peak[0]=max(peak[0],rss)
+    if time.monotonic()-started>120 or peak[0]>512*1024*1024:
+     for member in reversed(family):
+      try:member.kill()
+      except psutil.NoSuchProcess:pass
+     break
    except psutil.Error:break
  thread=threading.Thread(target=monitor,daemon=True);thread.start()
  try:
@@ -26,7 +35,12 @@ with tempfile.TemporaryDirectory(prefix='framelet-fuzz-') as tmp:
     line=rng.choice(['{','[]','null','{"jsonrpc":"bad","method":"ping"}',json.dumps({'jsonrpc':'2.0','id':i,'method':'tools/call','params':{'name':'bad','arguments':{'x':[None]*rng.randint(1,20)}}})])
    proc.stdin.write(line+'\n');proc.stdin.flush();reply=proc.stdout.readline();assert reply and isinstance(json.loads(reply),dict)
   proc.stdin.write(json.dumps({'jsonrpc':'2.0','id':99999,'method':'ping'})+'\n');proc.stdin.flush();assert json.loads(proc.stdout.readline())['result']=={}
-  cpu=psutil.Process(proc.pid).cpu_times();result={'ok':True,'iterations':a.iterations,'seed':a.seed,'elapsed_seconds':round(time.monotonic()-started,3),'server_peak_rss_bytes':peak[0],'server_cpu_seconds':round(cpu.user+cpu.system,3),'note':'deterministic mutation campaign, not proof of absence of bugs or coverage-guided fuzzing'}
+  family=[psutil.Process(proc.pid)]+psutil.Process(proc.pid).children(recursive=True);cpu_seconds=0
+  for member in family:
+   try:
+    cpu=member.cpu_times();cpu_seconds+=cpu.user+cpu.system
+   except psutil.NoSuchProcess:pass
+  result={'ok':True,'iterations':a.iterations,'seed':a.seed,'elapsed_seconds':round(time.monotonic()-started,3),'process_family_peak_rss_bytes':peak[0],'live_process_family_cpu_seconds':round(cpu_seconds,3),'note':'RSS sum includes shared pages; CPU is live family only; deterministic mutation campaign, not proof of absence of bugs or coverage-guided fuzzing'}
  finally:
   done.set();thread.join();proc.stdin.close();proc.wait(timeout=10)
  if a.output:a.output.parent.mkdir(parents=True,exist_ok=True);a.output.write_text(json.dumps(result,indent=2))

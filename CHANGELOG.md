@@ -1,11 +1,16 @@
 # Changelog
 
-## Unreleased — current API and interruption safety
+## Unreleased — v0.4 performance and current API
 
-- Breaking: remove blocking MCP recording; 20 current tools, catalog 2.0. Only timeline schema 2 is accepted; no implicit interval or identity conversion.
+- Breaking: remove blocking MCP recording; 23 current tools, catalog 3.0. Only timeline schema 2 is accepted; no implicit interval or identity conversion.
 - Single GIF capture is uniformly limited to 300 seconds across CLI/MCP/GUI; longer recordings use groups. Control session IDs are random, never PID/counter-based.
 - Stop/cancel are immediate, first intent wins; host/worker/pipe failures remain bounded. Recovery can resume after each publication boundary and uses process creation identity.
 - Add process interruption regressions, two Windows CI images, extracted-package validation, weekly real 650-second CLI/MCP jobs and mandatory engineering rules.
+
+- Buffer durable JSON I/O with explicit flush errors. Separate supervised analysis from recording controls, with bounded queues, deadlines and cancellation including blocked pipe writes.
+- Add `framelet_wait_recording`, `framelet_probe_frames` and `framelet_analyze`; filter/page input events, preserve transient changes and batch timestamps in one decode pass. Structured output avoids duplicate JSON; new analysis images are opt-in.
+- Cache validated immutable snapshots under content hashes and entry/byte/time bounds. Reuse capture/index buffers and exact palettes for at most 256 colors; report stage timings and maintain checkpoint SHA incrementally.
+- Default single recording duration is 60 seconds across CLI/MCP. Long recordings still rotate at 300 seconds per part. Add dense-trace, cancellation, mutation, compositing and performance CI gates.
 
 ## v0.3.0-rc.1 — 2026-11-02
 

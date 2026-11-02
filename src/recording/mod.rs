@@ -100,6 +100,20 @@ pub fn transform(mut rgb: Vec<u8>, r: Region, w: u32, h: u32, masks: &[Region]) 
     }
     out
 }
+fn capture_frame(
+    writer: &mut GifWriter,
+    grab: &Grabber,
+    r: Region,
+    w: u32,
+    h: u32,
+    masks: &[Region],
+) -> Result<Vec<u8>> {
+    let rgb = writer.capture(grab)?;
+    let began = std::time::Instant::now();
+    let rgb = transform(rgb, r, w, h, masks);
+    writer.observe_transform(began.elapsed());
+    Ok(rgb)
+}
 pub fn run(a: &RecordArgs, c: &Control, external_stop: impl Fn() -> bool) -> Result<Stats> {
     crate::worker::supervise(a, c, external_stop)
 }
@@ -177,14 +191,14 @@ pub(crate) fn run_local(
         }
         if stopping {
             if writer.samples == 0 {
-                let pixels = writer.capture(&grab)?;
-                writer.push(transform(pixels, r, w, h, &a.masks), 1)?;
+                let pixels = capture_frame(&mut writer, &grab, r, w, h, &a.masks)?;
+                writer.push(pixels, 1)?;
             }
             break;
         }
         if paused && c.single.swap(false, Ordering::Relaxed) {
-            let pixels = writer.capture(&grab)?;
-            writer.push(transform(pixels, r, w, h, &a.masks), 10)?;
+            let pixels = capture_frame(&mut writer, &grab, r, w, h, &a.masks)?;
+            writer.push(pixels, 10)?;
             accounted += 10;
             active += Duration::from_millis(100);
             c.samples.fetch_add(1, Ordering::Relaxed);
@@ -193,7 +207,8 @@ pub(crate) fn run_local(
             c.phase.store(2, Ordering::Relaxed);
         }
         if !paused && (was_paused || active >= next) {
-            let rgb = transform(writer.capture(&grab)?, r, w, h, &a.masks);
+            writer.observe_lateness(active.saturating_sub(next), period);
+            let rgb = capture_frame(&mut writer, &grab, r, w, h, &a.masks)?;
             previous = Some(rgb);
             c.samples.fetch_add(1, Ordering::Relaxed);
             c.phase.store(1, Ordering::Relaxed);

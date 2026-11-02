@@ -25,7 +25,7 @@ def passed(name):
     print('PASS', name, flush=True)
 
 catalog = run('schema')
-assert len(catalog['tools']) == 20
+assert len(catalog['tools']) == 23
 passed('versioned tool catalog')
 
 with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
@@ -62,12 +62,13 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
         {'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'framelet_shot','arguments':{'output':'x.png','cursor':'false'}}},
         {'jsonrpc':'2.0','id':6,'method':'tools/call','params':{'name':'framelet_inspect','arguments':{'input':str(source),'arbitrary':True}}},
     ]
-    p = subprocess.run([exe,'mcp'], env={**os.environ,'FRAMELET_MCP_ROOT':str(folder)}, input='\n'.join(map(json.dumps,requests))+'\n', capture_output=True, text=True, encoding="utf-8", timeout=30)
-    assert p.returncode == 0, p.stderr
-    responses = [json.loads(line) for line in p.stdout.splitlines()]
+    p = subprocess.Popen([exe,'mcp'], env={**os.environ,'FRAMELET_MCP_ROOT':str(folder)},stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8')
+    p.stdin.write('\n'.join(map(json.dumps,requests))+'\n');p.stdin.flush()
+    responses=sorted([json.loads(p.stdout.readline()) for _ in range(6)],key=lambda r:r['id'])
+    p.stdin.close();p.wait(timeout=22);assert p.returncode==0,p.stderr.read()
     assert len(responses) == 6
     assert responses[0]['result']['protocolVersion'] == '2025-11-25'
-    assert len(responses[1]['result']['tools']) == 20
+    assert len(responses[1]['result']['tools']) == 23
     assert responses[2]['result']['structuredContent']['result']['frames'] == 3
     assert all(x['result']['isError'] for x in responses[3:])
     passed('MCP handshake, notification, discovery, tool result and input errors')

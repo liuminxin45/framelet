@@ -5,7 +5,6 @@ use std::{
     collections::BTreeMap,
     fs::File,
     path::{Path, PathBuf},
-    time::{SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Debug, Clone, Copy, Deserialize, Serialize, ValueEnum)]
@@ -92,12 +91,26 @@ pub struct Report {
 }
 // Reconstruct cropped GIF frames before scoring or exporting. Keep only a canvas and optional Previous snapshot.
 pub fn validate_all(path: &Path) -> Result<()> {
-    decode(|_, _, _, _, _, _| Ok(true), path)
+    scan(path, |_, _, _, _, _| false, |_, _, _, _, _, _| Ok(true)).map(|_| ())
+}
+#[derive(Default, serde::Serialize)]
+pub struct DecodeStats {
+    pub decoded_frames: u64,
+    pub converted_frames: u64,
+    pub composited_pixels: u64,
 }
 pub(crate) fn decode(
-    mut visit: impl FnMut(usize, u64, u64, u32, u32, &[u8]) -> Result<bool>,
+    visit: impl FnMut(usize, u64, u64, u32, u32, &[u8]) -> Result<bool>,
     path: &Path,
 ) -> Result<()> {
+    scan(path, |_, _, _, _, _| true, visit).map(|_| ())
+}
+pub(crate) fn scan(
+    path: &Path,
+    mut select: impl FnMut(usize, u64, u64, u32, u32) -> bool,
+    mut visit: impl FnMut(usize, u64, u64, u32, u32, &[u8]) -> Result<bool>,
+) -> Result<DecodeStats> {
+    let mut stats = DecodeStats::default();
     let _lease = crate::file_guard::Lease::input(path)?;
     ensure!(
         std::fs::metadata(path)?.len() <= 512 * 1024 * 1024,
@@ -161,19 +174,26 @@ pub(crate) fn decode(
                 }
             }
         }
-        let rgb: Vec<u8> = canvas
-            .as_chunks::<4>()
-            .0
-            .iter()
-            .flat_map(|p| {
-                if p[3] == 0 {
-                    [0; 3]
-                } else {
-                    [p[0], p[1], p[2]]
-                }
-            })
-            .collect();
         let delay = u64::from(f.delay.max(1)) * 10;
+        stats.decoded_frames += 1;
+        stats.composited_pixels += u64::from(w) * u64::from(h);
+        let rgb = if select(index, at, delay, w, h) {
+            stats.converted_frames += 1;
+            canvas
+                .as_chunks::<4>()
+                .0
+                .iter()
+                .flat_map(|p| {
+                    if p[3] == 0 {
+                        [0; 3]
+                    } else {
+                        [p[0], p[1], p[2]]
+                    }
+                })
+                .collect::<Vec<_>>()
+        } else {
+            Vec::new()
+        };
         let keep_reading = visit(index, at, delay, w, h, &rgb)?;
         if let Some(saved) = saved {
             canvas = saved;
@@ -197,7 +217,7 @@ pub(crate) fn decode(
         }
     }
     ensure!(index > 0, "GIF contains no frames");
-    Ok(())
+    Ok(stats)
 }
 pub(crate) fn resize(rgb: &[u8], w: u32, h: u32, tw: u32, th: u32) -> Vec<u8> {
     let mut out = Vec::with_capacity(tw as usize * th as usize * 3);
@@ -315,12 +335,6 @@ pub(crate) fn label(canvas: &mut [u8], w: usize, x: usize, y: usize, n: usize) {
         }
     }
 }
-struct Stage(PathBuf);
-impl Drop for Stage {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
 pub fn extract(a: &ExtractArgs) -> Result<Report> {
     ensure!((1..=64).contains(&a.count), "count must be 1..64");
     ensure!(
@@ -337,6 +351,8 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
     );
     let _output_lease = crate::file_guard::Lease::output(&a.output)?;
     let input = a.input.canonicalize().context("open input GIF")?;
+    // The inventory/score and export passes must observe one immutable input.
+    let _input_lease = crate::file_guard::Lease::input(&input)?;
     ensure!(
         std::fs::metadata(&input)?.len() <= 512 * 1024 * 1024,
         "input exceeds 512 MiB budget"
@@ -351,34 +367,39 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
     let output = parent.join(output.file_name().context("invalid output directory")?);
     let identity = std::fs::metadata(&input)?;
     let mut samples = Vec::new();
-    let mut last = Vec::new();
     let (mut width, mut height) = (0, 0);
-    decode(
-        |index, at, delay, w, h, rgb| {
-            let thumb = resize(rgb, w, h, 32, 18);
-            let score = if last.is_empty() {
-                0.0
-            } else {
-                thumb
-                    .iter()
-                    .zip(&last)
-                    .map(|(&a, &b)| f64::from(a.abs_diff(b)))
-                    .sum::<f64>()
-                    / (thumb.len() as f64 * 255.0)
-            };
-            last = thumb;
-            samples.push(Sample {
+    if matches!(a.mode, Mode::Uniform) {
+        let (info, intervals) = crate::encode::inventory(&input)?;
+        width = info["width"].as_u64().context("inventory width")? as u32;
+        height = info["height"].as_u64().context("inventory height")? as u32;
+        samples = intervals
+            .into_iter()
+            .enumerate()
+            .map(|(index, (at, end))| Sample {
                 index,
                 at,
-                delay,
-                score,
-            });
-            width = w;
-            height = h;
-            Ok(true)
-        },
-        &input,
-    )?;
+                delay: end - at,
+                score: 0.,
+            })
+            .collect();
+    } else {
+        let mut visual = crate::review::visual::Visual::default();
+        decode(
+            |index, at, delay, w, h, rgb| {
+                let score = visual.push(rgb, w, h);
+                samples.push(Sample {
+                    index,
+                    at,
+                    delay,
+                    score,
+                });
+                width = w;
+                height = h;
+                Ok(true)
+            },
+            &input,
+        )?;
+    }
     let last_sample = samples.last().context("GIF contains no samples")?;
     let total = last_sample.at + last_sample.delay;
     let chosen = choose(&samples, a, total);
@@ -387,23 +408,20 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
         .enumerate()
         .map(|(order, &i)| (samples[i].index, order))
         .collect();
-    let temp = parent.join(format!(
-        ".framelet-{}-{}.partial",
-        std::process::id(),
-        SystemTime::now().duration_since(UNIX_EPOCH)?.as_nanos()
-    ));
-    std::fs::create_dir(&temp)?;
-    let stage = Stage(temp);
+    let stage = crate::storage::StagedDirectory::new(&output)?;
     let cols = chosen.len().clamp(1, 4);
     let rows = chosen.len().div_ceil(cols);
     let (sheet_w, sheet_h) = (cols * 256, rows * 212);
     let mut sheet = vec![28; sheet_w * sheet_h * 3];
     let mut frames = Vec::new();
-    decode(
+    let last_selected = *selected.last_key_value().context("no selected frames")?.0;
+    scan(
+        &input,
+        |index, _, _, _, _| selected.contains_key(&index),
         |index, _, _, w, h, rgb| {
             if let Some(&order) = selected.get(&index) {
                 let name = format!("frame-{:03}-{:010}ms.png", order + 1, samples[index].at);
-                crate::encode::screenshot(&stage.0.join(&name), w, h, rgb)?;
+                crate::encode::screenshot(&stage.path.join(&name), w, h, rgb)?;
                 let scale = (240.0 / f64::from(w)).min(180.0 / f64::from(h)).min(1.0);
                 let (tw, th) = (
                     (f64::from(w) * scale).round().max(1.0) as u32,
@@ -433,9 +451,8 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
                     image: output.join(name),
                 });
             }
-            Ok(true)
+            Ok(index < last_selected)
         },
-        &input,
     )?;
     let after = std::fs::metadata(&input)?;
     ensure!(
@@ -447,7 +464,7 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
         "input frame inventory changed during extraction"
     );
     let report = Report {
-        schema_version: "1.0",
+        schema_version: "2.0",
         input,
         output: output.clone(),
         manifest: output.join("manifest.json"),
@@ -458,20 +475,19 @@ pub fn extract(a: &ExtractArgs) -> Result<Report> {
         duration_ms: total,
         mode: a.mode,
         semantic_analysis: false,
-        selection_note: "Visual-change candidates only. Review the images to judge semantic importance; suggested ranges are context windows, not semantic highlights.",
+        selection_note: "Spatial-change candidates only (16px tiles). Review images for semantics; suggested ranges are context windows, not semantic highlights.",
         suggested_ranges: ranges(&frames, total, a.padding),
         frames,
     };
-    std::fs::write(
-        stage.0.join("contact-sheet.png"),
-        png_bytes(&sheet, sheet_w as u32, sheet_h as u32)?,
+    crate::encode::screenshot(
+        &stage.path.join("contact-sheet.png"),
+        sheet_w as u32,
+        sheet_h as u32,
+        &sheet,
     )?;
-    std::fs::write(
-        stage.0.join("manifest.json"),
-        serde_json::to_vec_pretty(&report)?,
-    )?;
+    crate::storage::replace_json(&stage.path.join("manifest.json"), &report)?;
     ensure!(!output.exists(), "output appeared during extraction");
-    std::fs::rename(&stage.0, &output).context("publish frame directory")?;
+    stage.publish()?;
     Ok(report)
 }
 pub fn extract_value(a: &ExtractArgs) -> Result<serde_json::Value> {
@@ -511,89 +527,18 @@ pub fn at(
         value["global_requested_ms"] = serde_json::json!((seconds * 1000.0).floor() as u64);
         return Ok(value);
     }
-    ensure!(
-        seconds.is_finite() && (0.0..=3600.0).contains(&seconds),
-        "at must be 0..3600 seconds"
-    );
-    if let Some(output) = output {
-        crate::safety::extension(output, "png")?;
-        ensure!(!output.exists(), "output already exists");
-    }
-    ensure!(
-        options.reference.is_some() || options.region.is_none(),
-        "compare_region requires reference"
-    );
-    let reference = options.reference.as_deref().map(read_png).transpose()?;
-    let requested = (seconds * 1000.0).floor() as u64;
-    let mut result = None;
-    decode(
-        |index, start, duration, w, h, rgb| {
-            if requested >= start && requested < start + duration {
-                let comparison = if let Some((rw, rh, ref_pixels)) = &reference {
-                    ensure!(
-                        (*rw, *rh) == (w, h),
-                        "reference dimensions must match the source GIF"
-                    );
-                    let r = options.region.unwrap_or(crate::capture::Region {
-                        x: 0,
-                        y: 0,
-                        width: w,
-                        height: h,
-                    });
-                    ensure!(
-                        r.x >= 0
-                            && r.y >= 0
-                            && r.width > 0
-                            && r.height > 0
-                            && i64::from(r.x) + i64::from(r.width) <= i64::from(w)
-                            && i64::from(r.y) + i64::from(r.height) <= i64::from(h),
-                        "compare_region must fit inside the image"
-                    );
-                    let (mut changed, mut sum) = (0u64, 0u64);
-                    for y in r.y as u32..r.y as u32 + r.height {
-                        for x in r.x as u32..r.x as u32 + r.width {
-                            let at = (y as usize * w as usize + x as usize) * 3;
-                            let diffs = [
-                                rgb[at].abs_diff(ref_pixels[at]),
-                                rgb[at + 1].abs_diff(ref_pixels[at + 1]),
-                                rgb[at + 2].abs_diff(ref_pixels[at + 2]),
-                            ];
-                            changed +=
-                                u64::from(diffs[0].max(diffs[1]).max(diffs[2]) > options.threshold);
-                            sum += diffs.iter().map(|d| u64::from(*d)).sum::<u64>();
-                        }
-                    }
-                    let pixels = u64::from(r.width) * u64::from(r.height);
-                    Some(
-                        serde_json::json!({"reference":options.reference,"region":r,"difference_threshold":options.threshold,"metric":"max_absolute_rgb_channel","changed_pixels":changed,"pixels":pixels,"changed_fraction":changed as f64/pixels as f64,"mean_absolute_error":sum as f64/(pixels*3) as f64}),
-                    )
-                } else {
-                    None
-                };
-                let mut value = if let Some(output) = output {
-                    crate::encode::screenshot(output, w, h, rgb)?
-                } else {
-                    serde_json::json!({"width":w,"height":h})
-                };
-                value["input"] = serde_json::json!(input.canonicalize()?);
-                value["requested_ms"] = serde_json::json!(requested);
-                value["frame_index"] = serde_json::json!(index);
-                value["timestamp_ms"] = serde_json::json!(start);
-                value["duration_ms"] = serde_json::json!(duration);
-                if let Some(comparison) = comparison {
-                    value["comparison"] = comparison;
-                }
-                result = Some(value);
-                return Ok(false);
-            }
-            Ok(true)
-        },
-        input,
-    )?;
-    result.context("timestamp is outside GIF playback duration")
+    crate::review::probe::single(input, seconds, output, options)
 }
 
 pub(crate) fn read_png(path: &Path) -> Result<(u32, u32, Vec<u8>)> {
+    let image = crate::review_cache::get(path, &[path.to_path_buf()], || {
+        let image = read_png_uncached(path)?;
+        let size = image.2.capacity() + 128;
+        Ok((image, size))
+    })?;
+    Ok((*image).clone())
+}
+fn read_png_uncached(path: &Path) -> Result<(u32, u32, Vec<u8>)> {
     let _lease = crate::file_guard::Lease::input(path)?;
     ensure!(
         std::fs::metadata(path)?.len() <= 32 * 1024 * 1024,

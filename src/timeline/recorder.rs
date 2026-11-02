@@ -593,6 +593,7 @@ mod rotation_tests {
             manifest: None,
             warnings: vec![],
             playback: None,
+            capture_metrics: None,
         };
         let mut ids = vec![];
         for kind in [WM_KEYDOWN, WM_KEYUP] {

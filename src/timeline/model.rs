@@ -57,7 +57,7 @@ pub struct Data {
     pub warnings: Vec<String>,
 }
 
-#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Clone, Copy, Default, Serialize, Deserialize, PartialEq, Eq, clap::ValueEnum)]
 #[serde(rename_all = "snake_case")]
 pub enum Device {
     #[default]

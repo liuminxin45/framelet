@@ -31,6 +31,8 @@ enum Command {
     Gui,
     #[command(hide = true)]
     WorkerRecord,
+    #[command(hide = true)]
+    WorkerAnalyze,
     /// Record a GIF. Ctrl+C finalizes and saves a valid file.
     Record(RecordArgs),
     /// Record a uniquely named group of GIFs; each part is at most 300 seconds.
@@ -69,9 +71,15 @@ enum Command {
         utc_us: Option<u64>,
         #[arg(long)]
         event_id: Option<u64>,
+        #[command(flatten)]
+        query: crate::timeline::QueryOptions,
     },
     /// Extract reviewable PNG frames, a contact sheet and timestamp/clip suggestions from a GIF.
     Frames(crate::frames::ExtractArgs),
+    /// Probe multiple timestamps with one compositing pass.
+    Probe(crate::review::probe::Args),
+    /// Find bounded visual/input action intervals without semantic claims.
+    Analyze(crate::review::analyze::Args),
     /// Return the composited frame covering a timestamp (seconds); useful for binary-search review.
     FrameAt {
         input: PathBuf,
@@ -134,6 +142,7 @@ pub fn run() -> Result<()> {
     };
     match cli.command.unwrap_or(Command::Gui) {
         Command::WorkerRecord => crate::worker::child_main()?,
+        Command::WorkerAnalyze => crate::mcp::analysis::child_main()?,
         Command::Gui => crate::gui::run()?,
         Command::Record(a) => {
             let cancel = Arc::new(AtomicBool::new(false));
@@ -178,7 +187,14 @@ pub fn run() -> Result<()> {
             at,
             utc_us,
             event_id,
-        } => print(json!({"ok":true,"result":crate::timeline::query(&input,at,utc_us,event_id)?}))?,
+            query,
+        } => print(
+            json!({"ok":true,"result":crate::timeline::query(&input,at,utc_us,event_id,&query)?}),
+        )?,
+        Command::Analyze(a) => print(json!({"ok":true,"result":crate::review::analyze::run(&a)?}))?,
+        Command::Probe(a) => print(
+            json!({"ok":true,"result":crate::review::probe::batch(&a.input,&a.times,crate::frames::ProbeOptions{reference:a.reference,region:a.compare_region,threshold:a.difference_threshold},a.output.as_deref(),a.export)?}),
+        )?,
         Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract_value(&a)?}))?,
         Command::FrameAt {
             input,

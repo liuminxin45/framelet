@@ -16,9 +16,9 @@ use windows_sys::Win32::{
     Foundation::*,
     System::{JobObjects::*, Threading::CREATE_NO_WINDOW},
 };
-struct Job(HANDLE);
+pub(crate) struct Job(HANDLE);
 impl Job {
-    fn new() -> Result<Self> {
+    pub(crate) fn new() -> Result<Self> {
         unsafe {
             let h = CreateJobObjectW(std::ptr::null(), std::ptr::null());
             ensure!(
@@ -45,6 +45,14 @@ impl Job {
             );
             Ok(job)
         }
+    }
+    pub(crate) fn assign(&self, child: &std::process::Child) -> Result<()> {
+        ensure!(
+            unsafe { AssignProcessToJobObject(self.0, child.as_raw_handle()) } != 0,
+            "assign worker job: {}",
+            std::io::Error::last_os_error()
+        );
+        Ok(())
     }
 }
 impl Drop for Job {
@@ -241,6 +249,7 @@ pub fn child_main() -> Result<()> {
         Ordering::Relaxed,
     );
     let c = control.clone();
+    let series_mode = value.get("series").is_some();
     std::thread::Builder::new()
         .name("framelet-worker-control".into())
         .spawn(move || {
@@ -248,7 +257,16 @@ pub fn child_main() -> Result<()> {
                 let mut line = String::new();
                 let result = input.by_ref().take(8193).read_line(&mut line);
                 if !matches!(result,Ok(n) if n>0 && n<=8192) {
-                    c.cancel.store(true, Ordering::Relaxed);
+                    // Host death may close stdin just before the job terminates us.
+                    // Never turn a disconnected group into explicit discard: that
+                    // race could delete its last durable checkpoint before job kill.
+                    if !c.stop.load(Ordering::Relaxed) && !c.cancel.load(Ordering::Relaxed) {
+                        if series_mode {
+                            c.stop.store(true, Ordering::Relaxed);
+                        } else {
+                            c.cancel.store(true, Ordering::Relaxed);
+                        }
+                    }
                     break;
                 }
                 if let Ok(v) = serde_json::from_str::<Value>(&line) {

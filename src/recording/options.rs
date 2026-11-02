@@ -11,7 +11,7 @@ pub struct RecordArgs {
     #[arg(long, default_value_t = 10)]
     #[serde(default = "default_fps")]
     pub fps: u32,
-    #[arg(long, default_value_t = 5.0)]
+    #[arg(long, default_value_t = 60.0)]
     #[serde(default = "default_duration")]
     pub duration: f64,
     #[arg(short, long)]
@@ -55,7 +55,7 @@ fn default_fps() -> u32 {
     10
 }
 fn default_duration() -> f64 {
-    5.0
+    60.0
 }
 fn default_quality() -> i32 {
     10

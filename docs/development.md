@@ -45,3 +45,5 @@ python scripts/verify_package.py <extracted-portable-directory>
 ```
 
 The output directory must be fresh. Every command has a deadline, per-check log, exit code and EXE SHA-bound summary. GitHub Actions runs on Windows 2022 and 2025, with failure artifacts; weekly or workflow_dispatch(long_acceptance=true) adds two real 650-second CLI/MCP jobs. These are Windows Server runner checks, not proof of native GUI operation on every Windows 10/11 system. GUI acceptance still requires a real interactive desktop. No raw capture/input sidecars are uploaded by the core artifact rule.
+
+Performance acceptance: `python scripts/verify_performance.py target/release/framelet.exe --output work/performance-fresh`. It is part of the shared core suite; [current workflow and limits](performance.md).

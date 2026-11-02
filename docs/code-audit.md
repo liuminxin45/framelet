@@ -86,4 +86,10 @@ CI 运行结果必须按提交 SHA 核验，不以本地测试冒充远端执行
 
 ## 2026-11-02 当前接口与中断防护
 
-删除 schema-1 时间线读取、缺失区间补齐、资产 ID 猜测、阻塞式 MCP 录制及 SDK 的多版接口容忍分支。现行 MCP 共 20 个工具。停止/取消立即响应，首个终止请求不可反转。单 GIF 恢复改用 PID + 创建时间，防 PID 复用或权限未知时误判。监督器先结束子进程再 join 管道读取线程。分段恢复在 GIF/时间线/清单/receipt 发布后中断可重复执行，对已有文件逐一比对，拒绝冲突且不覆盖。新增实际宿主强杀、挂起、断管道、取消竞态及各保存边界回归。强制要求见 [工程规范](engineering-standard.md)。
+删除 schema-1 时间线读取、缺失区间补齐、资产 ID 猜测、阻塞式 MCP 录制及 SDK 的多版接口容忍分支。现行 MCP 共 23 个工具。停止/取消立即响应，首个终止请求不可反转。单 GIF 恢复改用 PID + 创建时间，防 PID 复用或权限未知时误判。监督器先结束子进程再 join 管道读取线程。分段恢复在 GIF/时间线/清单/receipt 发布后中断可重复执行，对已有文件逐一比对，拒绝冲突且不覆盖。新增实际宿主强杀、挂起、断管道、取消竞态及各保存边界回归。强制要求见 [工程规范](engineering-standard.md)。
+
+## P0–P4 performance hardening
+
+Buffered JSON replaces bytewise/small-write I/O; analysis uses a cancellable supervised process and asynchronous input pipe, separate from recording controls; event queries filter movement, prioritize center and bind pagination cursors to content. Cache sizes include retained vector/string data, reject oversized inputs, rehash on every lookup and never trust mtime alone. Default summaries avoid duplicate machine JSON. Selective RGB conversion, batch probes, spatial transients, handle-based directory publication and incremental checkpoint hashes retain independent pixel/SHA/recovery gates. See performance.md and current SHA-bound verification; no claim that old test binaries prove new behavior.
+
+The performance interruption gate exposed and fixed an EOF/job-close race: a killed host could close stdin before job termination, and the group child discarded its durable checkpoint as cancellation. Group EOF now requests save; it never implies discard. Single EOF preserves an accepted stop, and explicit cancellation remains discard. Group overviews now batch by segment and compose directly from RGB without a PNG readback.

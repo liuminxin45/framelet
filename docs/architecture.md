@@ -73,7 +73,7 @@ flowchart TD
 - GIF and timeline remain separate file transactions. Preserve a successfully published GIF if optional metadata fails; report incomplete metadata and warn. Do not blindly retry a partially committed operation. Inspect returned paths/warnings first.
 - Mouse startup and shutdown waits are bounded. A native thread that cannot stop in time is detached with its own Arc-owned data; warnings identify incomplete trace data. Windows API calls themselves are not forcibly interruptible.
 
-All changes must follow [the engineering standard](engineering-standard.md). Only timeline schema 2 is read; there is no schema-1 reader, inferred interval or asset-ID fallback. MCP exposes 20 current tools; recording always uses asynchronous sessions. Stop/cancel returns immediately, the first terminal intent wins, and disconnect preserves an already accepted stop. Process identity belongs to identity.rs and uses PID plus creation time for both single and group recovery. Recovery validates candidate media/timeline before publication and safely resumes after media, timeline, manifest or receipt publication.
+All changes must follow [the engineering standard](engineering-standard.md). Only timeline schema 2 is read; there is no schema-1 reader, inferred interval or asset-ID fallback. MCP exposes 23 current tools; recording always uses asynchronous sessions. Stop/cancel returns immediately, the first terminal intent wins, and disconnect preserves an already accepted stop. Process identity belongs to identity.rs and uses PID plus creation time for both single and group recovery. Recovery validates candidate media/timeline before publication and safely resumes after media, timeline, manifest or receipt publication.
 
 ## Boundaries that remain / 仍然存在的边界
 
@@ -82,3 +82,7 @@ No promise of recovery from process termination, power loss, allocator abort/OOM
 GUI manual single-frame requests now pass through the same supervised recording engine as CLI/MCP. The UI adapter translates its buttons into pause, resume, stop and single-frame control messages.
 
 `framelet_context.recovery_discovery` checks up to 512 root entries and returns at most 16 pending captures, with an explicit truncation flag. This discovers interrupted work on the default agent entry path without starting recording or deleting files.
+
+## Performance services
+
+`json_io.rs` owns buffered serialization and explicit flush propagation. `mcp/analysis.rs` owns one persistent job-supervised analysis child, asynchronous pipe writes, bounded queue, cancellation and deadline; `mcp/wait.rs` holds active waits in the host event loop. Recording controls never enter the analysis queue. Responses are correlated by ID. `review_cache.rs` provides bounded typed immutable snapshots, verified by leased hashes on every lookup. `review/{probe,analyze,visual}.rs` own one-pass probes, spatial/input intervals and contact-sheet export. `frames.rs::scan` separates compositing from RGB conversion. `hash_writer.rs` streams SHA-256 state with committed bytes; `encode_metrics.rs` describes nested stage timings. Recovery independently validates content; cached metadata is never permission to bypass path/format checks.

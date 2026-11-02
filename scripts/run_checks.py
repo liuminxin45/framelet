@@ -48,6 +48,7 @@ def main():
             ("verify_series", ["--output", str(root / "series")]),
             ("verify_60fps", ["--output", str(root / "fps60")]),
             ("verify_interruptions", ["--output", str(root / "interruptions")]),
+            ("verify_performance", ["--output",str(root / "performance")]),
             ("fuzz_regression", ["--iterations", "1000", "--seed", "20261102", "--output", str(root / "fuzz.json")]),
         ]]
         commands.append(("mcp-sdk", ["node", "scripts/verify_mcp.mjs", exe, *desktop], 180))

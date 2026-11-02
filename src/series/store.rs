@@ -66,7 +66,7 @@ pub fn read_json<T: serde::de::DeserializeOwned>(path: &Path, limit: u64) -> Res
     let _lease = crate::file_guard::Lease::input(path)?;
     let f = File::open(path)?;
     ensure!(f.metadata()?.len() <= limit, "JSON exceeds resource budget");
-    Ok(crate::json_io::read(f.take(limit + 1))?)
+    crate::json_io::read(f.take(limit + 1))
 }
 pub fn filename(prefix: &str, number: u32) -> String {
     format!("{prefix}.part-{number:06}.gif")

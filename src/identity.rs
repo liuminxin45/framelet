@@ -16,12 +16,12 @@ pub fn new_id() -> Result<String> {
     );
     Ok(bytes.iter().map(|b| format!("{b:02x}")).collect())
 }
-struct Hasher {
+pub struct Sha256 {
     algorithm: BCRYPT_ALG_HANDLE,
     hash: BCRYPT_HASH_HANDLE,
     _object: Vec<u8>,
 }
-impl Drop for Hasher {
+impl Drop for Sha256 {
     fn drop(&mut self) {
         unsafe {
             if !self.hash.is_null() {
@@ -37,71 +37,117 @@ pub fn sha256(path: &Path) -> Result<String> {
     let _lease = crate::file_guard::Lease::input(path)?;
     sha256_reader(std::fs::File::open(path)?)
 }
+// CNG hash state has no thread affinity. Ownership is exclusive; buffers stay
+// heap-stable when moved, and no Sync/shared mutation is exposed.
+unsafe impl Send for Sha256 {}
+impl Sha256 {
+    pub fn new() -> Result<Self> {
+        let mut h = Self {
+            algorithm: std::ptr::null_mut(),
+            hash: std::ptr::null_mut(),
+            _object: vec![],
+        };
+        ensure!(
+            unsafe {
+                BCryptOpenAlgorithmProvider(
+                    &mut h.algorithm,
+                    BCRYPT_SHA256_ALGORITHM,
+                    std::ptr::null(),
+                    0,
+                )
+            } >= 0,
+            "SHA-256 provider unavailable"
+        );
+        let mut len = 0u32;
+        let mut got = 0;
+        ensure!(
+            unsafe {
+                BCryptGetProperty(
+                    h.algorithm,
+                    BCRYPT_OBJECT_LENGTH,
+                    (&mut len as *mut u32).cast(),
+                    4,
+                    &mut got,
+                    0,
+                )
+            } >= 0
+                && len <= 1024 * 1024,
+            "SHA-256 object size failed"
+        );
+        h._object = vec![0; len as usize];
+        ensure!(
+            unsafe {
+                BCryptCreateHash(
+                    h.algorithm,
+                    &mut h.hash,
+                    h._object.as_mut_ptr(),
+                    len,
+                    std::ptr::null(),
+                    0,
+                    0,
+                )
+            } >= 0,
+            "SHA-256 initialization failed"
+        );
+        Ok(h)
+    }
+    pub fn update(&mut self, bytes: &[u8]) -> Result<()> {
+        ensure!(bytes.len() <= u32::MAX as usize, "hash block too large");
+        ensure!(
+            unsafe { BCryptHashData(self.hash, bytes.as_ptr(), bytes.len() as u32, 0) } >= 0,
+            "SHA-256 update failed"
+        );
+        Ok(())
+    }
+    pub fn snapshot(&self) -> Result<String> {
+        struct CopyState {
+            hash: BCRYPT_HASH_HANDLE,
+            _object: Vec<u8>,
+        }
+        impl Drop for CopyState {
+            fn drop(&mut self) {
+                if !self.hash.is_null() {
+                    unsafe {
+                        BCryptDestroyHash(self.hash);
+                    }
+                }
+            }
+        }
+        let mut copy = CopyState {
+            hash: std::ptr::null_mut(),
+            _object: vec![0; self._object.len()],
+        };
+        ensure!(
+            unsafe {
+                BCryptDuplicateHash(
+                    self.hash,
+                    &mut copy.hash,
+                    copy._object.as_mut_ptr(),
+                    copy._object.len() as u32,
+                    0,
+                )
+            } >= 0,
+            "SHA-256 snapshot failed"
+        );
+        let mut digest = [0u8; 32];
+        ensure!(
+            unsafe { BCryptFinishHash(copy.hash, digest.as_mut_ptr(), 32, 0) } >= 0,
+            "SHA-256 finish failed"
+        );
+        Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
+    }
+}
 pub fn sha256_reader(mut source: impl Read) -> Result<String> {
-    let mut h = Hasher {
-        algorithm: std::ptr::null_mut(),
-        hash: std::ptr::null_mut(),
-        _object: vec![],
-    };
-    ensure!(
-        unsafe {
-            BCryptOpenAlgorithmProvider(
-                &mut h.algorithm,
-                BCRYPT_SHA256_ALGORITHM,
-                std::ptr::null(),
-                0,
-            )
-        } >= 0,
-        "SHA-256 provider unavailable"
-    );
-    let mut len = 0u32;
-    let mut got = 0;
-    ensure!(
-        unsafe {
-            BCryptGetProperty(
-                h.algorithm,
-                BCRYPT_OBJECT_LENGTH,
-                (&mut len as *mut u32).cast(),
-                4,
-                &mut got,
-                0,
-            )
-        } >= 0
-            && len <= 1024 * 1024,
-        "SHA-256 object size failed"
-    );
-    h._object = vec![0; len as usize];
-    ensure!(
-        unsafe {
-            BCryptCreateHash(
-                h.algorithm,
-                &mut h.hash,
-                h._object.as_mut_ptr(),
-                len,
-                std::ptr::null(),
-                0,
-                0,
-            )
-        } >= 0,
-        "SHA-256 initialization failed"
-    );
+    let mut digest = Sha256::new()?;
     let mut buffer = [0u8; 65536];
     loop {
         let n = source.read(&mut buffer)?;
         if n == 0 {
             break;
         }
-        ensure!(
-            unsafe { BCryptHashData(h.hash, buffer.as_ptr(), n as u32, 0) } >= 0,
-            "SHA-256 update failed"
-        );
+        digest.update(&buffer[..n])?;
     }
-    let mut digest = [0u8; 32];
-    ensure!(
-        unsafe { BCryptFinishHash(h.hash, digest.as_mut_ptr(), 32, 0) } >= 0,
-        "SHA-256 finish failed"
-    );
-    Ok(digest.iter().map(|b| format!("{b:02x}")).collect())
+    digest.snapshot()
 }
 pub fn process_stamp(pid: u32) -> Result<Option<u64>> {
     use windows_sys::Win32::{Foundation::*, System::Threading::*};

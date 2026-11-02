@@ -1,5 +1,7 @@
 # Framelet agent entry point
 
+For efficient current MCP calls, read [docs/performance.md](docs/performance.md): await recording readiness/terminal state without model polling, discover action events, analyze intervals once and batch numeric probes before sending images. MCP 2025-11-25, current catalog 3.0 / 23 tools; responses may arrive out of order.
+
 Read [docs/engineering-standard.md](docs/engineering-standard.md) before modifying any code, tests, interface or documentation. It is the mandatory engineering contract: one current API/format, bounded failure handling, restartable recovery and SHA-bound verification.
 
 For reliable long recordings, read docs/long-recording.md. Use record-series / framelet_start_series: a task owns a numbered .framelet group; each GIF is at most 300 seconds. Single GIF recording and rotating groups are current modes sharing one supervised capture core. Discover groups through framelet_recording_list, query global times, and recover interrupted groups only after the owner exits.

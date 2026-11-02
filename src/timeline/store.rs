@@ -146,6 +146,10 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
         let mut ids = std::collections::HashSet::new();
         for e in &d.events {
             ensure!(
+                e.key_name.as_ref().is_none_or(|s| s.len() <= 256),
+                "event key name exceeds byte budget"
+            );
+            ensure!(
                 e.id.is_some_and(|id| ids.insert(id)),
                 "duplicate/missing event ID"
             );

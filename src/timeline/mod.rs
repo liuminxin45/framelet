@@ -9,7 +9,7 @@ pub use mapping::remap;
 pub use model::Data;
 #[cfg(test)]
 use model::*;
-pub use query::query;
+pub use query::{Options as QueryOptions, query};
 pub use recorder::Recorder;
 pub use store::{available, load, publish};
 

@@ -10,6 +10,8 @@ use std::{
 
 struct Session {
     series_root: Option<std::path::PathBuf>,
+    began: Instant,
+    max_wall: Duration,
     id: String,
     control: Arc<Control>,
     result: Arc<Mutex<Option<Value>>>,
@@ -43,6 +45,7 @@ impl Sessions {
             }
         }
         self.idle()?;
+        let a_wall = Duration::from_secs_f64(a.max_wall_seconds as f64 + a.delay);
         let plan = crate::series::create(&a)?;
         let id = plan.index.session_id.clone();
         if plan.index.state != "starting" || plan.index.owner_pid != std::process::id() {
@@ -74,6 +77,8 @@ impl Sessions {
         })?;
         self.active = Some(Session {
             series_root: Some(root.clone()),
+            began: Instant::now(),
+            max_wall: a_wall,
             id: id.clone(),
             control,
             result,
@@ -125,6 +130,7 @@ impl Sessions {
     pub fn start(&mut self, a: RecordArgs) -> Result<Value> {
         self.idle()?;
         recording::validate(&a)?;
+        let wall = a.duration + a.delay;
         let id = crate::identity::new_id()?;
         let control = Arc::new(Control::default());
         let c = control.clone();
@@ -139,6 +145,8 @@ impl Sessions {
         })?;
         self.active = Some(Session {
             series_root: None,
+            began: Instant::now(),
+            max_wall: Duration::from_secs_f64(wall),
             id: id.clone(),
             control,
             result,
@@ -165,7 +173,7 @@ impl Sessions {
                 state
             };
             return Ok(
-                json!({"session_id":id,"terminal":false,"state":state,"samples":s.control.samples.load(Ordering::Relaxed),"recorded_ms":s.control.elapsed_ms.load(Ordering::Relaxed),"series":s.control.series.lock().ok().and_then(|v|v.clone())}),
+                json!({"session_id":id,"terminal":false,"state":state,"ready":state=="recording"&&s.control.samples.load(Ordering::Relaxed)>0,"next_poll_ms":if state=="starting"||state=="finalizing"{100}else{1000},"wall_remaining_ms":s.max_wall.saturating_sub(s.began.elapsed()).as_millis(),"samples":s.control.samples.load(Ordering::Relaxed),"recorded_ms":s.control.elapsed_ms.load(Ordering::Relaxed),"series":s.control.series.lock().ok().and_then(|v|v.clone())}),
             );
         }
         self.history

@@ -42,7 +42,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-defense-') as tmp:
  requests=[{'jsonrpc':'2.0','id':i+1,'method':'tools/call','params':{'name':'framelet_timeline','arguments':{'input':'source.gif','utc_us':'bad'}}} for i in range(3)]
  requests.append({'jsonrpc':'2.0','id':99,'method':'ping'})
  r=subprocess.run([exe,'mcp'],input='\n'.join(map(json.dumps,requests))+'\n',capture_output=True,text=True,encoding='utf-8',env=env,timeout=30);assert r.returncode==0,r.stderr
- replies=list(map(json.loads,r.stdout.splitlines()));assert replies[-1]['result']=={}
+ replies=sorted(map(json.loads,r.stdout.splitlines()),key=lambda x:x["id"]);assert replies[-1]['result']=={}
  assert all(x['result']['isError'] and x['result']['structuredContent']['failure']['stage']=='mcp.tool' for x in replies[:-1])
  # Small deterministic mutation corpus, not a substitute for a sustained fuzzer.
  original=raw.read_bytes();requests=[]
@@ -50,14 +50,17 @@ with tempfile.TemporaryDirectory(prefix='framelet-defense-') as tmp:
   mutated=bytearray(original);mutated[i]^=255;name=f'mutation-{i}.gif';(root/name).write_bytes(mutated)
   requests.append({'jsonrpc':'2.0','id':i,'method':'tools/call','params':{'name':'framelet_inspect','arguments':{'input':name}}})
  requests.append({'jsonrpc':'2.0','id':999,'method':'ping'})
- r=subprocess.run([exe,'mcp'],input='\n'.join(map(json.dumps,requests))+'\n',capture_output=True,text=True,encoding='utf-8',env=env,timeout=30)
- assert r.returncode==0,r.stderr
- replies=list(map(json.loads,r.stdout.splitlines()));assert len(replies)==len(requests) and replies[-1]['result']=={}
+ child_mut=subprocess.Popen([exe,'mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8',env=env)
+ replies=[]
+ for request in requests:
+  child_mut.stdin.write(json.dumps(request)+'\n');child_mut.stdin.flush();replies.append(json.loads(child_mut.stdout.readline()))
+ child_mut.stdin.close();child_mut.wait(timeout=22);assert child_mut.returncode==0,child_mut.stderr.read()
+ assert len(replies)==len(requests) and replies[-1]['result']=={}
  print('PASS 64-byte GIF mutation corpus retains server responsiveness')
  logs=root/'Framelet/Logs';records=[json.loads(x) for p in logs.glob('failures-*.jsonl') for x in p.read_text(encoding='utf-8').splitlines()];assert all(x['code'] and x['stage'] for x in records)
  child=subprocess.Popen([exe,'mcp'],stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8',env=env)
  log=logs/f'failures-{child.pid}.jsonl';log.write_text(' '*1048577,encoding='utf-8')
- message={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'framelet_inspect','arguments':{'input':'missing.gif'}}}
+ message={'jsonrpc':'2.0','id':1,'method':'tools/call','params':{'name':'framelet_unknown','arguments':{}}}
  stdout,stderr=child.communicate(json.dumps(message)+'\n',timeout=30);assert child.returncode==0,stderr
  assert (logs/f'failures-{child.pid}.previous.jsonl').exists();json.loads(log.read_text(encoding='utf-8').strip())
  blocked=root/'blocked';(blocked/'Framelet').mkdir(parents=True);(blocked/'Framelet/Logs').write_text('not-a-directory');failure=run('inspect',root/'missing.gif',ok=False,environ={**env,'LOCALAPPDATA':str(blocked)})['failure'];assert failure['log_error']

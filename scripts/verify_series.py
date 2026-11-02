@@ -133,8 +133,9 @@ def short(exe, root):
                                              "output": str(root / "global-probe.png")})
         assert query["segment_start_ms"] == 1000
         m.tool("framelet_timeline", {"input": directory, "at": 1.2})
-        overview=m.tool("framelet_extract_frames",{"input":directory,"output":str(root/"group-overview"),"count":3,"mode":"uniform"})
-        assert len(overview["frames"])==3 and Path(overview["contact_sheet"]).is_file()
+        overview=m.tool("framelet_extract_frames",{"input":directory,"output":str(root/"group-overview"),"count":9,"mode":"uniform"})
+        assert len(overview["frames"])==9 and Path(overview["contact_sheet"]).is_file()
+        assert overview['decode_passes']==3 and overview['work']['converted_frames']<=9,overview
         listing = m.tool("framelet_recording_list")
         assert listing["recordings"]
         m.tool("framelet_start_series", {**common, "duration": 1, "segment_seconds": 301}, ok=False)
@@ -168,7 +169,7 @@ def short(exe, root):
         sid = s["session_id"]
         m.wait(sid, lambda s: s.get("recorded_ms", 0) >= 5800)
         m.tool("framelet_recover", {"input": s["directory"]}, ok=False)
-        children = psutil.Process(m.p.pid).children()
+        children = [c for c in psutil.Process(m.p.pid).children() if 'worker-record' in c.cmdline()]
         assert len(children) == 1
         children[0].kill()
         children[0].wait(timeout=5)

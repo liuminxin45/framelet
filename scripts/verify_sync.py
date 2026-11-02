@@ -20,7 +20,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-sync-') as tmp, tempfile.Tempo
   sid=tool('framelet_start_recording',{**common,'output':'killed.gif','duration':30})['session_id']
   deadline=time.monotonic()+10
   while tool('framelet_recording_status',{'session_id':sid}).get('state')!='recording':assert time.monotonic()<deadline;time.sleep(.02)
-  children=psutil.Process(host.pid).children();assert len(children)==1,children;children[0].kill();children[0].wait(timeout=5)
+  children=[c for c in psutil.Process(host.pid).children() if 'worker-record' in c.cmdline()];assert len(children)==1,children;children[0].kill();children[0].wait(timeout=5)
   failed=terminal(sid);assert failed['result']['state']=='failed' and failed['result']['failure'];assert rpc('ping')=={}
   r=subprocess.run([exe,'recover',str(root/'killed.gif')],capture_output=True,text=True,encoding='utf-8',env=env,timeout=10);assert r.returncode==0,r.stderr;assert json.loads(r.stdout)['result']['state']=='incomplete'
   assert tool('framelet_recover',{'input':'killed.gif'})['state']=='incomplete'
@@ -28,7 +28,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-sync-') as tmp, tempfile.Tempo
   hang=tool('framelet_start_recording',{**common,'output':'hung.gif','duration':60})['session_id']
   deadline=time.monotonic()+10
   while tool('framelet_recording_status',{'session_id':hang}).get('state')!='recording':assert time.monotonic()<deadline;time.sleep(.02)
-  child=psutil.Process(host.pid).children()[0];child.suspend()
+  child=[c for c in psutil.Process(host.pid).children() if 'worker-record' in c.cmdline()][0];child.suspend()
   tool('framelet_stop_recording',{'session_id':hang});hung=terminal(hang)
   assert hung['result']['state']=='failed' and 'timeout' in hung['result']['error'],hung
   assert rpc('ping')=={}

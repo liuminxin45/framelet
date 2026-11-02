@@ -133,6 +133,11 @@ impl Grabber {
         }
     }
     pub fn rgb(&self) -> Result<Vec<u8>> {
+        let mut rgb = Vec::new();
+        self.rgb_into(&mut rgb)?;
+        Ok(rgb)
+    }
+    pub fn rgb_into(&self, rgb: &mut Vec<u8>) -> Result<()> {
         unsafe {
             let r = self.region;
             ensure!(
@@ -179,11 +184,12 @@ impl Grabber {
             ensure!(GdiFlush() != 0, "GdiFlush failed before pixel read");
             let src =
                 std::slice::from_raw_parts(self.bits, r.width as usize * r.height as usize * 4);
-            let mut rgb = Vec::with_capacity(src.len() / 4 * 3);
+            rgb.clear();
+            rgb.reserve(src.len() / 4 * 3);
             for p in src.as_chunks::<4>().0 {
                 rgb.extend_from_slice(&[p[2], p[1], p[0]]);
             }
-            Ok(rgb)
+            Ok(())
         }
     }
 }

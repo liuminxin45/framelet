@@ -1,5 +1,7 @@
 # Efficient GIF editing for agents · Agent 高效 GIF 剪辑指引
 
+Start with [the current efficient workflow](performance.md): analyze action intervals once, then batch numeric probes; wait_recording keeps the model out of polling loops. The bisection recipe below is for a known monotonic local boundary, not the default way to discover every action. / 先看当前高效工作流：一次分析动作区间，再批量数值探针。下方二分用于已知单调局部边界。
+
 For recordings longer than one GIF, read [long-recording.md](long-recording.md): `framelet_start_series` returns immediately and rotates into a named group, each part at most 300 seconds. Query the group by global media time before selecting a part for scene ranking or editing. Normal EOF saves, forced termination requires recovery. / 长录制先读该指引：分段按组保存，先全局定位再局部抽帧剪辑，不要每 300 秒重新开始一个任务。
 
 **Use playback time, a stable image region and the returned frame interval. Send images only when a visual decision is needed.**

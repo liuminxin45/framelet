@@ -10,6 +10,70 @@ pub struct StagedFile {
     pub file: File,
     _lease: crate::file_guard::Lease,
 }
+pub struct StagedDirectory {
+    pub path: PathBuf,
+    target: PathBuf,
+    _parent: crate::file_guard::Lease,
+    pinned: Option<crate::file_guard::Lease>,
+    committed: bool,
+}
+impl StagedDirectory {
+    pub fn new(target: &Path) -> Result<Self> {
+        ensure!(!target.try_exists()?, "output directory already exists");
+        let target = std::path::absolute(target)?;
+        let parent = crate::file_guard::Lease::output(&target)?;
+        let path = target
+            .parent()
+            .context("output parent missing")?
+            .join(format!(
+                ".framelet-review-{}.partial",
+                crate::identity::new_id()?
+            ));
+        std::fs::create_dir(&path)?;
+        let pinned = crate::file_guard::Lease::output(&path.join("manifest.json"))?;
+        Ok(Self {
+            path,
+            target,
+            _parent: parent,
+            pinned: Some(pinned),
+            committed: false,
+        })
+    }
+    pub fn publish(mut self) -> Result<()> {
+        self.pinned.take();
+        use std::os::windows::fs::OpenOptionsExt;
+        let directory = std::fs::OpenOptions::new()
+            .access_mode(
+                windows_sys::Win32::Storage::FileSystem::FILE_READ_ATTRIBUTES
+                    | windows_sys::Win32::Storage::FileSystem::DELETE,
+            )
+            .share_mode(windows_sys::Win32::Storage::FileSystem::FILE_SHARE_READ)
+            .custom_flags(
+                windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS
+                    | windows_sys::Win32::Storage::FileSystem::FILE_FLAG_OPEN_REPARSE_POINT,
+            )
+            .open(&self.path)?;
+        rename_file(&directory, &self.target, false)
+            .context("publish review directory without overwrite")?;
+        self.committed = true;
+        Ok(())
+    }
+}
+impl Drop for StagedDirectory {
+    fn drop(&mut self) {
+        if !self.committed {
+            if let Ok(entries) = std::fs::read_dir(&self.path) {
+                for entry in entries.flatten() {
+                    if entry.file_type().is_ok_and(|f| f.is_file()) {
+                        let _ = std::fs::remove_file(entry.path());
+                    }
+                }
+            }
+            self.pinned.take();
+            let _ = std::fs::remove_dir(&self.path);
+        }
+    }
+}
 impl StagedFile {
     pub fn new(target: &Path) -> Result<Self> {
         let lease = crate::file_guard::Lease::output(target)?;
@@ -124,6 +188,25 @@ fn rename_file(file: &File, target: &Path, replace: bool) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn directory_publication_preserves_a_racing_empty_directory() {
+        let root = std::env::temp_dir().join(format!(
+            "framelet-dir-test-{}",
+            crate::identity::new_id().unwrap()
+        ));
+        std::fs::create_dir(&root).unwrap();
+        let target = root.join("result");
+        let stage = StagedDirectory::new(&target).unwrap();
+        let partial = stage.path.clone();
+        std::fs::write(stage.path.join("owned"), b"test").unwrap();
+        std::fs::create_dir(&target).unwrap();
+        assert!(stage.publish().is_err());
+        assert!(target.is_dir());
+        assert_eq!(std::fs::read_dir(&target).unwrap().count(), 0);
+        assert!(!partial.exists());
+        std::fs::remove_dir(target).unwrap();
+        std::fs::remove_dir(root).unwrap();
+    }
     #[test]
     fn collision_and_unwind_preserve_existing_outputs() {
         let root = std::env::temp_dir().join(format!(

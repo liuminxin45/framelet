@@ -20,6 +20,7 @@ pub fn query(
     at: Option<f64>,
     utc: Option<u64>,
     event: Option<u64>,
+    options: &crate::timeline::QueryOptions,
 ) -> anyhow::Result<serde_json::Value> {
     anyhow::ensure!(
         [at.is_some(), utc.is_some(), event.is_some()]
@@ -29,9 +30,13 @@ pub fn query(
             <= 1,
         "choose at OR utc_us OR event_id"
     );
+    anyhow::ensure!(
+        options.time_range.is_none() && options.cursor.is_none(),
+        "choose a segment directly for paginated/range queries"
+    );
     if let Some(t) = at {
         let (file, local, start) = locate(input, t)?;
-        let mut value = crate::timeline::query(&file, Some(local), None, None)?;
+        let mut value = crate::timeline::query(&file, Some(local), None, None, options)?;
         value["recording_group"] = serde_json::json!(input);
         value["segment_start_ms"] = serde_json::json!(start);
         return Ok(value);
@@ -58,7 +63,13 @@ pub fn query(
         "ambiguous observation ranges; choose a segment directly"
     );
     for part in candidates {
-        let value = crate::timeline::query(&root.join(&part.recording.output), None, utc, event)?;
+        let value = crate::timeline::query(
+            &root.join(&part.recording.output),
+            None,
+            utc,
+            event,
+            options,
+        )?;
         if !value["events"].as_array().is_none_or(|v| v.is_empty()) || !value["sample"].is_null() {
             return Ok(value);
         }

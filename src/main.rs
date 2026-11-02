@@ -1,13 +1,17 @@
 mod capture;
 mod cli;
 mod encode;
+mod encode_metrics;
 mod file_guard;
 mod frames;
 mod gui;
+mod hash_writer;
 mod identity;
 mod json_io;
 mod mcp;
 mod recording;
+mod review;
+mod review_cache;
 mod runtime;
 mod safety;
 mod series;

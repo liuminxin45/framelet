@@ -32,7 +32,7 @@ function image(r) {
 try {
   await client.connect(transport);
   const tools = (await client.listTools()).tools;
-  assert.equal(tools.length, 20);
+  assert.equal(tools.length, 23);
   assert(!tools.some(t => t.name === 'framelet_record'));
   checks.push('SDK initialization and tool discovery');
   {
@@ -56,6 +56,14 @@ try {
   const edited = await call('framelet_edit', { input, output: path.join(output, 'trim.gif'), start: 0.1, end: 0.3 });
   assert.equal(edited.structuredContent.result.duration_ms, 200);
   checks.push('SDK inspect and trim');
+  const probes = await call('framelet_probe_frames', {input, times:[0.1,0.2,0.1]});
+  assert.equal(probes.structuredContent.result.decode_passes,1);
+  assert.equal(probes.structuredContent.result.frames.length,3);
+  assert.equal(probes.content.filter(c=>c.type==='image').length,0);
+  const analysis = await call('framelet_analyze', {input,output:path.join(output,'analysis'),include_image:true});
+  image(analysis);
+  assert.equal(analysis.structuredContent.result.semantic_analysis,false);
+  checks.push('SDK validates batch/analysis structured schemas and opt-in contact sheet');
   const invalid = await client.callTool({ name: 'framelet_inspect', arguments: { input, arbitrary: true } });
   assert.equal(invalid.isError, true);
   await client.ping();
@@ -99,13 +107,8 @@ try {
     image(shot);
     console.log(JSON.stringify({ shot_image_blocks: shot.content.filter(c => c.type === 'image').length }));
     const started = (await call('framelet_start_recording', { region, duration: 0.6, fps: 10, output: path.join(output, 'capture.gif') })).structuredContent.result;
-    let status;
-    const deadline = Date.now() + 20000;
-    do {
-      assert(Date.now() < deadline, 'recording terminal timeout');
-      await new Promise(resolve => setTimeout(resolve, 50));
-      status = (await call('framelet_recording_status', {session_id:started.session_id})).structuredContent.result;
-    } while (!status.terminal);
+    const status = (await call('framelet_wait_recording', {session_id:started.session_id,until:'terminal',timeout_ms:20000})).structuredContent.result;
+    assert(status.terminal && !status.wait_timed_out);
     assert.equal(status.result.state, 'completed');
     const recording = {structuredContent:{result:status.result.recording}};
     assert(Math.abs(recording.structuredContent.result.duration_ms - 600) <= 30);

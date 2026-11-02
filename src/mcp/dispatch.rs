@@ -59,6 +59,9 @@ fn call_value(
         }
     }
     for key in ["cursor", "include_image"] {
+        if key == "cursor" && name == "framelet_timeline" {
+            continue;
+        }
         if let Some(v) = a.get(key) {
             anyhow::ensure!(v.is_boolean(), "{key} must be boolean");
         }
@@ -104,6 +107,25 @@ fn call_value(
     }
     let a = &args;
     match name {
+        "framelet_analyze" => crate::review::analyze::run(&serde_json::from_value(a.clone())?),
+        "framelet_probe_frames" => {
+            let args: crate::review::probe::Args = serde_json::from_value(a.clone())?;
+            anyhow::ensure!(
+                !args.include_image || args.output.is_some(),
+                "output is required for batch image"
+            );
+            crate::review::probe::batch(
+                &args.input,
+                &args.times,
+                crate::frames::ProbeOptions {
+                    reference: args.reference,
+                    region: args.compare_region,
+                    threshold: args.difference_threshold,
+                },
+                args.output.as_deref(),
+                args.export,
+            )
+        }
         "framelet_recover" => {
             let p = Path::new(string(a, "input")?);
             if crate::series::is_group(p) {
@@ -123,6 +145,23 @@ fn call_value(
             a.get("at").and_then(Value::as_f64),
             a.get("utc_us").and_then(Value::as_u64),
             a.get("event_id").and_then(Value::as_u64),
+            &serde_json::from_value(serde_json::Value::Object(
+                obj.iter()
+                    .filter(|(k, _)| {
+                        [
+                            "detail",
+                            "device",
+                            "event_kinds",
+                            "include_moves",
+                            "time_range",
+                            "cursor",
+                            "limit",
+                        ]
+                        .contains(&k.as_str())
+                    })
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+            ))?,
         ),
         "framelet_context" => Ok(paths.context()),
         "framelet_recording_status" => sessions.status(string(a, "session_id")?),
@@ -214,6 +253,11 @@ pub(super) fn call(
 ) -> Result<Value> {
     let mut value = call_value(name, a, paths, sessions)?;
     let image_path = match name {
+        "framelet_probe_frames" | "framelet_analyze"
+            if a["include_image"].as_bool().unwrap_or(false) =>
+        {
+            value["contact_sheet"].as_str()
+        }
         "framelet_shot" => value["output"].as_str(),
         "framelet_frame_at" if a["include_image"].as_bool().unwrap_or(true) => {
             value["output"].as_str()
@@ -240,10 +284,8 @@ pub(super) fn call(
             Err(error) => return Err(error),
         }
     }
-    let result = json!({"ok":true,"result":value});
-    content.insert(
-        0,
-        json!({"type":"text","text":serde_json::to_string(&result)?}),
-    );
+    let result =
+        json!({"ok":true,"result":value,"performance":{"cache":crate::review_cache::stats()}});
+    content.insert(0,json!({"type":"text","text":format!("{name} completed. Read structuredContent.result; images are included only when requested.")}));
     Ok(json!({"content":content,"structuredContent":result,"isError":false}))
 }

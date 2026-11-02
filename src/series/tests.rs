@@ -41,6 +41,7 @@ fn args(root: &Path) -> SeriesArgs {
 fn stats(path: PathBuf) -> crate::encode::Stats {
     crate::encode::Stats {
         playback: None,
+        capture_metrics: None,
         output: path,
         width: 8,
         height: 8,

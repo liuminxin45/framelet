@@ -9,8 +9,14 @@ use std::{
 
 // Single pending frame: stationary time is merged without retaining a recording in RAM.
 pub struct GifWriter {
-    enc: Option<Encoder<BufWriter<File>>>,
+    enc: Option<Encoder<BufWriter<crate::hash_writer::HashWriter>>>,
     previous: Vec<u8>,
+    spare_rgb: Vec<u8>,
+    crop: Vec<u8>,
+    index_spare: Vec<u8>,
+    palette: Vec<u8>,
+    palette_map: std::collections::HashMap<[u8; 3], u8>,
+    metrics: crate::encode_metrics::Metrics,
     pending: Option<Frame<'static>>,
     width: u16,
     height: u16,
@@ -81,7 +87,12 @@ impl GifWriter {
             .open(&partial)
             .context("create output (parent directory must exist)")?;
         let initialized = (|| -> Result<_> {
-            let mut enc = Encoder::new(BufWriter::new(f), width as u16, height as u16, &[])?;
+            let mut enc = Encoder::new(
+                BufWriter::with_capacity(65536, crate::hash_writer::HashWriter::new(f)?),
+                width as u16,
+                height as u16,
+                &[],
+            )?;
             enc.set_repeat(Repeat::Infinite)?;
             Ok(enc)
         })();
@@ -95,6 +106,12 @@ impl GifWriter {
         Ok(Self {
             enc: Some(enc),
             previous: Vec::new(),
+            spare_rgb: Vec::new(),
+            crop: Vec::new(),
+            index_spare: Vec::new(),
+            palette: Vec::new(),
+            palette_map: Default::default(),
+            metrics: Default::default(),
             pending: None,
             width: width as u16,
             height: height as u16,
@@ -131,12 +148,44 @@ impl GifWriter {
         Ok(())
     }
     pub fn capture(&mut self, grab: &crate::capture::Grabber) -> Result<Vec<u8>> {
+        let began = std::time::Instant::now();
         let at = self.timeline.as_ref().map(|t| t.begin());
-        let pixels = grab.rgb()?;
+        let mut pixels = std::mem::take(&mut self.spare_rgb);
+        grab.rgb_into(&mut pixels)?;
         if let (Some(t), Some(at)) = (self.timeline.as_mut(), at) {
             t.captured(at);
         }
+        self.observe_capture(began.elapsed());
         Ok(pixels)
+    }
+    pub fn observe_capture(&mut self, elapsed: std::time::Duration) {
+        self.metrics.source_samples += 1;
+        self.metrics.capture_us += crate::encode_metrics::micros(elapsed);
+    }
+    pub fn observe_transform(&mut self, elapsed: std::time::Duration) {
+        self.metrics.transform_us += crate::encode_metrics::micros(elapsed);
+    }
+    pub fn observe_lateness(&mut self, late: std::time::Duration, period: std::time::Duration) {
+        self.metrics.missed_full_periods = self.metrics.missed_full_periods.saturating_add(
+            (late.as_nanos() / period.as_nanos().max(1)).min(u64::MAX as u128) as u64,
+        );
+    }
+    fn capture_metrics(&self, duration_ms: u64) -> Option<crate::encode_metrics::Metrics> {
+        let mut metrics = self.metrics.clone();
+        if duration_ms > 0 && metrics.source_samples > 0 {
+            metrics.samples_per_media_second =
+                Some(metrics.source_samples as f64 / (duration_ms as f64 / 1000.));
+        }
+        Some(metrics)
+    }
+    pub fn prefix_sha256(&mut self) -> Result<String> {
+        self.metrics.checkpoint_snapshots += 1;
+        self.enc
+            .as_ref()
+            .context("encoder closed")?
+            .get_ref()
+            .get_ref()
+            .snapshot()
     }
     fn mapped(&mut self, delay: u16) {
         if let Some(t) = &mut self.timeline {
@@ -152,6 +201,7 @@ impl GifWriter {
     }
     pub fn set_capture_fps(&mut self, fps: u32) {
         self.capture_fps = Some(fps);
+        self.metrics.target_fps = Some(fps);
     }
     fn playback(&self) -> Option<PlaybackInfo> {
         (self.capture_fps.is_some() || self.short_delay_frames > 0).then_some(PlaybackInfo {
@@ -177,6 +227,7 @@ impl GifWriter {
             manifest: None,
             warnings: vec![],
             playback: self.playback(),
+            capture_metrics: self.capture_metrics(self.duration_cs * 10),
         }
     }
     pub fn checkpoint(&mut self) -> Result<u64> {
@@ -188,12 +239,13 @@ impl GifWriter {
             .context("GIF encoder is closed")?
             .get_mut();
         out.flush()?;
-        out.get_ref().sync_all()?;
-        let bytes = out.get_ref().metadata()?.len();
+        out.get_ref().file.sync_all()?;
+        let bytes = out.get_ref().file.metadata()?.len();
         ensure!(bytes <= self.limit, "GIF exceeds output byte budget");
         Ok(bytes)
     }
     fn flush(&mut self) -> Result<()> {
+        let began = std::time::Instant::now();
         if let Some(frame) = self.pending.take() {
             if frame.delay <= 1 {
                 self.short_delay_frames += 1;
@@ -207,10 +259,20 @@ impl GifWriter {
                 "GIF exceeds output byte budget; unfinished output discarded"
             );
             self.frames += 1;
+            if let std::borrow::Cow::Owned(buffer) = frame.buffer {
+                self.index_spare = buffer;
+            }
         }
+        self.metrics.lzw_write_us += crate::encode_metrics::micros(began.elapsed());
         Ok(())
     }
     pub fn push(&mut self, rgb: Vec<u8>, delay: u16) -> Result<()> {
+        let began = std::time::Instant::now();
+        let result = self.push_inner(rgb, delay);
+        self.metrics.encode_pipeline_us += crate::encode_metrics::micros(began.elapsed());
+        result
+    }
+    fn push_inner(&mut self, rgb: Vec<u8>, delay: u16) -> Result<()> {
         ensure!(
             rgb.len() == self.width as usize * self.height as usize * 3,
             "pixel buffer length mismatch"
@@ -229,6 +291,8 @@ impl GifWriter {
                 .context("missing pending GIF frame")?
                 .delay += delay;
             self.mapped(delay);
+            self.metrics.merged_samples += 1;
+            self.spare_rgb = rgb;
             return Ok(());
         }
         let (x, y, w, h) = bounds(
@@ -238,36 +302,81 @@ impl GifWriter {
             self.height as usize,
         );
         self.flush()?;
-        let mut crop = Vec::with_capacity(w * h * 3);
+        let mut crop = std::mem::take(&mut self.crop);
+        crop.clear();
+        crop.reserve(w * h * 3);
         for row in y..y + h {
             crop.extend_from_slice(
                 &rgb[(row * self.width as usize + x) * 3..(row * self.width as usize + x + w) * 3],
             );
         }
-        let mut frame = Frame::from_rgb_speed(w as u16, h as u16, &crop, self.quality);
+        let began = std::time::Instant::now();
+        let mut frame = self.quantize(w as u16, h as u16, &crop);
+        self.metrics.quantize_us += crate::encode_metrics::micros(began.elapsed());
+        self.crop = crop;
         frame.left = x as u16;
         frame.top = y as u16;
         frame.delay = delay;
         frame.dispose = DisposalMethod::Keep;
         self.pending = Some(frame);
-        self.previous = rgb;
+        self.spare_rgb = std::mem::replace(&mut self.previous, rgb);
         self.mapped(delay);
         Ok(())
     }
+    fn quantize(&mut self, w: u16, h: u16, rgb: &[u8]) -> Frame<'static> {
+        let mut indices = std::mem::take(&mut self.index_spare);
+        indices.clear();
+        indices.reserve(rgb.len() / 3);
+        let mut missing = false;
+        for pixel in rgb.as_chunks::<3>().0 {
+            if let Some(&index) = self.palette_map.get(pixel) {
+                indices.push(index);
+            } else {
+                missing = true;
+                break;
+            }
+        }
+        if missing {
+            self.palette.clear();
+            self.palette_map.clear();
+            indices.clear();
+            for pixel in rgb.as_chunks::<3>().0 {
+                let index = if let Some(&index) = self.palette_map.get(pixel) {
+                    index
+                } else {
+                    if self.palette_map.len() == 256 {
+                        self.palette.clear();
+                        self.palette_map.clear();
+                        self.index_spare = indices;
+                        self.metrics.quantized_frames += 1;
+                        return Frame::from_rgb_speed(w, h, rgb, self.quality);
+                    }
+                    let index = self.palette_map.len() as u8;
+                    self.palette_map.insert(*pixel, index);
+                    self.palette.extend_from_slice(pixel);
+                    index
+                };
+                indices.push(index);
+            }
+        }
+        self.metrics.exact_palette_frames += 1;
+        Frame::from_palette_pixels(w, h, indices, self.palette.clone(), None)
+    }
     pub fn finish(mut self) -> Result<Stats> {
+        let finalize = std::time::Instant::now();
         ensure!(self.samples > 0, "recording contains no frames");
         self.flush()?;
         let enc = self.enc.take().context("GIF encoder already finalized")?;
         let mut writer = enc.into_inner()?;
         use std::io::Write;
         writer.flush()?;
-        writer.get_ref().sync_all()?;
+        writer.get_ref().file.sync_all()?;
         ensure!(
             std::fs::metadata(&self.partial)?.len() <= self.limit,
             "GIF exceeds output byte budget; unfinished output discarded"
         );
-        // Hard-link publishes without replacing an existing user file, even under races.
-        crate::storage::publish_file(writer.get_ref(), &self.path)?;
+        // Handle-based publication never replaces an existing user file.
+        crate::storage::publish_file(&writer.get_ref().file, &self.path)?;
         self.committed = true;
         drop(writer);
         let cleanup_warnings = Vec::new();
@@ -283,6 +392,7 @@ impl GifWriter {
             manifest: None,
             warnings: cleanup_warnings,
             playback: self.playback(),
+            capture_metrics: self.capture_metrics(self.duration_cs * 10),
         };
         if let Some(t) = self.timeline.take() {
             match crate::runtime::guard("timeline.finalize", || Ok(t.finish(&stats))) {
@@ -322,6 +432,8 @@ impl GifWriter {
                 }
             }
         }
+        self.metrics.finalize_us = crate::encode_metrics::micros(finalize.elapsed());
+        stats.capture_metrics = self.capture_metrics(stats.duration_ms);
         Ok(stats)
     }
 }
@@ -337,6 +449,8 @@ impl Drop for GifWriter {
 }
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct Stats {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub capture_metrics: Option<crate::encode_metrics::Metrics>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub playback: Option<PlaybackInfo>,
     pub output: PathBuf,
@@ -512,6 +626,14 @@ pub fn inspect(input: &Path) -> Result<serde_json::Value> {
     Ok(inventory(input)?.0)
 }
 pub(crate) fn inventory(input: &Path) -> Result<(serde_json::Value, Vec<(u64, u64)>)> {
+    let value = crate::review_cache::get(input, &[input.to_path_buf()], || {
+        let value = inventory_uncached(input)?;
+        let bytes = value.1.capacity() * 16 + 1024;
+        Ok((value, bytes))
+    })?;
+    Ok((*value).clone())
+}
+fn inventory_uncached(input: &Path) -> Result<(serde_json::Value, Vec<(u64, u64)>)> {
     let _lease = crate::file_guard::Lease::input(input)?;
     ensure!(
         std::fs::metadata(input)?.len() <= 512 * 1024 * 1024,
@@ -557,6 +679,42 @@ pub(crate) fn inventory(input: &Path) -> Result<(serde_json::Value, Vec<(u64, u6
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn exact_palette_reuse_preserves_all_256_colors_and_stream_hash() {
+        let p = std::env::temp_dir().join(format!(
+            "framelet-palette-{}.gif",
+            crate::identity::new_id().unwrap()
+        ));
+        let mut w = GifWriter::new(&p, 16, 16, 10).unwrap();
+        let a: Vec<u8> = (0..=255).flat_map(|v| [v, v, v]).collect();
+        let mut b = a.clone();
+        b.rotate_left(3);
+        w.push(a.clone(), 10).unwrap();
+        w.push(b.clone(), 10).unwrap();
+        let prefix = w.checkpoint().unwrap();
+        use std::io::Read;
+        assert_eq!(
+            w.prefix_sha256().unwrap(),
+            crate::identity::sha256_reader(File::open(w.partial_path()).unwrap().take(prefix))
+                .unwrap()
+        );
+        let stats = w.finish().unwrap();
+        assert_eq!(stats.capture_metrics.unwrap().exact_palette_frames, 2);
+        let mut options = gif::DecodeOptions::new();
+        options.set_color_output(gif::ColorOutput::RGBA);
+        let mut reader = options.read_info(File::open(&p).unwrap()).unwrap();
+        for expected in [a, b] {
+            let f = reader.read_next_frame().unwrap().unwrap();
+            let actual: Vec<_> = f
+                .buffer
+                .chunks_exact(4)
+                .flat_map(|p| [p[0], p[1], p[2]])
+                .collect();
+            assert_eq!(actual, expected);
+        }
+        drop(reader);
+        std::fs::remove_file(p).unwrap();
+    }
     fn path(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("framelet-{}-{name}.gif", std::process::id()))
     }

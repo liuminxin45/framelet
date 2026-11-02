@@ -8,7 +8,6 @@ use crate::{
 use anyhow::{Context, Result, ensure};
 use serde_json::{Value, json};
 use std::{
-    io::Read,
     path::Path,
     sync::{atomic::Ordering, mpsc},
     time::{Duration, Instant},
@@ -122,9 +121,7 @@ fn checkpoint(
     let stats = writer.snapshot_stats(bytes + 1);
     let data = recorder.checkpoint_data(&stats);
     let c = Checkpoint {
-        gif_prefix_sha256: crate::identity::sha256_reader(
-            std::fs::File::open(writer.partial_path())?.take(bytes),
-        )?,
+        gif_prefix_sha256: writer.prefix_sha256()?,
         schema: 1,
         session_id: index.session_id.clone(),
         number,
@@ -349,9 +346,13 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
             }
             if !paused && previous.is_none() && (active >= next || was_paused) {
                 let at = recorder.begin();
-                let rgb = grab.rgb()?;
+                let current = writer.as_mut().context("writer missing during capture")?;
+                current.observe_lateness(active.saturating_sub(next), period);
+                let rgb = current.capture(&grab)?;
                 recorder.captured(at);
+                let transform = Instant::now();
                 previous = Some(crate::recording::transform(rgb, region, w, h, &a.masks));
+                current.observe_transform(transform.elapsed());
                 c.samples.fetch_add(1, Ordering::Relaxed);
                 next = if was_paused {
                     active + period

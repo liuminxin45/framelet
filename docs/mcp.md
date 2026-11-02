@@ -1,6 +1,6 @@
 # MCP · Local recording for AI / AI 本地录屏
 
-Current development uses MCP protocol 2025-11-25 only (standard initialization returns this supported version, without older protocol execution branches) and exposes 20 tools, including `framelet_start_series`, `framelet_recording_list` and `framelet_recover`. `framelet_timeline` accepts `event_id` and returns keyboard/mouse events, unique observation/sample/frame links and timing offsets. Each explicit recording runs in a supervised child process and writes GIF + timeline + content-hash manifest. Keyboard observation is active only during recording, never on MCP initialization. See [timeline.md](timeline.md) and [reliable long recording](long-recording.md) for scope and semantics. Single GIF recording is bounded to 300 seconds across CLI/MCP/GUI; series return immediately and rotate at most every 300 active seconds, with a separate task lifetime. Normal EOF saves a series; a killed process requires recovery.
+Current development uses MCP protocol 2025-11-25 only (standard initialization returns this supported version, without older protocol execution branches) and exposes 23 tools, including `framelet_start_series`, `framelet_recording_list` and `framelet_recover`. `framelet_timeline` accepts `event_id` and returns keyboard/mouse events, unique observation/sample/frame links and timing offsets. Each explicit recording runs in a supervised child process and writes GIF + timeline + content-hash manifest. Keyboard observation is active only during recording, never on MCP initialization. See [timeline.md](timeline.md) and [reliable long recording](long-recording.md) for scope and semantics. Single GIF recording is bounded to 300 seconds across CLI/MCP/GUI; series return immediately and rotate at most every 300 active seconds, with a separate task lifetime. Normal EOF saves a series; a killed process requires recovery.
 
 The portable EXE **is** the MCP server: your AI client launches `framelet.exe mcp` and exchanges JSON-RPC over stdin/stdout. It runs on the Windows computer whose visible desktop you want to capture. There is no daemon to start, model API key or server runtime to install. Initialization alone never starts capture.
 
@@ -73,9 +73,9 @@ start 返回 `session_id`，后续控制工具都传此 ID。暂停是异步请�
 
 ## Tools / 工具
 
-The current catalog exposes 20 tools. Recording uses background sessions only.
+The current catalog exposes 23 tools. Recording uses background sessions only.
 
-当前目录共 20 个工具；MCP 录像统一采用后台会话，不提供阻塞式录制。
+当前目录共 23 个工具；MCP 录像统一采用后台会话，不提供阻塞式录制。
 
 | Tools | Purpose / 用途 |
 | --- | --- |
@@ -115,3 +115,5 @@ The returned frame index and half-open playback interval support interval cachin
 帧号与左闭右开的播放区间可用于缓存和跳跃，恰好等于 GIF 总时长的时间点越界。无效时间点、参考图或区域不会发布输出。图片响应还包含原图与预览尺寸，用于坐标映射。见 [Agent 高效剪辑指引](agent-guide.md) 和 [Bilibili 真实示例](demo.md)。
 
 Current engineering policy: [engineering-standard.md](engineering-standard.md). Interrupted recovery can be repeated; mismatched output is preserved and refused.
+
+[Efficient AI workflow / 高效 AI 工作流](performance.md) — nonblocking waits and controls, filtered/paginated input events, one-pass batch probes, transient-aware action intervals and bounded content-verified caches. / 无阻塞等待与控制、事件筛选分页、单遍批量探针、短暂状态候选和有界内容缓存。

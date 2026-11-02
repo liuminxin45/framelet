@@ -8,8 +8,17 @@ use std::{
 use windows_sys::Win32::Storage::FileSystem::*;
 pub struct Lease {
     _handles: Vec<File>,
+    input: bool,
 }
 impl Lease {
+    pub fn reader(&self) -> Result<File> {
+        ensure!(self.input, "output lease has no input reader");
+        Ok(self
+            ._handles
+            .last()
+            .context("input handle missing")?
+            .try_clone()?)
+    }
     pub fn output(path: &Path) -> Result<Self> {
         Self::open(path, false)
     }
@@ -48,7 +57,10 @@ impl Lease {
             );
             handles.push(file);
         }
-        Ok(Self { _handles: handles })
+        Ok(Self {
+            _handles: handles,
+            input,
+        })
     }
 }
 #[cfg(test)]

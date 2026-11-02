@@ -87,7 +87,7 @@ def main():
         m.wait(s["session_id"], lambda v: v.get("recorded_ms", 0) >= 5800)
         m.tool("framelet_pause_recording", {"session_id": s["session_id"]})
         m.wait(s["session_id"], lambda v: v.get("state") == "paused")
-        children = psutil.Process(m.p.pid).children()
+        children = [c for c in psutil.Process(m.p.pid).children() if 'worker-record' in c.cmdline()]
         assert len(children) == 1
         m.p.kill()
         m.p.wait(timeout=5)
