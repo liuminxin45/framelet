@@ -14,7 +14,7 @@ Let an AI operate software while recording its screen and keyboard/mouse events,
 
 ## More than a GIF: an interaction timeline
 
-Local development records **keyboard, mouse and frame samples together by default**, sharing UTC and monotonic clocks. A timeline and content-integrity manifest accompany the GIF.
+Framelet records **keyboard, mouse and frame samples together by default**, sharing UTC and monotonic clocks. A timeline and content-integrity manifest accompany the GIF.
 
 - **Unique identities:** shared observation IDs link input events, original samples and GIF frames, with explicit timing offsets.
 - **Input independent of FPS:** several actions between samples can map to one frame. Unsampled visual changes cannot be recovered.

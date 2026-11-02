@@ -12,7 +12,7 @@
     {
       "registryType": "mcpb",
       "identifier": "https://github.com/liuminxin45/framelet/releases/download/v0.4.0/framelet-v0.4.0-windows-x64.mcpb",
-      "fileSha256": "e8cf77705d7e3b863b4eebf0b0cb26f4cb60a3332e2b7012877ec3c28d9abf54",
+      "fileSha256": "a30469119fd1f6803a3ed51cf6e0014a7838ecca76a812064a1e4e2c12e16a97",
       "transport": {
         "type": "stdio"
       }
