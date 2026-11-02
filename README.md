@@ -43,6 +43,12 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 
 Static acceptance can use **1 FPS**; compact GIFs **10–15 FPS**; polished demos default to **30 FPS**. Actual sampling depends on workload.
 
+## What Framelet is for
+
+Use Framelet to capture a short interface demonstration, preserve a visible state change, or let an AI agent inspect and trim a GIF through MCP. The recorder provides capture and image tools; the AI client or operator controls the application being demonstrated.
+
+It captures visible desktop pixels on an interactive Windows x64 session. Overlapping windows can appear in the result. Direct MP4 export, audio recording, and hidden-window capture are outside the documented feature scope.
+
 ## Example 1 · Real window and recording
 
 ![Framelet capture frame](docs/images/framelet-window.jpg)
