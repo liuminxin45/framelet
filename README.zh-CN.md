@@ -8,11 +8,11 @@
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D4)](#下载)
-[![Preview](https://img.shields.io/badge/preview-v0.2.0--rc.1-0891B2)](https://github.com/liuminxin45/framelet/releases/tag/v0.2.0-rc.1)
+[![Preview](https://img.shields.io/badge/preview-v0.2.0--rc.2-0891B2)](https://github.com/liuminxin45/framelet/releases/tag/v0.2.0-rc.2)
 [![Windows CI](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml/badge.svg)](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-52525B)](LICENSE)
 
-[**下载便携版**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [三步上手](#三步上手) · [MCP 配置](docs/mcp.md) · [真实演示](#示例一真实界面与演示)
+[**下载便携版**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.2/framelet-v0.2.0-rc.2-windows-x64.zip) · [三步上手](#三步上手) · [MCP 配置](docs/mcp.md) · [真实演示](#示例一真实界面与演示)
 
 </div>
 
@@ -30,7 +30,7 @@ Framelet 把 Windows 桌面上的一块可见区域录成 GIF，或截成 PNG。
 
 ## 下载
 
-[**v0.2.0-rc.1 · Windows x64 便携 ZIP**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [SHA-256 校验](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/SHA256SUMS.txt) · [所有版本](https://github.com/liuminxin45/framelet/releases)
+[**v0.2.0-rc.2 · Windows x64 便携 ZIP**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.2/framelet-v0.2.0-rc.2-windows-x64.zip) · [SHA-256 校验](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.2/SHA256SUMS.txt) · [所有版本](https://github.com/liuminxin45/framelet/releases)
 
 解压后运行 `framelet.exe`。需要 Windows 10 2004+ / Windows 11 x64 交互式桌面。本次为验收预览版，包含后台 MCP 会话、时间点取帧和防护增强；[v0.1.0](https://github.com/liuminxin45/framelet/releases/tag/v0.1.0) 稳定版保留。便携 ZIP 不到 1 MiB，演示媒体单独提供。构建和测试工具仅为开发依赖。
 
@@ -49,6 +49,22 @@ Framelet 把 Windows 桌面上的一块可见区域录成 GIF，或截成 PNG。
 ```
 
 坐标是物理像素，可用 `monitors`、`windows` 查询。输出不能已存在，父目录需提前创建。录制的是当前可见桌面，其他窗口遮住时也可能被录进去。指定帧率是采样上限，实际速度取决于桌面和编码负载；GIF 延时按实际时间记录。
+
+### 按场景选择帧率（CLI / MCP）
+
+支持 **1–50 FPS**。以下是录制起点，AI 应根据需要保留的证据选择：
+
+| 场景 | 建议 FPS | 选择理由 |
+| --- | --- | --- |
+| 静态界面验收、长任务进度 | **1** | 只需稳定状态；只看最终结果可直接用 `shot` |
+| 开发流程检查、表单与状态切换 | **3–5** | 看清操作前后；不用于判断短暂闪烁或动画 |
+| 体积优先的 README GIF、分步教程 | **10–15** | 动作流畅性非重点时，控制文件体积 |
+| 正式软件演示、滚动、拖拽、转场 | **30** | 默认面向观众的演示档位，优先保留动作连续性 |
+| 快速动作、短暂视觉缺陷排查 | **40–50** | 先做短录验证性能，仍可能漏掉更短的瞬态 |
+
+**“开发测试”不等于 1 FPS 足够**：1 FPS 可能漏掉不足一秒的弹窗、闪烁或错误状态。正式演示默认 30 FPS；若明确优先考虑体积，可主动选择 10–15 FPS。
+
+AI 先用 `max_width:960` 或 `1280` 短录，再根据 `recording_status` 的采样数和录制时长估计实际采样速度。不要用编码后的 GIF 帧数判断采样帧率，静态帧可能被合并。性能不足时，优先缩小区域或输出尺寸；若必须降低演示帧率，应说明取舍。输出宽 × 高 × FPS 不能超过 80,000,000；指定 FPS 是采样上限，GIF 的百分之一秒延时精度也不保证 30 FPS 对应均匀的 33.33 ms 帧间隔。MCP 的 `framelet_context.capture_guidance` 提供同一套建议。
 
 | 要做什么 | 可以直接使用的能力 |
 | --- | --- |

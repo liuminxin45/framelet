@@ -8,6 +8,40 @@ This workflow is advertised in MCP initialization instructions and `framelet_con
 
 MCP 初始化说明和 `framelet_context.editing_recipe` 会告知 Agent 这套流程。下面的差分由 Framelet 原生完成，运行录屏工具不需要额外安装 Python、FFmpeg 或图像分析运行时。
 
+## 0. Choose capture FPS / 先选择采集帧率
+
+### Choose FPS by intent (CLI / MCP)
+
+Supported range: **1–50 FPS**. These are starting points; choose the evidence you need to preserve:
+
+| Intent | Suggested FPS | Why |
+| --- | --- | --- |
+| Stable UI acceptance, long-running progress | **1** | Stable states only; use `shot` for just the final result |
+| Development workflow, forms and state changes | **3–5** | Before/after states, rather than brief glitches or animation |
+| Compact README GIF, step-by-step tutorial | **10–15** | Favor size when smooth motion is secondary |
+| Polished software demo, scrolling, dragging, transitions | **30** | Default for audience-facing demos; preserve motion continuity |
+| Fast motion, brief visual defects | **40–50** | Check performance with a short trial; shorter transients may still be missed |
+
+**Development testing does not automatically mean 1 FPS is enough.** At 1 FPS, sub-second dialogs, flicker or errors may be missed. Default to 30 FPS for polished demos; deliberately use 10–15 FPS when compact output matters more.
+
+Start with a short trial at `max_width:960` or `1280`. Estimate actual sampling speed from `recording_status` samples and recorded elapsed time, not encoded GIF frame count: static frames may be merged. If capture is slow, reduce the region or output size first; explain the compromise if lowering demo FPS is necessary. Encoded width × height × FPS must be ≤80,000,000. Requested FPS is a ceiling; GIF centisecond delay resolution also means 30 FPS does not guarantee uniform 33.33 ms intervals. MCP exposes the same advice in `framelet_context.capture_guidance`.
+
+### 按场景选择帧率（CLI / MCP）
+
+支持 **1–50 FPS**。以下是录制起点，AI 应根据需要保留的证据选择：
+
+| 场景 | 建议 FPS | 选择理由 |
+| --- | --- | --- |
+| 静态界面验收、长任务进度 | **1** | 只需稳定状态；只看最终结果可直接用 `shot` |
+| 开发流程检查、表单与状态切换 | **3–5** | 看清操作前后；不用于判断短暂闪烁或动画 |
+| 体积优先的 README GIF、分步教程 | **10–15** | 动作流畅性非重点时，控制文件体积 |
+| 正式软件演示、滚动、拖拽、转场 | **30** | 默认面向观众的演示档位，优先保留动作连续性 |
+| 快速动作、短暂视觉缺陷排查 | **40–50** | 先做短录验证性能，仍可能漏掉更短的瞬态 |
+
+**“开发测试”不等于 1 FPS 足够**：1 FPS 可能漏掉不足一秒的弹窗、闪烁或错误状态。正式演示默认 30 FPS；若明确优先考虑体积，可主动选择 10–15 FPS。
+
+AI 先用 `max_width:960` 或 `1280` 短录，再根据 `recording_status` 的采样数和录制时长估计实际采样速度。不要用编码后的 GIF 帧数判断采样帧率，静态帧可能被合并。性能不足时，优先缩小区域或输出尺寸；若必须降低演示帧率，应说明取舍。输出宽 × 高 × FPS 不能超过 80,000,000；指定 FPS 是采样上限，GIF 的百分之一秒延时精度也不保证 30 FPS 对应均匀的 33.33 ms 帧间隔。MCP 的 `framelet_context.capture_guidance` 提供同一套建议。
+
 ## 1. Establish the task / 先明确剪辑目标
 
 - Call `framelet_context` for paths and `framelet_inspect` for duration. Use unique output names; existing files are protected.

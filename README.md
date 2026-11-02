@@ -8,11 +8,11 @@
 [English](README.md) · [简体中文](README.zh-CN.md)
 
 [![Windows](https://img.shields.io/badge/Windows-10%20%2F%2011-0078D4)](#download)
-[![Preview](https://img.shields.io/badge/preview-v0.2.0--rc.1-0891B2)](https://github.com/liuminxin45/framelet/releases/tag/v0.2.0-rc.1)
+[![Preview](https://img.shields.io/badge/preview-v0.2.0--rc.2-0891B2)](https://github.com/liuminxin45/framelet/releases/tag/v0.2.0-rc.2)
 [![Windows CI](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml/badge.svg)](https://github.com/liuminxin45/framelet/actions/workflows/ci.yml)
 [![MIT](https://img.shields.io/badge/license-MIT-52525B)](LICENSE)
 
-[**Download portable**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [Quick start](#quick-start) · [MCP setup](docs/mcp.md) · [Examples](#example-1--real-window-and-recording)
+[**Download portable**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.2/framelet-v0.2.0-rc.2-windows-x64.zip) · [Quick start](#quick-start) · [MCP setup](docs/mcp.md) · [Examples](#example-1--real-window-and-recording)
 
 </div>
 
@@ -30,7 +30,7 @@ The original small demo is preserved: **620×300, 3 seconds, 16 FPS, 48 frames, 
 
 ## Download
 
-[**v0.2.0-rc.1 · Windows x64 portable ZIP**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/framelet-v0.2.0-rc.1-windows-x64.zip) · [SHA-256](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.1/SHA256SUMS.txt) · [All releases](https://github.com/liuminxin45/framelet/releases)
+[**v0.2.0-rc.2 · Windows x64 portable ZIP**](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.2/framelet-v0.2.0-rc.2-windows-x64.zip) · [SHA-256](https://github.com/liuminxin45/framelet/releases/download/v0.2.0-rc.2/SHA256SUMS.txt) · [All releases](https://github.com/liuminxin45/framelet/releases)
 
 Extract and run `framelet.exe`. Requires an interactive Windows 10 2004+ / Windows 11 x64 desktop. The preview includes the new MCP sessions, timestamp probes and guardrails; [v0.1.0](https://github.com/liuminxin45/framelet/releases/tag/v0.1.0) remains the stable release. The portable ZIP is under 1 MiB; demo media is distributed separately. Build/test tools are development dependencies only.
 
@@ -49,6 +49,22 @@ Extract and run `framelet.exe`. Requires an interactive Windows 10 2004+ / Windo
 ```
 
 Coordinates are physical pixels; `monitors` and `windows` discover bounds. Output must be new, and its parent directory must exist. Capture reads visible desktop pixels; an overlapping window can appear in a recording. Requested FPS is a ceiling, and GIF delays preserve elapsed time when capture/encoding is slower.
+
+### Choose FPS by intent (CLI / MCP)
+
+Supported range: **1–50 FPS**. These are starting points; choose the evidence you need to preserve:
+
+| Intent | Suggested FPS | Why |
+| --- | --- | --- |
+| Stable UI acceptance, long-running progress | **1** | Stable states only; use `shot` for just the final result |
+| Development workflow, forms and state changes | **3–5** | Before/after states, rather than brief glitches or animation |
+| Compact README GIF, step-by-step tutorial | **10–15** | Favor size when smooth motion is secondary |
+| Polished software demo, scrolling, dragging, transitions | **30** | Default for audience-facing demos; preserve motion continuity |
+| Fast motion, brief visual defects | **40–50** | Check performance with a short trial; shorter transients may still be missed |
+
+**Development testing does not automatically mean 1 FPS is enough.** At 1 FPS, sub-second dialogs, flicker or errors may be missed. Default to 30 FPS for polished demos; deliberately use 10–15 FPS when compact output matters more.
+
+Start with a short trial at `max_width:960` or `1280`. Estimate actual sampling speed from `recording_status` samples and recorded elapsed time, not encoded GIF frame count: static frames may be merged. If capture is slow, reduce the region or output size first; explain the compromise if lowering demo FPS is necessary. Encoded width × height × FPS must be ≤80,000,000. Requested FPS is a ceiling; GIF centisecond delay resolution also means 30 FPS does not guarantee uniform 33.33 ms intervals. MCP exposes the same advice in `framelet_context.capture_guidance`.
 
 | Make something | Use Framelet for |
 | --- | --- |

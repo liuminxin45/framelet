@@ -35,6 +35,21 @@ try {
   const expanded = tools.some(t => t.name === 'framelet_extract_frames');
   assert.equal(tools.length, expanded ? 17 : 7);
   checks.push('SDK initialization and tool discovery');
+  if (expanded) {
+    const context = (await call('framelet_context', {})).structuredContent.result;
+    const guidance = context.capture_guidance;
+    assert.deepEqual(guidance.fps_range, { min: 1, max: 50 });
+    assert.deepEqual(guidance.presets.map(p => [p.intent, p.fps]), [
+      ['static_state_check', 1], ['development_workflow', 5],
+      ['compact_documentation', 12], ['presentation', 30], ['fast_motion_check', 50]
+    ]);
+    for (const preset of guidance.presets) {
+      assert(preset.description_en && /[\u4e00-\u9fff]/.test(preset.description_zh));
+    }
+    assert(guidance.selection_rule && guidance.performance_rule && guidance.timing_note);
+    checks.push('machine-readable bilingual FPS presets and capture caveats');
+  }
+
   const info = (await call('framelet_inspect', { input })).structuredContent.result;
   assert(info.frames > 0 && info.duration_ms >= 300);
   const edited = await call('framelet_edit', { input, output: path.join(output, 'trim.gif'), start: 0.1, end: 0.3 });
