@@ -74,3 +74,42 @@ def publish_trace(gif, data):
     manifest = dict(schema=1, state='complete', session_id=data['session_id'], asset_id=data['asset_id'],
                     gif_sha256=data['gif_sha256'], timeline_sha256=hashlib.sha256(side.read_bytes()).hexdigest())
     gif.with_suffix('.capture.json').write_text(json.dumps(manifest), encoding='utf-8')
+
+
+def review_corpus(root):
+    """Reproducible review corpus; static long holds are synthetic, not desktop capture."""
+    import io
+    import shutil
+    root = Path(root)
+    create(root)
+    shutil.copy2(Path(__file__).resolve().parents[1]/'docs/images/bilibili-demo.gif', root/'bilibili.gif')
+    group = root/'long.framelet'
+    group.mkdir()
+    image = Image.new('P', (64,64), 0)
+    image.putpalette([0]*768)
+    buffer = io.BytesIO()
+    image.save(buffer, format='GIF', duration=5000, optimize=False)
+    raw = buffer.getvalue()
+    split = raw.index(b'!\xf9\x04')
+    gif = group/'benchmark.part-000001.gif'
+    gif.write_bytes(raw[:split] + raw[split:-1]*60 + b';')
+    with Image.open(gif) as check:
+        assert check.n_frames == 60
+    clock = 1793610000000000
+    samples = [dict(id=i+1, seq=i, utc_us=clock+i*1000000, capture_us=i*1000000,
+                    capture_end_us=i*1000000+100, coverage_start_us=i*1000000,
+                    hold_end_us=(i+1)*1000000, media_start_us=i*1000000,
+                    media_end_us=(i+1)*1000000, gif_frame=i//5, cursor=None) for i in range(300)]
+    data = dict(schema=2, asset_id='a'*32, gif_sha256=hashlib.sha256(gif.read_bytes()).hexdigest(),
+                session_id='b'*32, region=dict(x=0,y=0,width=64,height=64), width=64,height=64,
+                gif_bytes=gif.stat().st_size,duration_ms=300000,frames=60,samples=samples,
+                events=[],dropped_events=0,warnings=[])
+    publish_trace(gif,data)
+    stats = dict(output=gif.name,width=64,height=64,frames=60,samples=300,duration_ms=300000,
+                 bytes=gif.stat().st_size,timeline=gif.with_suffix('.timeline.json').name,
+                 manifest=gif.with_suffix('.capture.json').name,warnings=[])
+    index = dict(schema=1,session_id='b'*32,prefix='benchmark',state='completed',reason='fixture',
+                 owner_pid=0,owner_created=0,segment_seconds=300,request_id=None,request={},
+                 parts=[dict(number=1,start_ms=0,reason='fixture',observation_range=[1,300],
+                             utc_range=[clock,clock+300000000],recording=stats)],failure=None)
+    (group/'recording.json').write_text(json.dumps(index),encoding='utf-8')

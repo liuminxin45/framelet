@@ -122,4 +122,4 @@ Current engineering policy: [engineering-standard.md](engineering-standard.md). 
 
 [Efficient AI workflow / 高效 AI 工作流](performance.md) — nonblocking waits and controls, filtered/paginated input events, one-pass batch probes, transient-aware action intervals and bounded content-verified caches. / 无阻塞等待与控制、事件筛选分页、单遍批量探针、短暂状态候选和有界内容缓存。
 
-Development review changes / 开发版复核变化：分组批量调用的 `work.index_reads/segment_validations` 可检查索引与分段校验去重；分析和剪辑的 `work.converted_frames` 区分 RGB 转换和前缀解码。分析联系表从同一遍分析中选取最多 `count` 张不同的头尾/视觉变化候选，`preview_selection` 说明策略，`preview_work` 记录有界缩略图内存和零额外解码；它不代表语义高光。精确均匀时间点仍由批量探针指定。见 [分批验收](algorithm-rollout.md)。
+v0.4.1 review changes / 复核变化：分组批量调用的 `work.index_reads/segment_validations` 可检查索引与分段校验去重；分析和剪辑的 `work.converted_frames` 区分 RGB 转换和前缀解码。分析联系表从同一遍分析中选取最多 `count` 张不同的头尾/视觉变化候选，`preview_selection` 说明策略，`preview_work` 记录有界缩略图内存和零额外解码；它不代表语义高光。精确均匀时间点仍由批量探针指定。见 [分批验收](algorithm-rollout.md) 和[发布基准](benchmarks-v0.4.1.md)。

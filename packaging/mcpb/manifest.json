@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "framelet",
   "display_name": "Framelet",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Tiny Windows keyboard/mouse/frame recording and GIF review through local MCP. 原生 Windows 键鼠帧同步录制与 GIF 抽帧剪辑。",
   "author": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
   "homepage": "https://github.com/liuminxin45/framelet",

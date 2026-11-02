@@ -4,9 +4,9 @@
 
 **CLI-first, AI-native Windows recording with keyboard, mouse and frame synchronization.**
 
-**One small native EXE · No extra runtime installs · CLI First · AI Native**
+**≈3.6 MiB native EXE · No extra runtime installs · CLI First · AI Native**
 
-[English](README.md) · [简体中文](README.zh-CN.md) · [Download](https://github.com/liuminxin45/framelet/releases) · [About](ABOUT.md)
+[English](README.md) · [简体中文](README.zh-CN.md) · [Download](https://github.com/liuminxin45/framelet/releases/latest) · [About](ABOUT.md)
 
 </div>
 
@@ -16,14 +16,9 @@ Let an AI operate software while recording its screen and keyboard/mouse events,
 
 Framelet records **keyboard, mouse and frame samples together by default**, sharing UTC and monotonic clocks. A timeline and content-integrity manifest accompany the GIF.
 
-- **Unique identities:** shared observation IDs link input events, original samples and GIF frames, with explicit timing offsets.
+- **Unique identities and time:** shared observation IDs link input events, original samples and GIF frames, with UTC references and explicit timing offsets.
 - **Input independent of FPS:** several actions between samples can map to one frame. Unsampled visual changes cannot be recovered.
-- **Look up the action first:** query an event ID or timestamp, then inspect surrounding pictures instead of extracting every frame.
-
-- **Computer time ↔ picture:** UTC timestamps and monotonic capture intervals connect original samples to GIF frames, even when identical pictures are merged.
-- **Clicks, scrolling and pauses:** independent mouse events retain their timing at low recording FPS. Positional dwell candidates help identify where the pointer lingered.
-- **Trim without losing context:** native trimming and speed changes preserve the original computer-time references and remap playback positions.
-- **Useful to agents:** ask for clicks near a moment, locate a picture by computer time, then inspect the surrounding frames. Event data helps choose where to look before sending images to a model.
+- **Review and trim with context:** locate actions by ID/time, inspect selected pictures, then trim or change speed while preserving original identities and computer-time references.
 
 Keyboard records contain down/up transitions, key codes and scan codes, not clipboard or IME-committed text. Key events can reveal typed content; visual masks are not automatic password protection. Masked mouse coordinates are omitted. Timestamps describe observed intervals, not hardware synchronization; dwell candidates do not identify UI elements.
 
@@ -45,11 +40,17 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 
 Static acceptance can use **1 FPS**; compact GIFs **10–15 FPS**; polished demos default to **30 FPS**. Actual sampling depends on workload.
 
-## What Framelet is for
+## Measured review performance
 
-Use Framelet to capture a short interface demonstration, preserve a visible state change, or let an AI agent inspect and trim a GIF through MCP. The recorder provides capture and image tools; the AI client or operator controls the application being demonstrated.
+v0.4.1 removes repeated segment checks, skips unused RGB conversions and builds candidate previews in one analysis pass. No runtime dependencies were added.
 
-It captures visible desktop pixels on an interactive Windows x64 session. Overlapping windows can appear in the result. Direct MP4 export, audio recording, and hidden-window capture are outside the documented feature scope.
+| Local MCP workload | v0.4.0 | v0.4.1 | Time saved |
+| --- | ---: | ---: | ---: |
+| Probe 64 times in one recording part | 633 ms | **52.5 ms** | **91.7%** |
+| Analyze the last 0.5 s of a 20 s GIF | 2,106 ms | **790 ms** | **62.5%** |
+| Analyze + preview the Bilibili demo | 971 ms | **566 ms** | **41.7%** |
+
+Windows, 10 alternating warm runs per version, medians. The group fixture is 64×64; the window fixture is 640×360/600 frames; Bilibili reuses the demo below. Timings exclude model inference and UI operation and depend on input/hardware. [Methodology, hashes, memory tradeoffs and raw results](docs/benchmarks-v0.4.1.md).
 
 ## Example 1 · Real window and recording
 
@@ -67,7 +68,7 @@ Start recording → scroll the real browser → stop → probe boundaries → tr
 
 **29.88 seconds → 7.63 seconds.** Native region comparisons and interval jumps located boundaries with eight midpoint probes, avoiding intermediate image exports. [Read the real walkthrough](docs/demo.md).
 
-The existing demos predate keyboard/mouse/frame synchronization. v0.3 previews add timelines, integrity manifests and rotating recordings; v0.2 downloads lack these features.
+These demos predate synchronized timelines. Current releases record keyboard/mouse/frame timelines by default; the older media illustrates capture and editing.
 
 For viewing GIFs and inspecting them frame by frame, we recommend [Minimal Image Viewer](https://github.com/deminimis/minimalimageviewer).
 

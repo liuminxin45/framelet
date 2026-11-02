@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.4.1-dev — unreleased
+## v0.4.1 — 2026-11-03
 
 - Batch 3: single-pass bounded visual-candidate contact sheets with opening/closing context, peak/time coverage and up to 32 thumbnails; select before resizing, reuse the existing comparison tail, and hoist repeated scaling divisions. Add independent preview-pixel, transient, collision and memory-bound regressions, plus per-batch SHA-bound measurements.
 

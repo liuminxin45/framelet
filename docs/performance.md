@@ -76,6 +76,10 @@ framelet probe demo.gif --times 0 2 4.5 --output review --export sheet
 
 Review the intervals and limited images, then call framelet_edit. Keep original event/sample IDs and interpret offsets using timeline.md. For a known single monotonic boundary, local numerical bisection remains useful; it is no longer necessary to make the model discover every action through repeated image calls.
 
+v0.4.1 collects a bounded visual-candidate contact sheet during this same analysis pass: up to count distinct opening/closing/change/time-coverage frames, rather than uniform timestamps. preview_selection states the policy; preview_work reports zero additional decodes and at most 4,147,200 thumbnail pixel bytes. The existing comparison buffer supplies the closing frame. These thumbnails do not reduce full-resolution change detection. Use batch probes for exact timestamp selections. Windowed analysis converts only intersecting frames and one predecessor; editing converts only retained frames. GIF prefix decoding/compositing remains sequential. Group probes/overviews read one index snapshot and validate each unique selected segment once under request-long input leases; work.index_reads/segment_validations expose that work.
+
+v0.4.1 的候选联系表与分析同遍生成，最多 count 张不同的头尾、视觉变化和时间覆盖代表图；缩略图像素内存上限约 3.96 MiB，画布等其他内存另计。需要精确时间点时用 batch probe。局部窗口省掉无用 RGB 转换，保留必要的 GIF 前缀合成和前驱比较；分组调用按请求校验唯一分段，保留完整内容校验。发布基准与原始数据见仓库 docs/benchmarks-v0.4.1.md。
+
 先选候选，再少量复核边界，最后 edit。单调边界仍可做局部二分；不要要求 AI 逐帧阅读，也不要将动作候选误称语义理解。
 
 ## Isolation, cancellation and caches / 隔离、取消与缓存

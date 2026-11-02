@@ -9,9 +9,9 @@ Framelet is a native Windows GIF/PNG screen recorder built with Rust and Win32. 
 
 Framelet 是使用 Rust + Win32 编写的原生 Windows GIF/PNG 录屏工具。使用一个小巧原生 EXE，解压即用，无需额外安装 Python、Node.js、.NET、FFmpeg 或浏览器运行时，也无需账号和模型 API Key。程序使用 Windows 系统 API 和静态 CRT；编译进程序的开源 Rust 库及其许可证声明随便携包提供。
 
-CLI and the local MCP server are the core interfaces; a native capture frame is also available. Version 0.4.0 provides 23 MCP tools, default input/frame timelines, unique event/sample/frame links, supervised recording workers and hash-bound recovery manifests. Reliable long recordings rotate into a named group of GIFs, each at most 300 seconds, with durable checkpoints. Capture supports 1–60 FPS; high-rate GIF browser playback has [timing limits](docs/60fps.md). No model or cloud upload service is embedded.
+CLI and the local MCP server are the core interfaces; a native capture frame is also available. Version 0.4.1 provides 23 MCP tools, default input/frame timelines, unique event/sample/frame links, supervised recording workers and hash-bound recovery manifests. Reliable long recordings rotate into a named group of GIFs, each at most 300 seconds, with durable checkpoints. Capture supports 1–60 FPS; high-rate GIF browser playback has [timing limits](docs/60fps.md). No model or cloud upload service is embedded.
 
-CLI 与本地 MCP 是核心入口，同时保留原生捕获框。v0.4.0提供 23 个 MCP 工具、默认键鼠帧时间线、唯一事件/采样/画面关联、受监督录制子进程与内容校验恢复清单。可靠长录制按组命名，每段最长 300 秒自动轮转，并保留持久检查点。支持 1–60 FPS 采集，高帧率 GIF 的浏览器播放存在[时序限制](docs/60fps.md)。不内嵌大模型或云端上传服务。
+CLI 与本地 MCP 是核心入口，同时保留原生捕获框。v0.4.1 提供 23 个 MCP 工具、默认键鼠帧时间线、唯一事件/采样/画面关联、受监督录制子进程与内容校验恢复清单。可靠长录制按组命名，每段最长 300 秒自动轮转，并保留持久检查点。支持 1–60 FPS 采集，高帧率 GIF 的浏览器播放存在[时序限制](docs/60fps.md)。不内嵌大模型或云端上传服务。
 
 Input events retain original IDs and computer time through native editing; derived GIFs have new asset IDs. Sampling differences are explicit offsets. Keyboard recording is key-level input, not clipboard or IME text extraction. 按键、鼠标事件经剪辑后保留原始身份和电脑时间，派生 GIF 使用新资产标识，并明确返回采样偏差；键盘记录是按键级事件，不读取剪贴板或输入法提交文本。[Timeline / 时间线](docs/timeline.md)。
 
