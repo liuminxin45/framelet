@@ -1,6 +1,9 @@
 # Changelog
 
-## v0.3.0-dev — local, unreleased
+## v0.3.0-rc.1 — 2026-11-02
+
+- Raise CLI/MCP/GUI sampling ceiling to 60 FPS, use deadline-aware waits, and report encoded short-delay frames separately from trace warnings. Chromium playback can stretch 10ms GIF frames; native inspection is recommended, and browser sharing defaults to 30 FPS.
+- Add independent GIF timing tests and real CLI/MCP 60 FPS checks. Pixel/color/output-FPS presets remain a design proposal, not a released feature.
 
 - Reliable rotating recordings: `record-series` / `framelet_start_series`, GIF parts of at most 300 seconds, named `.framelet` groups, global observation identity and relative-path indexes.
 - Durable frame-prefix SHA-256 checkpoints, independently committed segment receipts, index backup/recovery, bounded asynchronous finalization and normal MCP EOF save; cancel preserves committed parts.

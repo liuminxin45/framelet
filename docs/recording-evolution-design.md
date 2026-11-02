@@ -2,6 +2,8 @@
 
 状态：总体演进方案。基于 2026-11-02 本地开发版初始代码核对；第一阶段长录制已实施，实际入口以 [long-recording.md](long-recording.md) 为准。本文画质、高帧率、跨连接持久任务等新增参数仍为提案，不能作为当前命令执行。保留单个原生 EXE、无需额外安装运行时、CLI First 和 MCP 可发现的定位。
 
+更新：用户已取消 200 FPS 目标，当前已实施最高 60 FPS，见 [60fps.md](60fps.md)。清晰度策略以 [fidelity-strategy-design.md](fidelity-strategy-design.md) 为准；本文 200 FPS 部分仅留作历史设计，不再实施。
+
 第一阶段以 [最长单段 300 秒的可靠轮转录制](segmented-recording-design.md) 为准；其单段时长、命名、恢复与任务生命周期细节取代本文对应的概念建议。
 
 ## 1. 当前能力与约束

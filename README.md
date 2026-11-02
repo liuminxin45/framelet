@@ -35,7 +35,7 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 | CLI + local MCP | Background recording while an agent operates your app |
 | [Reliable long recording](docs/long-recording.md) | Numbered GIFs of at most 300 seconds, automatic rotation and checkpoint recovery |
 | Keyboard/mouse/frame timeline | Locate failed steps and review action results |
-| 1–50 FPS | Stable-state checks through polished motion demos |
+| [1–60 FPS](docs/60fps.md) | State checks and high-rate native review; use 30 FPS for browser sharing |
 | GIF editing | Precise time cuts and playback speed changes |
 | Native frame extraction | PNGs, contact sheets, timestamp probes and region comparisons |
 | Privacy and guardrails | Fixed masks, scoped MCP paths, no-overwrite and resource limits |
@@ -65,7 +65,7 @@ Start recording → scroll the real browser → stop → probe boundaries → tr
 
 **29.88 seconds → 7.63 seconds.** Native region comparisons and interval jumps located boundaries with eight midpoint probes, avoiding intermediate image exports. [Read the real walkthrough](docs/demo.md).
 
-The existing demos predate keyboard/mouse/frame synchronization. New local recordings produce timelines and integrity manifests; published v0.2 downloads do not yet include this feature.
+The existing demos predate keyboard/mouse/frame synchronization. v0.3 previews add timelines, integrity manifests and rotating recordings; v0.2 downloads lack these features.
 
 For viewing GIFs and inspecting them frame by frame, we recommend [Minimal Image Viewer](https://github.com/deminimis/minimalimageviewer).
 

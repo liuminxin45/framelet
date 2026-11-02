@@ -5,7 +5,7 @@ pub fn catalog() -> Value {
         {"name":"framelet_doctor","description":"Check local screen capture readiness. No network.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
         {"name":"framelet_monitors","description":"List monitors in physical screen pixels, including negative coordinates.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
         {"name":"framelet_windows","description":"List visible windows, titles and screen bounds. Captures visible pixels, not occluded window contents.","inputSchema":{"type":"object","properties":{},"additionalProperties":false}},
-        {"name":"framelet_record","description":"Record visible screen pixels into a GIF; blocking, maximum 300 seconds. Output must not exist. No audio.","inputSchema":{"type":"object","properties":{"output":{"type":"string"},"region":region,"duration":{"type":"number","exclusiveMinimum":0,"maximum":300,"default":5},"fps":{"type":"integer","minimum":1,"maximum":50,"default":10},"cursor":{"type":"boolean","default":false},"quality":{"type":"integer","minimum":1,"maximum":30,"default":10}},"required":["output"],"additionalProperties":false}},
+        {"name":"framelet_record","description":"Record visible screen pixels into a GIF; blocking, maximum 300 seconds. Output must not exist. No audio.","inputSchema":{"type":"object","properties":{"output":{"type":"string"},"region":region,"duration":{"type":"number","exclusiveMinimum":0,"maximum":300,"default":5},"fps":{"type":"integer","minimum":1,"maximum":60,"default":10},"cursor":{"type":"boolean","default":false},"quality":{"type":"integer","minimum":1,"maximum":30,"default":10}},"required":["output"],"additionalProperties":false}},
         {"name":"framelet_shot","description":"Capture visible screen pixels as a PNG. Output must not exist.","inputSchema":{"type":"object","properties":{"output":{"type":"string"},"region":region,"cursor":{"type":"boolean"}},"required":["output"],"additionalProperties":false}},
         {"name":"framelet_inspect","description":"Read GIF size, frame count and duration.","inputSchema":{"type":"object","properties":{"input":{"type":"string"}},"required":["input"],"additionalProperties":false}},
         {"name":"framelet_edit","description":"Trim a GIF and change playback speed. Seconds; output must not exist.","inputSchema":{"type":"object","properties":{"input":{"type":"string"},"output":{"type":"string"},"start":{"type":"number","minimum":0,"default":0},"end":{"type":"number","exclusiveMinimum":0},"speed":{"type":"number","minimum":0.01,"maximum":100,"default":1}},"required":["input","output"],"additionalProperties":false}},
@@ -120,5 +120,5 @@ pub fn catalog() -> Value {
     list.iter_mut()
         .find(|t| t["name"] == "framelet_frame_at")
         .unwrap()["inputSchema"]["properties"]["at"]["maximum"] = json!(86400);
-    json!({"schema_version":"1.7","name":"framelet","version":env!("CARGO_PKG_VERSION"),"tools":tools})
+    json!({"schema_version":"1.8","name":"framelet","version":env!("CARGO_PKG_VERSION"),"tools":tools})
 }

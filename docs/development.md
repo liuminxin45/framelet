@@ -16,6 +16,7 @@ python scripts/verify_timeline.py target/release/framelet.exe --desktop
 python scripts/verify_defense.py target/release/framelet.exe
 python scripts/verify_sync.py target/release/framelet.exe
 python scripts/verify_series.py target/release/framelet.exe --output work/series-short
+python scripts/verify_60fps.py target/release/framelet.exe --output work/fps60-short
 # Explicit real-time acceptance (about 11 minutes each; creates a fresh evidence directory):
 python scripts/verify_series.py target/release/framelet.exe --long --output work/series-cli-650
 python scripts/verify_series.py target/release/framelet.exe --mcp-long --output work/series-mcp-650

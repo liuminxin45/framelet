@@ -1,8 +1,8 @@
 # Reliable rotating recording / 可靠长录制
 
-Local v0.3 development capability; inspect the installed catalog before use. Existing public v0.2 downloads do not include it. No extra runtime or background service is installed.
+Available in v0.3 previews; inspect the installed catalog before use. Earlier v0.2 downloads do not include it. No extra runtime or background service is installed.
 
-本地 v0.3 开发功能，公开 v0.2 下载不包含。CLI 与 MCP 共用录制内核；普通单 GIF 和原生 GUI 保持原有入口。长录制使用独立、明确的 `record-series` / `framelet_start_series`，避免升级后旧命令意外持续录制。
+v0.3 预览功能，较早的 v0.2 下载不包含。CLI 与 MCP 共用录制内核；普通单 GIF 和原生 GUI 保持原有入口。长录制使用独立、明确的 `record-series` / `framelet_start_series`，避免升级后旧命令意外持续录制。
 
 ## Record / 录制
 

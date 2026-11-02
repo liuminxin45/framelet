@@ -1,0 +1,44 @@
+{
+  "version": "0.3.0-rc.1",
+  "exe_sha256": "29a11a5f7f810e30a215f7ebb2cc06784dc9f8a16a50de8e8bf0cb0ccd735b81",
+  "exe_bytes": 2695168,
+  "unit_tests": 18,
+  "verification_command_groups": 15,
+  "masked_sample_fps": 60.0,
+  "masked_scope": "64x64, 3 seconds, real GDI, full privacy mask",
+  "dynamic": {
+    "ok": true,
+    "exe_sha256": "29a11a5f7f810e30a215f7ebb2cc06784dc9f8a16a50de8e8bf0cb0ccd735b81",
+    "requested_fps": 60,
+    "scenario": "Real Edge page, scripts/fixtures/60fps.html, source observed above 60 updates/s; capture region 100,350,256,128; 5 seconds.",
+    "samples": 296,
+    "actual_sample_fps": 59.2,
+    "actual_sample_interval_fps": 59.07200877870124,
+    "gif_frames": 296,
+    "distinct_decoded_images": 296,
+    "duration_ms": 5000,
+    "short_delay_frames": 97,
+    "fixture_pixel_match_ratio": 1.0,
+    "chromium_policy_projected_duration_ms": 13730,
+    "projection_note": "Computed from current Chromium source policy; not a measurement of wall-clock playback.",
+    "gif_sha256": "187dc1a248941d47b767529f103880c8074770a6ebab6d138ab86fa62647af71"
+  },
+  "gui": {
+    "ok": true,
+    "gui_selector": "60 fps",
+    "region": {
+      "height": 331,
+      "width": 654,
+      "x": 193,
+      "y": 196
+    },
+    "duration_ms": 27980,
+    "samples": 1067,
+    "actual_sample_fps": 38.134381701215155,
+    "median_sample_interval_ms": 23.3325,
+    "scope": "GUI 60 setting and successful save verified. This larger dynamic region did not sustain target rate; do not describe it as measured 60 FPS."
+  },
+  "cold_masked_sample_fps": 52.333333333333336,
+  "performance_note": "Target rate is not a guarantee. One cold masked capture ran at 52.3; a repeat ran at 60.0. Larger dynamic GUI capture ran at 38.1.",
+  "visual_presets": "design only; not implemented"
+}

@@ -67,6 +67,7 @@ fn fixture() -> Data {
 fn clip_speed_preserves_capture_identity_and_event_utc() {
     let d = fixture();
     let stats = Stats {
+        playback: None,
         output: PathBuf::new(),
         width: 100,
         height: 50,

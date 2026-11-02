@@ -24,7 +24,7 @@ Every new recording saves an adjacent `.timeline.json`. Query `framelet_timeline
 
 ### Choose FPS by intent (CLI / MCP)
 
-Supported range: **1–50 FPS**. These are starting points; choose the evidence you need to preserve:
+Supported range: **1–60 FPS**. These are starting points; choose the evidence you need to preserve. Use 60 for native high-rate review; GIF browser playback can stretch 10ms frames, so sharing still defaults to 30. See [60 FPS](60fps.md).
 
 | Intent | Suggested FPS | Why |
 | --- | --- | --- |
@@ -40,7 +40,7 @@ Start with a short trial at `max_width:960` or `1280`. Estimate actual sampling 
 
 ### 按场景选择帧率（CLI / MCP）
 
-支持 **1–50 FPS**。以下是录制起点，AI 应根据需要保留的证据选择：
+支持 **1–60 FPS**。60 FPS 用于原生高频逐帧检查，浏览器可能延长 GIF 的 10 毫秒帧，分享仍建议 30 FPS。[60 FPS 说明](60fps.md)。以下是录制起点，AI 应根据需要保留的证据选择：
 
 | 场景 | 建议 FPS | 选择理由 |
 | --- | --- | --- |

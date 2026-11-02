@@ -160,6 +160,7 @@ fn new_writer(root: &Path, index: &Index, number: u32, w: u32, h: u32) -> Result
         Some(&root.join(".work")),
     )?;
     writer.set_limit(index.request.max_mib * 1024 * 1024);
+    writer.set_capture_fps(index.request.fps);
     Ok(writer)
 }
 
@@ -367,7 +368,12 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
                 );
             }
             was_paused = paused;
-            std::thread::sleep(Duration::from_millis(5));
+            let wait = crate::recording::sample_wait(next, active, tick.elapsed(), paused);
+            if wait.is_zero() {
+                std::thread::yield_now()
+            } else {
+                std::thread::sleep(wait)
+            }
         }
         Ok(())
     });

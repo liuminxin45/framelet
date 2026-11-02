@@ -27,6 +27,8 @@ pub struct GifWriter {
     _work_lease: Option<crate::file_guard::Lease>,
     _pending: Option<crate::transaction::Pending>,
     preserve_partial: bool,
+    capture_fps: Option<u32>,
+    short_delay_frames: u64,
 }
 impl GifWriter {
     pub fn new(path: &Path, width: u32, height: u32, quality: i32) -> Result<Self> {
@@ -109,6 +111,8 @@ impl GifWriter {
             _work_lease: work_lease,
             _pending: None,
             preserve_partial: work.is_some(),
+            capture_fps: None,
+            short_delay_frames: 0,
         })
     }
     pub fn track(
@@ -146,6 +150,17 @@ impl GifWriter {
     pub fn set_limit(&mut self, bytes: u64) {
         self.limit = bytes;
     }
+    pub fn set_capture_fps(&mut self, fps: u32) {
+        self.capture_fps = Some(fps);
+    }
+    fn playback(&self) -> Option<PlaybackInfo> {
+        (self.capture_fps.is_some() || self.short_delay_frames > 0).then_some(PlaybackInfo {
+            requested_capture_fps: self.capture_fps,
+            gif_delay_unit_ms: 10,
+            short_delay_frames: self.short_delay_frames,
+            browser_timing_warning: self.short_delay_frames > 0,
+        })
+    }
     pub fn partial_path(&self) -> &Path {
         &self.partial
     }
@@ -161,6 +176,7 @@ impl GifWriter {
             timeline: None,
             manifest: None,
             warnings: vec![],
+            playback: self.playback(),
         }
     }
     pub fn checkpoint(&mut self) -> Result<u64> {
@@ -179,6 +195,9 @@ impl GifWriter {
     }
     fn flush(&mut self) -> Result<()> {
         if let Some(frame) = self.pending.take() {
+            if frame.delay <= 1 {
+                self.short_delay_frames += 1;
+            }
             self.enc
                 .as_mut()
                 .context("GIF encoder is closed")?
@@ -263,6 +282,7 @@ impl GifWriter {
             timeline: None,
             manifest: None,
             warnings: cleanup_warnings,
+            playback: self.playback(),
         };
         if let Some(t) = self.timeline.take() {
             match crate::runtime::guard("timeline.finalize", || Ok(t.finish(&stats))) {
@@ -317,6 +337,8 @@ impl Drop for GifWriter {
 }
 #[derive(Debug, Clone, Serialize, serde::Deserialize)]
 pub struct Stats {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub playback: Option<PlaybackInfo>,
     pub output: PathBuf,
     pub width: u16,
     pub height: u16,
@@ -328,6 +350,14 @@ pub struct Stats {
     #[serde(default)]
     pub manifest: Option<PathBuf>,
     pub warnings: Vec<String>,
+}
+#[derive(Debug, Clone, Serialize, serde::Deserialize)]
+pub struct PlaybackInfo {
+    pub requested_capture_fps: Option<u32>,
+    pub gif_delay_unit_ms: u32,
+    pub short_delay_frames: u64,
+    /// Chromium stretches <=10ms GIF delays to 100ms. This is informational, not trace loss.
+    pub browser_timing_warning: bool,
 }
 fn bounds(a: &[u8], b: &[u8], w: usize, h: usize) -> (usize, usize, usize, usize) {
     if a.len() != b.len() {
@@ -530,6 +560,41 @@ mod tests {
     use super::*;
     fn path(name: &str) -> PathBuf {
         std::env::temp_dir().join(format!("framelet-{}-{name}.gif", std::process::id()))
+    }
+    #[test]
+    fn sixty_fps_centisecond_timing_preserves_total_duration() {
+        let p = std::env::temp_dir().join(format!(
+            "framelet-60fps-{}.gif",
+            crate::identity::new_id().unwrap()
+        ));
+        let mut writer = GifWriter::new(&p, 8, 8, 10).unwrap();
+        writer.set_capture_fps(60);
+        let mut accounted = 0u64;
+        for i in 0..120u64 {
+            let target = ((i + 1) * 100 + 30) / 60;
+            let delay = (target - accounted) as u16;
+            writer.push(vec![i as u8; 8 * 8 * 3], delay).unwrap();
+            accounted = target;
+        }
+        let stats = writer.finish().unwrap();
+        assert_eq!(stats.duration_ms, 2000);
+        assert_eq!(stats.frames, 120);
+        let playback = stats.playback.unwrap();
+        assert_eq!(playback.short_delay_frames, 40);
+        assert!(playback.browser_timing_warning);
+        let mut reader = gif::DecodeOptions::new()
+            .read_info(File::open(&p).unwrap())
+            .unwrap();
+        let mut total = 0;
+        let mut frames = 0;
+        while let Some(frame) = reader.read_next_frame().unwrap() {
+            assert!([1, 2].contains(&frame.delay));
+            total += frame.delay as u64;
+            frames += 1;
+        }
+        assert_eq!((frames, total), (120, 200));
+        drop(reader);
+        std::fs::remove_file(p).unwrap();
     }
     #[test]
     fn delta_merge_and_trim() {

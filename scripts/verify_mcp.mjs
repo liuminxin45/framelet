@@ -39,7 +39,7 @@ try {
     const context = (await call('framelet_context', {})).structuredContent.result;
     const guidance = context.capture_guidance;
     assert(context.documentation.timeline && context.timeline.default_enabled);
-    assert.deepEqual(guidance.fps_range, { min: 1, max: 50 });
+    assert.deepEqual(guidance.fps_range, { min: 1, max: 60 });
     assert.deepEqual(guidance.presets.map(p => [p.intent, p.fps]), [
       ['static_state_check', 1], ['development_workflow', 5],
       ['compact_documentation', 12], ['presentation', 30], ['fast_motion_check', 50]

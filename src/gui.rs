@@ -272,7 +272,11 @@ unsafe fn start(hwnd: HWND, paused: bool) {
             0 => 10,
             1 => 16,
             2 => 20,
-            _ => 25,
+            3 => 25,
+            4 => 30,
+            5 => 50,
+            6 => 60,
+            _ => 10,
         };
         let cursor = SendMessageW(GetDlgItem(hwnd, CURSOR as i32), BM_GETCHECK, 0, 0)
             == BST_CHECKED as isize;
@@ -460,7 +464,9 @@ unsafe fn proc_impl(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
                     FPS,
                     CBS_DROPDOWNLIST as u32 | WS_VSCROLL,
                 );
-                for s in ["10 fps", "16 fps", "20 fps", "25 fps"] {
+                for s in [
+                    "10 fps", "16 fps", "20 fps", "25 fps", "30 fps", "50 fps", "60 fps",
+                ] {
                     SendMessageW(combo, CB_ADDSTRING, 0, wide(s).as_ptr() as isize);
                 }
                 SendMessageW(combo, CB_SETCURSEL, 0, 0);

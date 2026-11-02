@@ -1,5 +1,7 @@
 # Design and implementation
 
+Proposed visual controls (not implemented): [Pixel, color and time fidelity / 清晰度策略](fidelity-strategy-design.md). The implemented FPS ceiling is now 60; 200 FPS is no longer planned.
+
 Proposed next steps (not implemented): [Long recording, visual fidelity and high-FPS capture / 长录制、清晰度与高帧率设计](recording-evolution-design.md).
 
 First-stage implementation: [Reliable long recording / 可靠长录制](long-recording.md), with a maximum of 300 seconds per GIF. [Original rotating-recording design / 原始轮转设计](segmented-recording-design.md).

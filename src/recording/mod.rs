@@ -24,7 +24,7 @@ pub struct Control {
     pub elapsed_ms: AtomicU64,
 }
 pub fn validate(a: &RecordArgs) -> Result<(Region, u32, u32)> {
-    ensure!((1..=50).contains(&a.fps), "fps must be 1..50");
+    ensure!((1..=60).contains(&a.fps), "fps must be 1..60");
     ensure!(
         a.duration.is_finite() && a.duration > 0.0 && a.duration <= 3600.0,
         "duration must be >0 and <=3600 seconds"
@@ -126,6 +126,7 @@ pub(crate) fn run_local(
     let mut writer = GifWriter::new(&a.output, w, h, a.quality)?;
     writer.track(r, &a.masks)?;
     writer.set_limit(a.max_mib * 1024 * 1024);
+    writer.set_capture_fps(a.fps);
     let start = Instant::now();
     let duration = Duration::from_secs_f64(a.duration);
     let period = Duration::from_secs_f64(1.0 / f64::from(a.fps));
@@ -207,7 +208,12 @@ pub(crate) fn run_local(
         }
         was_paused = paused;
         // Bounded polling keeps pause/stop/EOF responsive, including at 1 fps.
-        std::thread::sleep(Duration::from_millis(10));
+        let wait = sample_wait(next, active, tick.elapsed(), paused);
+        if wait.is_zero() {
+            std::thread::yield_now()
+        } else {
+            std::thread::sleep(wait)
+        }
     }
     c.phase.store(3, Ordering::Relaxed);
     notify(c);
@@ -218,9 +224,39 @@ pub(crate) fn run_local(
     Ok(stats)
 }
 
+/// Include capture/encoding work in the wait; fixed polling can consume a 60-FPS frame budget.
+pub fn sample_wait(next: Duration, active: Duration, work: Duration, paused: bool) -> Duration {
+    if paused {
+        Duration::from_millis(10)
+    } else {
+        next.saturating_sub(active.saturating_add(work))
+            .min(Duration::from_millis(10))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn sample_wait_accounts_for_work_and_never_blocks_controls() {
+        let deadline = Duration::from_micros(16667);
+        assert_eq!(
+            sample_wait(deadline, Duration::ZERO, Duration::from_millis(5), false),
+            Duration::from_millis(10)
+        );
+        assert_eq!(
+            sample_wait(deadline, Duration::ZERO, Duration::from_millis(15), false),
+            Duration::from_micros(1667)
+        );
+        assert_eq!(
+            sample_wait(deadline, Duration::ZERO, Duration::from_millis(20), false),
+            Duration::ZERO
+        );
+        assert_eq!(
+            sample_wait(deadline, Duration::ZERO, Duration::ZERO, true),
+            Duration::from_millis(10)
+        );
+    }
     #[test]
     fn masks_precede_resampling() {
         let r = Region {

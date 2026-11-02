@@ -29,6 +29,7 @@ jobs:
       - run: python scripts/verify_defense.py target/release/framelet.exe
       - run: python scripts/verify_sync.py target/release/framelet.exe
       - run: python scripts/verify_series.py target/release/framelet.exe --output work/series-ci
+      - run: python scripts/verify_60fps.py target/release/framelet.exe --output work/fps60-ci
       - run: python scripts/fuzz_regression.py target/release/framelet.exe --iterations 1000 --seed ${{ github.run_number }} --output work/fuzz-results.json
       - run: python scripts/verify_robustness.py target/release/framelet.exe
       - run: npm install --prefix work/mcp-client @modelcontextprotocol/sdk@1.32.2 --ignore-scripts --no-audit --no-fund
