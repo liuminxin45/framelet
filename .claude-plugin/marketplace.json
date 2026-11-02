@@ -2,5 +2,5 @@
   "name": "framelet",
   "metadata": {"description": "Tiny Windows recording and GIF review for AI software tests and demos."},
   "owner": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
-  "plugins": [{"name": "framelet", "source": "./", "description": "Windows keyboard/mouse/frame recording and GIF review for software testing and demos."}]
+  "plugins": [{"name": "framelet", "source": {"source": "archive", "url": "https://github.com/liuminxin45/framelet/releases/download/v0.4.0/framelet-v0.4.0-claude-plugin.zip", "sha256": "94a5aab181ec63eecd18ee343f4d58cbfad1eb256af28fab7ffbab1e84b06ee3"}, "description": "Windows keyboard/mouse/frame recording and GIF review for software testing and demos."}]
 }

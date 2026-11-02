@@ -1,0 +1,38 @@
+name: Public installation
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "41 5 * * 2"
+permissions:
+  contents: read
+concurrency:
+  group: public-installation
+  cancel-in-progress: false
+jobs:
+  public-install:
+    runs-on: windows-2025
+    timeout-minutes: 12
+    env:
+      PYTHONUTF8: "1"
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: "22"
+      - run: npm install --prefix work/public-client @anthropic-ai/claude-code@2.1.316 --ignore-scripts --no-audit --no-fund
+      - run: node work/public-client/node_modules/@anthropic-ai/claude-code/install.cjs
+      - run: python scripts/verify_public_distribution.py --output work/public-install --claude work/public-client/node_modules/@anthropic-ai/claude-code/bin/claude.exe
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        if: always()
+        with:
+          name: public-installation
+          path: |
+            work/public-install/verification.json
+            work/public-install/*.log
+          retention-days: 14
