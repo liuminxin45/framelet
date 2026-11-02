@@ -1,7 +1,7 @@
 """Exercise installed host implementations without LLM inference or user-profile writes."""
 import argparse,json,os,queue,subprocess,threading,time,hashlib,shutil
 from pathlib import Path
-import psutil
+from host_rpc import close_host
 
 def main():
     p=argparse.ArgumentParser();p.add_argument('exe');p.add_argument('--output',required=True);p.add_argument('--codex',default='codex.cmd');p.add_argument('--claude');a=p.parse_args()
@@ -40,17 +40,7 @@ def main():
         flat=[s for group in skills['data'] for s in group['skills']];assert any(Path(s['path']).resolve()==(skill/'SKILL.md').resolve() and s['enabled'] for s in flat), 'Installed skill not discovered'
         proof={'ok':True,'exe_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'codex':{'host':initialized,'tools':len(tools),'skill_discovered':True,'application_protocol':'real Codex app-server; no model turn'},'claude':None}
     finally:
-        try:children=psutil.Process(host.pid).children(recursive=True)
-        except psutil.NoSuchProcess:children=[]
-        host.stdin.close()
-        try:host.wait(timeout=20)
-        except subprocess.TimeoutExpired:
-            for child in reversed(children):
-                try:child.kill()
-                except psutil.NoSuchProcess:pass
-            host.kill();host.wait(timeout=5)
-        log.close()
-        _,alive=psutil.wait_procs(children,timeout=6);assert not alive,'host left child processes'
+        close_host(host,log)
     if a.claude:
         profile=root/'claude';profile.mkdir(exist_ok=True);config=profile/'.claude.json';install('claude-code',config,profile/'skills/framelet')
         args=[a.claude,'mcp','list']

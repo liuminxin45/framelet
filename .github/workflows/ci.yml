@@ -101,6 +101,7 @@ jobs:
       - run: python -m pip install -r scripts/requirements-test.txt
       - run: npm install --prefix work/client-hosts @openai/codex@0.166.0 @anthropic-ai/claude-code@2.1.316 --ignore-scripts --no-audit --no-fund
       - run: node work/client-hosts/node_modules/@anthropic-ai/claude-code/install.cjs
+      - run: python scripts/verify_host_cleanup.py target/release/framelet.exe --output work/host-cleanup
       - run: python scripts/verify_hosts.py target/release/framelet.exe --output work/host-acceptance --codex work/client-hosts/node_modules/.bin/codex.cmd --claude work/client-hosts/node_modules/@anthropic-ai/claude-code/bin/claude.exe
       - name: Build and install real client plugin packages
         run: |
@@ -115,6 +116,8 @@ jobs:
           path: |
             work/host-acceptance/verification.json
             work/host-acceptance/*.log
+            work/host-cleanup/verification.json
+            work/host-cleanup/*.log
             work/plugin-host-acceptance/verification.json
             work/plugin-host-acceptance/*.log
           retention-days: 14
