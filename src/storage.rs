@@ -78,7 +78,7 @@ pub fn replace_json_bounded(
         );
     }
     let mut stage = StagedFile::new(target)?;
-    serde_json::to_writer(&mut stage.file, value)?;
+    crate::json_io::write(&mut stage.file, value)?;
     stage.file.flush()?;
     stage.file.sync_all()?;
     ensure!(

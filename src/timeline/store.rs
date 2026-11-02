@@ -20,7 +20,7 @@ pub fn publish(gif: &Path, data: &Data) -> Result<PathBuf> {
     let mut data = serde_json::to_value(data)?;
     data["gif_sha256"] = serde_json::json!(crate::identity::sha256(gif)?);
     let mut stage = crate::storage::StagedFile::new(&target)?;
-    serde_json::to_writer(&mut stage.file, &data)?;
+    crate::json_io::write(&mut stage.file, &data)?;
     stage.file.flush()?;
     ensure!(
         stage.file.metadata()?.len() <= 64 * 1024 * 1024,
@@ -50,7 +50,7 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
         "timeline exceeds 64 MiB"
     );
     let _sidecar_lease = crate::file_guard::Lease::input(&p)?;
-    let d: Data = serde_json::from_reader(std::fs::File::open(p)?)?;
+    let d: Data = crate::json_io::read(std::fs::File::open(p)?)?;
     ensure!(
         d.schema == 2 && d.samples.len() <= MAX_SAMPLES && d.events.len() <= MAX_EVENTS,
         "unsupported timeline or resource limit"

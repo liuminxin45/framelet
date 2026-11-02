@@ -25,7 +25,7 @@ pub fn begin(gif: &Path) -> Result<Pending> {
     ensure!(!manifest(gif).exists(), "capture manifest already exists");
     let path = pending(gif);
     let mut stage = crate::storage::StagedFile::new(&path)?;
-    serde_json::to_writer(
+    crate::json_io::write(
         &mut stage.file,
         &json!({"schema":1,"state":"pending","gif":gif.file_name().map(|n|n.to_string_lossy().into_owned()),"pid":std::process::id(),"owner_created":crate::identity::process_stamp(std::process::id())?,"transaction_id":crate::identity::new_id()?}),
     )?;
@@ -43,7 +43,7 @@ pub fn complete(gif: &Path) -> Result<PathBuf> {
     let target = manifest(gif);
     let value = json!({"schema":1,"state":"complete","dropped_events":data.dropped_events,"recording_warnings":data.warnings,"session_id":data.session_id,"asset_id":data.asset_id,"gif_sha256":crate::identity::sha256(gif)?,"timeline_sha256":crate::identity::sha256(&timeline)?});
     let mut stage = crate::storage::StagedFile::new(&target)?;
-    serde_json::to_writer(&mut stage.file, &value)?;
+    crate::json_io::write(&mut stage.file, &value)?;
     stage.file.flush()?;
     stage.publish(&target)?;
     if let Err(e) = std::fs::remove_file(pending(gif))
@@ -60,7 +60,7 @@ pub fn verify(gif: &Path) -> Result<()> {
     }
     let _lease = crate::file_guard::Lease::input(&p)?;
     ensure!(p.metadata()?.len() <= 8192, "manifest too large");
-    let value: Value = serde_json::from_reader(std::fs::File::open(&p)?)?;
+    let value: Value = crate::json_io::read(std::fs::File::open(&p)?)?;
     ensure!(
         value["schema"] == 1
             && value["state"] == "complete"
@@ -83,7 +83,7 @@ pub fn recover(gif: &Path) -> Result<Value> {
     ensure!(p.exists(), "no pending transaction for this GIF");
     let _pending_lease = crate::file_guard::Lease::input(&p)?;
     ensure!(p.metadata()?.len() <= 8192, "pending marker too large");
-    let marker: Value = serde_json::from_reader(std::fs::File::open(&p)?)?;
+    let marker: Value = crate::json_io::read(std::fs::File::open(&p)?)?;
     ensure!(
         marker["schema"] == 1
             && marker["gif"] == json!(gif.file_name().map(|n| n.to_string_lossy().into_owned())),

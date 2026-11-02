@@ -5,6 +5,7 @@ mod file_guard;
 mod frames;
 mod gui;
 mod identity;
+mod json_io;
 mod mcp;
 mod recording;
 mod runtime;

@@ -120,7 +120,7 @@ pub fn extract(a: &crate::frames::ExtractArgs) -> Result<Value> {
         &sheet,
     )?;
     let mut manifest = crate::storage::StagedFile::new(&stage.path.join("manifest.json"))?;
-    serde_json::to_writer_pretty(&mut manifest.file, &report)?;
+    crate::json_io::write(&mut manifest.file, &report)?;
     manifest.publish(&stage.path.join("manifest.json"))?;
     stage.lease.take();
     std::fs::rename(&stage.path, &output)?;

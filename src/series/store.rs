@@ -66,7 +66,7 @@ pub fn read_json<T: serde::de::DeserializeOwned>(path: &Path, limit: u64) -> Res
     let _lease = crate::file_guard::Lease::input(path)?;
     let f = File::open(path)?;
     ensure!(f.metadata()?.len() <= limit, "JSON exceeds resource budget");
-    Ok(serde_json::from_reader(f.take(limit + 1))?)
+    Ok(crate::json_io::read(f.take(limit + 1))?)
 }
 pub fn filename(prefix: &str, number: u32) -> String {
     format!("{prefix}.part-{number:06}.gif")
@@ -377,7 +377,7 @@ pub fn relative_stats(stats: &mut crate::encode::Stats) -> Result<()> {
 pub fn commit_part(root: &Path, part: &Part) -> Result<()> {
     let target = root.join(part.recording.output.with_extension("segment.json"));
     let mut file = crate::storage::StagedFile::new(&target)?;
-    serde_json::to_writer(&mut file.file, part)?;
+    crate::json_io::write(&mut file.file, part)?;
     file.publish(&target)?;
     Ok(())
 }

@@ -66,7 +66,7 @@ fn write_log(f: &Failure) -> Result<()> {
         .append(true)
         .create(true)
         .open(&path)?;
-    serde_json::to_writer(&mut file, f)?;
+    crate::json_io::write(&mut file, f)?;
     file.write_all(b"\n")?;
     file.flush()?;
     // Per-process files avoid cross-process rotation races; retain at most 64 owned logs.
