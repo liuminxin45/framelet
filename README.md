@@ -20,6 +20,12 @@ Framelet turns a visible part of your Windows desktop into a GIF or PNG. Double-
 
 Its biggest advantage: **one small EXE, about 1.1 MiB, with zero extra runtime installs**. No Python, Node.js, .NET, FFmpeg, browser runtime, account or model API key is required to run Framelet. Windows system APIs do the capture; Rust and a static CRT keep it self-contained.
 
+## What Framelet is for
+
+Use Framelet to capture a short interface demonstration, preserve a visible state change, or let an AI agent inspect and trim a GIF through MCP. The recorder provides capture and image tools; the AI client or operator controls the application being demonstrated.
+
+It captures visible desktop pixels on an interactive Windows x64 session. Overlapping windows can appear in the result. Direct MP4 export, audio recording, and hidden-window capture are outside the documented feature scope.
+
 ## Example 1 · Real window and recording
 
 ![Framelet's native transparent capture frame](docs/images/framelet-window.jpg)
