@@ -193,9 +193,10 @@ pub fn batch(
     );
     if crate::series::is_group(input) {
         // One traversal per selected segment; never repeat that segment for each timestamp.
+        let mut snapshot = crate::series::ReviewSnapshot::new(input)?;
         let mut groups: BTreeMap<PathBuf, Vec<(usize, f64, u64)>> = BTreeMap::new();
         for (i, &time) in times.iter().enumerate() {
-            let (file, local, start) = crate::series::locate(input, time)?;
+            let (file, local, start) = snapshot.locate(time)?;
             groups.entry(file).or_default().push((i, local, start));
         }
         let mut frames = vec![Value::Null; times.len()];
@@ -225,13 +226,14 @@ pub fn batch(
                 .zip(value["frames"].as_array().context("batch frames missing")?)
             {
                 let mut f = frame.clone();
+                f["request_index"] = json!(i);
                 f["segment_start_ms"] = json!(start);
                 f["global_requested_ms"] = json!((times[i] * 1000.).floor() as u64);
                 frames[i] = f;
             }
         }
         return Ok(
-            json!({"input":input,"frames":frames,"decode_passes":passes,"work":{"decoded_frames":decoded},"coordinate_space":"each segment's decoded image pixels"}),
+            json!({"input":input,"frames":frames,"decode_passes":passes,"work":{"decoded_frames":decoded,"index_reads":1,"segment_validations":snapshot.verified_segments()},"coordinate_space":"each segment's decoded image pixels"}),
         );
     }
     let reference = options

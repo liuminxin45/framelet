@@ -49,6 +49,7 @@ def main():
             ("verify_60fps", ["--output", str(root / "fps60")]),
             ("verify_interruptions", ["--output", str(root / "interruptions")]),
             ("verify_performance", ["--output",str(root / "performance")]),
+            ("verify_review_algorithms", ["--output",str(root / "review-algorithms")]),
             ("verify_integration", ["--output",str(root / "integration")]),
             ("fuzz_regression", ["--iterations", "1000", "--seed", "20261102", "--output", str(root / "fuzz.json")]),
         ]]

@@ -13,9 +13,10 @@ pub fn extract(a: &crate::frames::ExtractArgs) -> Result<Value> {
             && (0.0..=60.0).contains(&a.padding),
         "invalid extraction settings"
     );
-    let root = super::store::directory(&a.input)?;
-    let index = super::read_index(&root)?;
-    let total = index
+    let mut snapshot = super::ReviewSnapshot::new(&a.input)?;
+    let root = snapshot.root.clone();
+    let total = snapshot
+        .index
         .parts
         .last()
         .map(|p| p.start_ms + p.recording.duration_ms)
@@ -38,7 +39,7 @@ pub fn extract(a: &crate::frames::ExtractArgs) -> Result<Value> {
         } else {
             n as u64 * (total - 1) / (a.count - 1) as u64
         };
-        let (file, local, start) = match super::locate(&root, timestamp as f64 / 1000.) {
+        let (file, local, start) = match snapshot.locate(timestamp as f64 / 1000.) {
             Ok(v) => v,
             Err(e) => {
                 missing.push(json!({"at_ms":timestamp,"error":e.to_string()}));
@@ -52,7 +53,8 @@ pub fn extract(a: &crate::frames::ExtractArgs) -> Result<Value> {
     }
     let mut budget = 0u64;
     for file in groups.keys() {
-        let part = index
+        let part = snapshot
+            .index
             .parts
             .iter()
             .find(|p| root.join(&p.recording.output) == *file)
@@ -117,7 +119,7 @@ pub fn extract(a: &crate::frames::ExtractArgs) -> Result<Value> {
         converted += work.converted_frames;
     }
     frames.sort_by_key(|v| v["order"].as_u64());
-    let report = json!({"schema_version":"2.0","input":root,"output":output,"manifest":output.join("manifest.json"),"contact_sheet":output.join("contact-sheet.png"),"duration_ms":total,"mode":"uniform","requested_mode":a.mode,"semantic_analysis":false,"selection_note":"Global overview samples committed parts uniformly in time; use scene mode on a chosen part for visual-change ranking. Missing spans are reported, not invented.","frames":frames,"missing":missing,"decode_passes":passes,"work":{"decoded_frames":decoded,"converted_frames":converted}});
+    let report = json!({"schema_version":"2.0","input":root,"output":output,"manifest":output.join("manifest.json"),"contact_sheet":output.join("contact-sheet.png"),"duration_ms":total,"mode":"uniform","requested_mode":a.mode,"semantic_analysis":false,"selection_note":"Global overview samples committed parts uniformly in time; use scene mode on a chosen part for visual-change ranking. Missing spans are reported, not invented.","frames":frames,"missing":missing,"decode_passes":passes,"work":{"decoded_frames":decoded,"converted_frames":converted,"index_reads":1,"segment_validations":snapshot.verified_segments()}});
     crate::encode::screenshot(
         &stage.path.join("contact-sheet.png"),
         sw as u32,

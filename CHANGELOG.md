@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.4.1-dev — unreleased
+
+- Batch 1: request-scoped group index snapshots and one content validation per unique segment; pin selected files through decoding, allow concurrent index publication, and preserve global request indices. Add independent review regressions and work counters without new runtime dependencies.
+
 ## v0.4.0 — 2026-11-02
 
 - Native user-scoped `integrate install/check/uninstall` for Codex, Claude Code, Cursor and Claude Desktop; managed skill discovery where supported, private backups, explicit adoption, executable-path upgrades and restartable transactions. Uninstall preserves captures and restores adopted entries.

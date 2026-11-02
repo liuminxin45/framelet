@@ -1,5 +1,61 @@
 use super::{args::SeriesArgs, model::*, store};
 use std::path::{Path, PathBuf};
+
+#[test]
+fn review_snapshot_pins_parts_but_allows_index_publication() {
+    let root = Root::new();
+    let plan = store::create(&args(&root.0)).unwrap();
+    let mut index = plan.index;
+    for (number, start) in [(1, 0), (2, 2000)] {
+        let name = store::filename(&index.prefix, number);
+        let file = plan.directory.join(&name);
+        std::fs::write(&file, b"GIF test content").unwrap();
+        let timeline = file.with_extension("timeline.json");
+        std::fs::write(&timeline, b"{}").unwrap();
+        crate::storage::replace_json(
+            &crate::transaction::manifest(&file),
+            &serde_json::json!({
+                "schema":1,"state":"complete","gif_sha256":crate::identity::sha256(&file).unwrap(),
+                "timeline_sha256":crate::identity::sha256(&timeline).unwrap()
+            }),
+        )
+        .unwrap();
+        index.parts.push(Part {
+            number,
+            start_ms: start,
+            reason: "test".into(),
+            recording: stats(name.into()),
+            observation_range: None,
+            utc_range: None,
+        });
+    }
+    let second = index.parts.pop().unwrap();
+    store::save_index(&plan.directory, &index).unwrap();
+    let mut snapshot = super::ReviewSnapshot::new(&plan.directory).unwrap();
+    for time in [0.999, 0., 0.5, 0.5] {
+        assert_eq!(snapshot.locate(time).unwrap().2, 0);
+    }
+    assert_eq!(snapshot.verified_segments(), 1);
+    assert!(snapshot.locate(1.).is_err());
+    index.parts.push(second);
+    store::save_index(&plan.directory, &index).unwrap();
+    assert!(snapshot.locate(2.).is_err()); // The ongoing request keeps its original index.
+    let file = plan.directory.join(&index.parts[0].recording.output);
+    assert!(std::fs::write(&file, b"mutated").is_err());
+    assert!(std::fs::write(file.with_extension("timeline.json"), b"changed").is_err());
+    drop(snapshot);
+    let mut fresh = super::ReviewSnapshot::new(&plan.directory).unwrap();
+    assert_eq!(fresh.locate(2.).unwrap().2, 2000);
+    assert!(fresh.locate(1.5).is_err()); // Committed gap must not become a frame.
+    drop(fresh);
+    std::fs::write(&file, b"mutated").unwrap();
+    assert!(
+        super::ReviewSnapshot::new(&plan.directory)
+            .unwrap()
+            .locate(0.)
+            .is_err()
+    );
+}
 struct Root(PathBuf);
 impl Root {
     fn new() -> Self {

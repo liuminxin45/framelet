@@ -4,7 +4,9 @@ mod model;
 mod recovery;
 mod review;
 pub use review::extract;
+mod snapshot;
 mod store;
+pub use snapshot::ReviewSnapshot;
 #[cfg(test)]
 mod tests;
 pub use args::SeriesArgs;

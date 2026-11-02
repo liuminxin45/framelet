@@ -302,21 +302,7 @@ pub fn discover(root: &Path, offset: usize, limit: usize) -> Result<Value> {
     )
 }
 pub fn locate(input: &Path, seconds: f64) -> Result<(PathBuf, f64, u64)> {
-    ensure!(
-        seconds.is_finite() && (0.0..=86400.0).contains(&seconds),
-        "global at must be 0..86400"
-    );
-    let root = directory(input)?;
-    let i = read_index(&root)?;
-    let at = (seconds * 1000.0).floor() as u64;
-    let p = i
-        .parts
-        .iter()
-        .find(|p| at >= p.start_ms && at < p.start_ms + p.recording.duration_ms)
-        .context("timestamp outside committed segments")?;
-    let file = root.join(&p.recording.output);
-    crate::transaction::verify(&file)?;
-    Ok((file, seconds - p.start_ms as f64 / 1000.0, p.start_ms))
+    super::ReviewSnapshot::new(input)?.locate(seconds)
 }
 pub fn disk_usage(root: &Path) -> Result<u64> {
     let mut total = 0u64;
