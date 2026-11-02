@@ -5,7 +5,7 @@
 - Add bilingual FPS recommendations to README and the agent guide: 1 FPS for stable states, 3–5 for development workflows, 10–15 for compact GIFs, 30 for polished demos and 40–50 for fast motion checks.
 - Expose machine-readable presets and selection/performance caveats through `framelet_context.capture_guidance`. Agents can choose a rate based on required evidence rather than treating all development tests as static.
 - Clarify sampling ceilings, missed transient states, GIF timing resolution and how to estimate sampling speed without confusing merged GIF frames with captured samples.
-- Add an official MCP SDK regression check for the published guidance. Capture defaults and the supported 1–50 FPS range are unchanged.
+- Use explicit UTF-8 in Python protocol verifiers on Windows, and add an official MCP SDK regression check for the published guidance. Capture defaults and the supported 1–50 FPS range are unchanged.
 
 帧率建议现已提供中英文文档和 MCP 可读预设；默认采集参数与 1–50 FPS 范围保持不变。此版本仍为预览版，v0.1.0 保持稳定版。
 

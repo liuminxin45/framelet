@@ -16,7 +16,7 @@ exe = str(a.exe.resolve())
 checks = []
 
 def run(*args, ok=True):
-    p = subprocess.run([exe, *map(str, args)], capture_output=True, text=True, timeout=45)
+    p = subprocess.run([exe, *map(str, args)], capture_output=True, text=True, encoding="utf-8", timeout=45)
     assert (p.returncode == 0) == ok, (args, p.returncode, p.stdout, p.stderr)
     return json.loads(p.stdout if ok else p.stderr)
 
@@ -62,7 +62,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-verify-') as folder:
         {'jsonrpc':'2.0','id':5,'method':'tools/call','params':{'name':'framelet_shot','arguments':{'output':'x.png','cursor':'false'}}},
         {'jsonrpc':'2.0','id':6,'method':'tools/call','params':{'name':'framelet_inspect','arguments':{'input':str(source),'arbitrary':True}}},
     ]
-    p = subprocess.run([exe,'mcp'], env={**os.environ,'FRAMELET_MCP_ROOT':str(folder)}, input='\n'.join(map(json.dumps,requests))+'\n', capture_output=True, text=True, timeout=30)
+    p = subprocess.run([exe,'mcp'], env={**os.environ,'FRAMELET_MCP_ROOT':str(folder)}, input='\n'.join(map(json.dumps,requests))+'\n', capture_output=True, text=True, encoding="utf-8", timeout=30)
     assert p.returncode == 0, p.stderr
     responses = [json.loads(line) for line in p.stdout.splitlines()]
     assert len(responses) == 6

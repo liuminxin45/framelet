@@ -12,7 +12,7 @@ args = parser.parse_args()
 exe = str(args.exe.resolve())
 
 def run(*args, ok=True):
-    p = subprocess.run([exe, *map(str, args)], capture_output=True, text=True, timeout=60)
+    p = subprocess.run([exe, *map(str, args)], capture_output=True, text=True, encoding="utf-8", timeout=60)
     assert (p.returncode == 0) == ok, (args, p.stdout, p.stderr)
     return json.loads(p.stdout if ok else p.stderr)
 

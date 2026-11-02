@@ -18,14 +18,14 @@ with tempfile.TemporaryDirectory(prefix='framelet-safety-') as tmp:
     env = {**os.environ, 'FRAMELET_MCP_ROOT': tmp, 'FRAMELET_MCP_READ_ROOTS': '[]'}
     messages = ['[]', '{"jsonrpc":"1.0","id":1,"method":"ping"}', '{broken', 'x' * (1024 * 1024 + 10),
                 json.dumps({'jsonrpc':'2.0','id':2,'method':'ping'})]
-    proc = subprocess.run([exe, 'mcp'], input='\n'.join(messages)+'\n', capture_output=True, text=True, env=env, timeout=20)
+    proc = subprocess.run([exe, 'mcp'], input='\n'.join(messages)+'\n', capture_output=True, text=True, encoding="utf-8", env=env, timeout=20)
     assert proc.returncode == 0, proc.stderr
     replies = [json.loads(line) for line in proc.stdout.splitlines()]
     assert [x['error']['code'] for x in replies[:4]] == [-32600, -32600, -32700, -32600]
     assert replies[4]['result'] == {}
     print('PASS invalid envelopes, malformed JSON and oversized request recover to ping', flush=True)
 
-    proc = subprocess.Popen([exe, 'mcp'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env)
+    proc = subprocess.Popen([exe, 'mcp'], stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", env=env)
     seq = 0
     def tool(name, arguments=None, ok=True):
         global seq
