@@ -521,13 +521,19 @@ pub fn screenshot(path: &Path, width: u32, height: u32, rgb: &[u8]) -> Result<se
     )
 }
 
+#[derive(Serialize)]
+pub struct EditResult {
+    #[serde(flatten)]
+    pub stats: Stats,
+    pub work: crate::frames::DecodeStats,
+}
 pub fn edit(
     input: &Path,
     output: &Path,
     start: f64,
     end: Option<f64>,
     speed: f64,
-) -> Result<Stats> {
+) -> Result<EditResult> {
     ensure!(
         speed.is_finite()
             && (0.01..=100.0).contains(&speed)
@@ -554,7 +560,11 @@ pub fn edit(
     let mut writer: Option<GifWriter> = None;
     let mut timing_error = 0.0;
     let mut output_cs = 0u64;
-    crate::frames::decode(
+    let work = crate::frames::scan(
+        input,
+        |_, at, delay, _, _| {
+            (at + delay) as f64 / 1000. > start && end.is_none_or(|end| (at as f64 / 1000.) < end)
+        },
         |_, at, delay_ms, w, h, rgb| {
             let time = at as f64 / 1000.0;
             let next = (at + delay_ms) as f64 / 1000.0;
@@ -593,7 +603,6 @@ pub fn edit(
             }
             Ok(end.is_none_or(|e| next < e))
         },
-        input,
     )?;
     let mut stats = writer.context("trim range contains no frames")?.finish()?;
     if let Some(data) = source_timeline {
@@ -620,7 +629,7 @@ pub fn edit(
             }
         }
     }
-    Ok(stats)
+    Ok(EditResult { stats, work })
 }
 pub fn inspect(input: &Path) -> Result<serde_json::Value> {
     Ok(inventory(input)?.0)
@@ -779,7 +788,7 @@ mod tests {
         let f = r.read_next_frame().unwrap().unwrap();
         assert_eq!((f.left, f.top, f.width, f.height), (1, 1, 1, 1));
         let s = edit(&p, &q, 0.1, Some(0.3), 2.0).unwrap();
-        assert_eq!(s.duration_ms, 100);
+        assert_eq!(s.stats.duration_ms, 100);
         std::fs::remove_file(p).unwrap();
         std::fs::remove_file(q).unwrap();
     }

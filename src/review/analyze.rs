@@ -67,10 +67,16 @@ pub fn run(a: &Args) -> Result<Value> {
         .unwrap_or(u64::MAX);
     let work = crate::frames::scan(
         &a.input,
-        |_, _, _, _, _| true,
+        // The containing/preceding frame seeds the first in-window difference.
+        // Prefix compositing still runs, but does not allocate/compare RGB.
+        |_, at, delay, _, _| at < end && at + delay >= begin,
         |index, at, delay, w, h, rgb| {
             total = at + delay;
-            let score = visual.push(rgb, w, h);
+            let score = if rgb.is_empty() {
+                0.
+            } else {
+                visual.push(rgb, w, h)
+            };
             if at >= begin && at < end && score > 0. && score >= a.min_change {
                 changes += 1;
                 add(

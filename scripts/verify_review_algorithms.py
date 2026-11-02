@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+from PIL import Image, ImageDraw
 from performance_fixtures import create, publish_trace
 from verify_performance import Client, result
 
@@ -81,6 +82,45 @@ def main():
         side.write_bytes(original)
         client.tool('framelet_probe_frames', dict(input=str(group), times=[0]))
         proof['checks'].append('one index and validation per unique segment; duplicate/order/boundary/gap/tamper/next-request behavior')
+        value, _, _ = client.tool('framelet_analyze', dict(input=str(fixture['dense']), start=19.5, end=20))
+        assert result(value)['work']['decoded_frames'] == 600
+        assert result(value)['work']['converted_frames'] == 16
+        palette = [0,0,0, 255,0,0, 0,255,0, 255,255,255] + [0]*756
+        frames = []
+        for index in range(5):
+            frame = Image.new('P', (32,24), 0)
+            frame.putpalette(palette)
+            ImageDraw.Draw(frame).rectangle((index*4, 3, index*4+7, 12), fill=1+index%3)
+            frames.append(frame)
+        source = root/'disposal.gif'
+        frames[0].save(source, save_all=True, append_images=frames[1:],
+                       duration=[70,160,30,200,90], transparency=0,
+                       disposal=[1,2,3,1,2], optimize=False)
+        full, _, _ = client.tool('framelet_analyze', dict(input=str(source), padding=0))
+        peaks = result(full)['candidates']
+        for start, end in [(0,.07),(.07,.26),(.09,.48),(.26,.55)]:
+            value, _, _ = client.tool('framelet_analyze', dict(input=str(source), start=start, end=end, padding=0))
+            expected = [p for p in peaks if int(start*1000) <= p['timestamp_ms'] < int(end*1000)]
+            assert result(value)['candidates'] == expected, (start, result(value), expected)
+        output = root/'trimmed.gif'
+        value, _, _ = client.tool('framelet_edit', dict(input=str(source), output=str(output), start=.09, end=.48))
+        assert result(value)['work']['converted_frames'] == 4
+        assert result(value)['duration_ms'] == 390
+        def pixels(path):
+            spans = []
+            at = 0
+            with Image.open(path) as image:
+                for index in range(image.n_frames):
+                    image.seek(index)
+                    end = at + image.info['duration']
+                    spans.append((at, end, image.convert('RGB').tobytes()))
+                    at = end
+            return spans
+        original = pixels(source)
+        for at, end, rgb in pixels(output):
+            expected = next(p[2] for p in original if p[0] <= at+90 < p[1])
+            assert rgb == expected, (at, end)
+        proof['checks'].append('window skips prefix RGB, preserves predecessor scores, variable delays and independent transparent/disposal edit pixels')
         proof['ok'] = True
     finally:
         client.close()

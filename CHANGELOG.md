@@ -2,6 +2,8 @@
 
 ## v0.4.1-dev — unreleased
 
+- Batch 2: skip out-of-window RGB conversion/comparison while preserving sequential GIF compositing and first in-window predecessor scores; expose edit work counters and independently verify disposal, delays and clipped pixels.
+
 - Batch 1: request-scoped group index snapshots and one content validation per unique segment; pin selected files through decoding, allow concurrent index publication, and preserve global request indices. Add independent review regressions and work counters without new runtime dependencies.
 
 ## v0.4.0 — 2026-11-02
