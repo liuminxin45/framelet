@@ -6,6 +6,9 @@ pub struct Visual {
     h: u32,
 }
 impl Visual {
+    pub fn current_rgb(&self) -> &[u8] {
+        &self.previous
+    }
     pub fn push(&mut self, rgb: &[u8], w: u32, h: u32) -> f64 {
         if self.previous.len() != rgb.len() || self.w != w || self.h != h {
             self.previous.clear();

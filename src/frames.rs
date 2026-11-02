@@ -221,11 +221,15 @@ pub(crate) fn scan(
 }
 pub(crate) fn resize(rgb: &[u8], w: u32, h: u32, tw: u32, th: u32) -> Vec<u8> {
     let mut out = Vec::with_capacity(tw as usize * th as usize * 3);
+    // A row shares its source y and every row shares source x coordinates.
+    // Hoist integer divisions out of the per-pixel loop; nearest sampling is unchanged.
+    let columns: Vec<_> = (0..tw)
+        .map(|x| (u64::from(x) * u64::from(w) / u64::from(tw)) as usize * 3)
+        .collect();
     for y in 0..th {
-        for x in 0..tw {
-            let i = (((u64::from(y) * u64::from(h) / u64::from(th)) * u64::from(w)
-                + u64::from(x) * u64::from(w) / u64::from(tw))
-                * 3) as usize;
+        let row = (u64::from(y) * u64::from(h) / u64::from(th)) as usize * w as usize * 3;
+        for &column in &columns {
+            let i = row + column;
             out.extend_from_slice(&rgb[i..i + 3]);
         }
     }

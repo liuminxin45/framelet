@@ -1,0 +1,1606 @@
+{
+  "scope": "Local Windows MCP stdio, no model inference; five warm alternating requests per binary with warmup retained. RSS sampled every 5 ms, not unique physical memory. Recorded timings are scenario-specific.",
+  "fixtures": {
+    "group": "existing 64x64 full-mask 1FPS committed 300-second segment, sixty encoded frames",
+    "ui": "640x360,20s,600 frames; dense timeline 20000 synthetic events",
+    "bilibili": "existing public docs/images/bilibili-demo.gif:960x505,7.63s,30 encoded frames"
+  },
+  "batches": [
+    {
+      "batch": 1,
+      "measurements": {
+        "group_spread": {
+          "before": {
+            "warmup": {
+              "ms": 351.9298000028357,
+              "wire_bytes": 20978,
+              "logical_read_bytes_including_ipc": 4777226,
+              "sampled_peak_worker_rss": 11063296,
+              "work": {
+                "decoded_frames": 60
+              },
+              "preview_work": null,
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 367.40390001796186,
+            "max_ms": 379.9557999591343,
+            "runs": [
+              {
+                "ms": 367.40390001796186,
+                "wire_bytes": 20978,
+                "logical_read_bytes_including_ipc": 4777226,
+                "sampled_peak_worker_rss": 11132928,
+                "work": {
+                  "decoded_frames": 60
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 367.37739999080077,
+                "wire_bytes": 20978,
+                "logical_read_bytes_including_ipc": 4777226,
+                "sampled_peak_worker_rss": 11210752,
+                "work": {
+                  "decoded_frames": 60
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 351.4173000003211,
+                "wire_bytes": 20978,
+                "logical_read_bytes_including_ipc": 4777226,
+                "sampled_peak_worker_rss": 11284480,
+                "work": {
+                  "decoded_frames": 60
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 379.9557999591343,
+                "wire_bytes": 20978,
+                "logical_read_bytes_including_ipc": 4777226,
+                "sampled_peak_worker_rss": 11284480,
+                "work": {
+                  "decoded_frames": 60
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 368.2837000233121,
+                "wire_bytes": 20978,
+                "logical_read_bytes_including_ipc": 4777226,
+                "sampled_peak_worker_rss": 11165696,
+                "work": {
+                  "decoded_frames": 60
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 25.100899976678193,
+              "wire_bytes": 21018,
+              "logical_read_bytes_including_ipc": 77678,
+              "sampled_peak_worker_rss": 11030528,
+              "work": {
+                "decoded_frames": 60,
+                "index_reads": 1,
+                "segment_validations": 1
+              },
+              "preview_work": null,
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 27.80659997370094,
+            "max_ms": 36.815600004047155,
+            "runs": [
+              {
+                "ms": 25.05270001711324,
+                "wire_bytes": 21018,
+                "logical_read_bytes_including_ipc": 77678,
+                "sampled_peak_worker_rss": 11091968,
+                "work": {
+                  "decoded_frames": 60,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 27.80659997370094,
+                "wire_bytes": 21018,
+                "logical_read_bytes_including_ipc": 77678,
+                "sampled_peak_worker_rss": 11190272,
+                "work": {
+                  "decoded_frames": 60,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 29.650899989064783,
+                "wire_bytes": 21018,
+                "logical_read_bytes_including_ipc": 77678,
+                "sampled_peak_worker_rss": 11255808,
+                "work": {
+                  "decoded_frames": 60,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 25.957000034395605,
+                "wire_bytes": 21018,
+                "logical_read_bytes_including_ipc": 77678,
+                "sampled_peak_worker_rss": 11223040,
+                "work": {
+                  "decoded_frames": 60,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 36.815600004047155,
+                "wire_bytes": 21018,
+                "logical_read_bytes_including_ipc": 77678,
+                "sampled_peak_worker_rss": 11190272,
+                "work": {
+                  "decoded_frames": 60,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": 92.43159912773339
+        },
+        "group_duplicate": {
+          "before": {
+            "warmup": {
+              "ms": 364.35920000076294,
+              "wire_bytes": 20819,
+              "logical_read_bytes_including_ipc": 4776263,
+              "sampled_peak_worker_rss": 11304960,
+              "work": {
+                "decoded_frames": 3
+              },
+              "preview_work": null,
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 512.6786999753676,
+            "max_ms": 844.5395000162534,
+            "runs": [
+              {
+                "ms": 512.6786999753676,
+                "wire_bytes": 20820,
+                "logical_read_bytes_including_ipc": 4776263,
+                "sampled_peak_worker_rss": 11304960,
+                "work": {
+                  "decoded_frames": 3
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 492.02460004016757,
+                "wire_bytes": 20820,
+                "logical_read_bytes_including_ipc": 4776263,
+                "sampled_peak_worker_rss": 11300864,
+                "work": {
+                  "decoded_frames": 3
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 595.2417000080459,
+                "wire_bytes": 20820,
+                "logical_read_bytes_including_ipc": 4776263,
+                "sampled_peak_worker_rss": 11120640,
+                "work": {
+                  "decoded_frames": 3
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 429.3720000423491,
+                "wire_bytes": 20820,
+                "logical_read_bytes_including_ipc": 4776263,
+                "sampled_peak_worker_rss": 11280384,
+                "work": {
+                  "decoded_frames": 3
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 844.5395000162534,
+                "wire_bytes": 20820,
+                "logical_read_bytes_including_ipc": 4776263,
+                "sampled_peak_worker_rss": 11280384,
+                "work": {
+                  "decoded_frames": 3
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 29.437399993184954,
+              "wire_bytes": 20859,
+              "logical_read_bytes_including_ipc": 76715,
+              "sampled_peak_worker_rss": 11186176,
+              "work": {
+                "decoded_frames": 3,
+                "index_reads": 1,
+                "segment_validations": 1
+              },
+              "preview_work": null,
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 22.755600046366453,
+            "max_ms": 24.34860001085326,
+            "runs": [
+              {
+                "ms": 24.302200006786734,
+                "wire_bytes": 20860,
+                "logical_read_bytes_including_ipc": 76715,
+                "sampled_peak_worker_rss": 11259904,
+                "work": {
+                  "decoded_frames": 3,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 18.108999996911734,
+                "wire_bytes": 20860,
+                "logical_read_bytes_including_ipc": 76715,
+                "sampled_peak_worker_rss": 11259904,
+                "work": {
+                  "decoded_frames": 3,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 22.755600046366453,
+                "wire_bytes": 20860,
+                "logical_read_bytes_including_ipc": 76715,
+                "sampled_peak_worker_rss": 11132928,
+                "work": {
+                  "decoded_frames": 3,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 22.374899999704212,
+                "wire_bytes": 20860,
+                "logical_read_bytes_including_ipc": 76715,
+                "sampled_peak_worker_rss": 11194368,
+                "work": {
+                  "decoded_frames": 3,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 24.34860001085326,
+                "wire_bytes": 20860,
+                "logical_read_bytes_including_ipc": 76715,
+                "sampled_peak_worker_rss": 11194368,
+                "work": {
+                  "decoded_frames": 3,
+                  "index_reads": 1,
+                  "segment_validations": 1
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": 95.56143057094827
+        }
+      },
+      "scope": "Local MCP requests, excluding model inference; alternating before/after; warm median with warmup retained",
+      "before": {
+        "sha256": "65a11571debe89cd9c2058f99d2a17d104fe2fabd437c7f6d3fdc64aca775acf",
+        "exe_bytes": 3685888
+      },
+      "after": {
+        "sha256": "2d1403eaa671a600f5895dff9fe4c6efbc234bce501ba3c22a5ad99eb1833e41",
+        "exe_bytes": 3695104
+      },
+      "ok": true
+    },
+    {
+      "batch": 2,
+      "measurements": {
+        "analyze_tail": {
+          "before": {
+            "warmup": {
+              "ms": 2116.4071999955922,
+              "wire_bytes": 2029,
+              "logical_read_bytes_including_ipc": 17406316,
+              "sampled_peak_worker_rss": 16015360,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 2195.5104999942705,
+            "max_ms": 2486.539800011087,
+            "runs": [
+              {
+                "ms": 2082.1263999678195,
+                "wire_bytes": 2029,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16027648,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2126.8866999889724,
+                "wire_bytes": 2029,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16056320,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2400.2959999488667,
+                "wire_bytes": 2029,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16347136,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2486.539800011087,
+                "wire_bytes": 2029,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16396288,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2195.5104999942705,
+                "wire_bytes": 2029,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16482304,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 897.2622999572195,
+              "wire_bytes": 2027,
+              "logical_read_bytes_including_ipc": 17406316,
+              "sampled_peak_worker_rss": 15147008,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 16,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 793.6941999942064,
+            "max_ms": 1026.9136000424623,
+            "runs": [
+              {
+                "ms": 709.9953000433743,
+                "wire_bytes": 2027,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 15044608,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 16,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 806.2761999899521,
+                "wire_bytes": 2027,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 15888384,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 16,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1026.9136000424623,
+                "wire_bytes": 2027,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16048128,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 16,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 793.6941999942064,
+                "wire_bytes": 2027,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16465920,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 16,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 789.8513000109233,
+                "wire_bytes": 2027,
+                "logical_read_bytes_including_ipc": 16048185,
+                "sampled_peak_worker_rss": 16461824,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 16,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": 63.849218667080955
+        },
+        "edit_tail": {
+          "before": {
+            "warmup": {
+              "ms": 1141.925799951423,
+              "wire_bytes": 954,
+              "logical_read_bytes_including_ipc": 1358314,
+              "sampled_peak_worker_rss": 16818176,
+              "work": null,
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": 500
+            },
+            "median_ms": 904.1947000077926,
+            "max_ms": 1813.9957000385039,
+            "runs": [
+              {
+                "ms": 943.9525000052527,
+                "wire_bytes": 954,
+                "logical_read_bytes_including_ipc": 1358314,
+                "sampled_peak_worker_rss": 16793600,
+                "work": null,
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 904.1947000077926,
+                "wire_bytes": 956,
+                "logical_read_bytes_including_ipc": 1358314,
+                "sampled_peak_worker_rss": 16953344,
+                "work": null,
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 847.9509999742731,
+                "wire_bytes": 955,
+                "logical_read_bytes_including_ipc": 1358314,
+                "sampled_peak_worker_rss": 17059840,
+                "work": null,
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 1813.9957000385039,
+                "wire_bytes": 957,
+                "logical_read_bytes_including_ipc": 1358314,
+                "sampled_peak_worker_rss": 17043456,
+                "work": null,
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 862.3826000257395,
+                "wire_bytes": 955,
+                "logical_read_bytes_including_ipc": 1358314,
+                "sampled_peak_worker_rss": 16994304,
+                "work": null,
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 796.9193999888375,
+              "wire_bytes": 1036,
+              "logical_read_bytes_including_ipc": 1358313,
+              "sampled_peak_worker_rss": 16486400,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 15,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": 500
+            },
+            "median_ms": 672.3311000387184,
+            "max_ms": 770.2099999878556,
+            "runs": [
+              {
+                "ms": 770.2099999878556,
+                "wire_bytes": 1037,
+                "logical_read_bytes_including_ipc": 1358313,
+                "sampled_peak_worker_rss": 16580608,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 15,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 759.2162999790162,
+                "wire_bytes": 1036,
+                "logical_read_bytes_including_ipc": 1358313,
+                "sampled_peak_worker_rss": 16777216,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 15,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 672.3311000387184,
+                "wire_bytes": 1036,
+                "logical_read_bytes_including_ipc": 1358313,
+                "sampled_peak_worker_rss": 16850944,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 15,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 649.427599972114,
+                "wire_bytes": 1036,
+                "logical_read_bytes_including_ipc": 1358313,
+                "sampled_peak_worker_rss": 16863232,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 15,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              },
+              {
+                "ms": 628.9777000201866,
+                "wire_bytes": 1035,
+                "logical_read_bytes_including_ipc": 1358313,
+                "sampled_peak_worker_rss": 16723968,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 15,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": 500
+              }
+            ]
+          },
+          "reduction_percent": 25.643105402749633
+        },
+        "analyze_full": {
+          "before": {
+            "warmup": {
+              "ms": 1652.0224999985658,
+              "wire_bytes": 1969,
+              "logical_read_bytes_including_ipc": 1358190,
+              "sampled_peak_worker_rss": 16211968,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 1723.007199994754,
+            "max_ms": 1995.1995000010356,
+            "runs": [
+              {
+                "ms": 1569.2080999724567,
+                "wire_bytes": 1969,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16187392,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1615.6788999796845,
+                "wire_bytes": 1969,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16187392,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1723.007199994754,
+                "wire_bytes": 1969,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16109568,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1995.1995000010356,
+                "wire_bytes": 1969,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 15904768,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1825.907000049483,
+                "wire_bytes": 1969,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16191488,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 1622.1648000064306,
+              "wire_bytes": 1968,
+              "logical_read_bytes_including_ipc": 1358190,
+              "sampled_peak_worker_rss": 15896576,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 1681.184499990195,
+            "max_ms": 1863.34879999049,
+            "runs": [
+              {
+                "ms": 1687.9734999965876,
+                "wire_bytes": 1968,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 15896576,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1681.184499990195,
+                "wire_bytes": 1968,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 15896576,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1630.162300018128,
+                "wire_bytes": 1968,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16060416,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1863.34879999049,
+                "wire_bytes": 1968,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16060416,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1662.4052000115626,
+                "wire_bytes": 1968,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 16060416,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": 2.427308487433266
+        }
+      },
+      "scope": "Local MCP requests, excluding model inference; alternating before/after; warm median with warmup retained",
+      "before": {
+        "sha256": "2d1403eaa671a600f5895dff9fe4c6efbc234bce501ba3c22a5ad99eb1833e41",
+        "exe_bytes": 3695104
+      },
+      "after": {
+        "sha256": "c803b03684069963500d77b6e0ba122c15ddbb8ef77479728b7ca0a73adecd6e",
+        "exe_bytes": 3696128
+      },
+      "ok": true
+    },
+    {
+      "batch": 3,
+      "measurements": {
+        "ui_sheet": {
+          "before": {
+            "warmup": {
+              "ms": 2491.1975000286475,
+              "wire_bytes": 3708,
+              "logical_read_bytes_including_ipc": 2716418,
+              "sampled_peak_worker_rss": 15437824,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 6,
+                "decoded_frames": 600
+              },
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 2267.541700042784,
+            "max_ms": 2382.9015999799594,
+            "runs": [
+              {
+                "ms": 2267.541700042784,
+                "wire_bytes": 3708,
+                "logical_read_bytes_including_ipc": 2716418,
+                "sampled_peak_worker_rss": 15732736,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 6,
+                  "decoded_frames": 600
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2161.8633999605663,
+                "wire_bytes": 3708,
+                "logical_read_bytes_including_ipc": 2716418,
+                "sampled_peak_worker_rss": 16740352,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 6,
+                  "decoded_frames": 600
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2339.045500033535,
+                "wire_bytes": 3708,
+                "logical_read_bytes_including_ipc": 2716418,
+                "sampled_peak_worker_rss": 16777216,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 6,
+                  "decoded_frames": 600
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2382.9015999799594,
+                "wire_bytes": 3708,
+                "logical_read_bytes_including_ipc": 2716418,
+                "sampled_peak_worker_rss": 16785408,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 6,
+                  "decoded_frames": 600
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 2074.670200003311,
+                "wire_bytes": 3708,
+                "logical_read_bytes_including_ipc": 2716418,
+                "sampled_peak_worker_rss": 16752640,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 6,
+                  "decoded_frames": 600
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 1860.4258999694139,
+              "wire_bytes": 4515,
+              "logical_read_bytes_including_ipc": 1358286,
+              "sampled_peak_worker_rss": 17104896,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": {
+                "converted_frames": 0,
+                "decode_passes": 0,
+                "decoded_frames": 0,
+                "peak_thumbnail_bytes": 3110400,
+                "selected_frames": 6,
+                "thumbnail_pixel_budget": 4147200
+              },
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 1763.3794999564998,
+            "max_ms": 1819.3707999889739,
+            "runs": [
+              {
+                "ms": 1819.3707999889739,
+                "wire_bytes": 4515,
+                "logical_read_bytes_including_ipc": 1358286,
+                "sampled_peak_worker_rss": 17403904,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 3110400,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1811.2232999992557,
+                "wire_bytes": 4515,
+                "logical_read_bytes_including_ipc": 1358286,
+                "sampled_peak_worker_rss": 17498112,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 3110400,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1763.3794999564998,
+                "wire_bytes": 4515,
+                "logical_read_bytes_including_ipc": 1358286,
+                "sampled_peak_worker_rss": 18235392,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 3110400,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1679.488699999638,
+                "wire_bytes": 4515,
+                "logical_read_bytes_including_ipc": 1358286,
+                "sampled_peak_worker_rss": 18030592,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 3110400,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1616.5274999802932,
+                "wire_bytes": 4515,
+                "logical_read_bytes_including_ipc": 1358286,
+                "sampled_peak_worker_rss": 18309120,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 3110400,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": 22.23386674991564
+        },
+        "bilibili_sheet": {
+          "before": {
+            "warmup": {
+              "ms": 562.4284999794327,
+              "wire_bytes": 3698,
+              "logical_read_bytes_including_ipc": 7568022,
+              "sampled_peak_worker_rss": 21364736,
+              "work": {
+                "composited_pixels": 14544000,
+                "converted_frames": 30,
+                "decoded_frames": 30
+              },
+              "preview_work": {
+                "composited_pixels": 14544000,
+                "converted_frames": 6,
+                "decoded_frames": 30
+              },
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 583.6525000049733,
+            "max_ms": 613.5535999783315,
+            "runs": [
+              {
+                "ms": 566.4059999980964,
+                "wire_bytes": 3699,
+                "logical_read_bytes_including_ipc": 7568022,
+                "sampled_peak_worker_rss": 20910080,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 6,
+                  "decoded_frames": 30
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 579.5565000153147,
+                "wire_bytes": 3699,
+                "logical_read_bytes_including_ipc": 7568022,
+                "sampled_peak_worker_rss": 21319680,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 6,
+                  "decoded_frames": 30
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 584.3035999569111,
+                "wire_bytes": 3699,
+                "logical_read_bytes_including_ipc": 7568022,
+                "sampled_peak_worker_rss": 19386368,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 6,
+                  "decoded_frames": 30
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 613.5535999783315,
+                "wire_bytes": 3699,
+                "logical_read_bytes_including_ipc": 7568022,
+                "sampled_peak_worker_rss": 21393408,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 6,
+                  "decoded_frames": 30
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 583.6525000049733,
+                "wire_bytes": 3699,
+                "logical_read_bytes_including_ipc": 7568022,
+                "sampled_peak_worker_rss": 18231296,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 6,
+                  "decoded_frames": 30
+                },
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 389.79420001851395,
+              "wire_bytes": 4486,
+              "logical_read_bytes_including_ipc": 3784094,
+              "sampled_peak_worker_rss": 20406272,
+              "work": {
+                "composited_pixels": 14544000,
+                "converted_frames": 30,
+                "decoded_frames": 30
+              },
+              "preview_work": {
+                "converted_frames": 0,
+                "decode_passes": 0,
+                "decoded_frames": 0,
+                "peak_thumbnail_bytes": 2721600,
+                "selected_frames": 6,
+                "thumbnail_pixel_budget": 4147200
+              },
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 410.0821000174619,
+            "max_ms": 442.96059996122494,
+            "runs": [
+              {
+                "ms": 399.69599997857586,
+                "wire_bytes": 4487,
+                "logical_read_bytes_including_ipc": 3784094,
+                "sampled_peak_worker_rss": 20389888,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 2721600,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 428.1429999973625,
+                "wire_bytes": 4487,
+                "logical_read_bytes_including_ipc": 3784094,
+                "sampled_peak_worker_rss": 20197376,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 2721600,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 409.69300002325326,
+                "wire_bytes": 4487,
+                "logical_read_bytes_including_ipc": 3784094,
+                "sampled_peak_worker_rss": 20103168,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 2721600,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 410.0821000174619,
+                "wire_bytes": 4487,
+                "logical_read_bytes_including_ipc": 3784094,
+                "sampled_peak_worker_rss": 20488192,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 2721600,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 442.96059996122494,
+                "wire_bytes": 4487,
+                "logical_read_bytes_including_ipc": 3784094,
+                "sampled_peak_worker_rss": 20439040,
+                "work": {
+                  "composited_pixels": 14544000,
+                  "converted_frames": 30,
+                  "decoded_frames": 30
+                },
+                "preview_work": {
+                  "converted_frames": 0,
+                  "decode_passes": 0,
+                  "decoded_frames": 0,
+                  "peak_thumbnail_bytes": 2721600,
+                  "selected_frames": 6,
+                  "thumbnail_pixel_budget": 4147200
+                },
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": 29.738654419544563
+        },
+        "ui_numeric": {
+          "before": {
+            "warmup": {
+              "ms": 1526.802200009115,
+              "wire_bytes": 1966,
+              "logical_read_bytes_including_ipc": 1358190,
+              "sampled_peak_worker_rss": 14606336,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": null,
+              "result_duration_ms": null
+            },
+            "median_ms": 1569.7183000156656,
+            "max_ms": 1584.4757999875583,
+            "runs": [
+              {
+                "ms": 1552.343999966979,
+                "wire_bytes": 1966,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14589952,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1523.0980000342242,
+                "wire_bytes": 1966,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14577664,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1584.4757999875583,
+                "wire_bytes": 1966,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14610432,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1569.7183000156656,
+                "wire_bytes": 1966,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14626816,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1574.8434999841265,
+                "wire_bytes": 1966,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14684160,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": null,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "after": {
+            "warmup": {
+              "ms": 1687.5327000161633,
+              "wire_bytes": 1983,
+              "logical_read_bytes_including_ipc": 1358190,
+              "sampled_peak_worker_rss": 15003648,
+              "work": {
+                "composited_pixels": 138240000,
+                "converted_frames": 600,
+                "decoded_frames": 600
+              },
+              "preview_work": null,
+              "decode_passes": 1,
+              "result_duration_ms": null
+            },
+            "median_ms": 1589.2419000156224,
+            "max_ms": 1776.0310000157915,
+            "runs": [
+              {
+                "ms": 1586.1467000213452,
+                "wire_bytes": 1983,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14876672,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1606.998500006739,
+                "wire_bytes": 1983,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14876672,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1776.0310000157915,
+                "wire_bytes": 1983,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14876672,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1589.2419000156224,
+                "wire_bytes": 1983,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14876672,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              },
+              {
+                "ms": 1581.3273999956436,
+                "wire_bytes": 1983,
+                "logical_read_bytes_including_ipc": 1358190,
+                "sampled_peak_worker_rss": 14876672,
+                "work": {
+                  "composited_pixels": 138240000,
+                  "converted_frames": 600,
+                  "decoded_frames": 600
+                },
+                "preview_work": null,
+                "decode_passes": 1,
+                "result_duration_ms": null
+              }
+            ]
+          },
+          "reduction_percent": -1.2437645658945229
+        }
+      },
+      "scope": "Local MCP requests, excluding model inference; alternating before/after; warm median with warmup retained",
+      "before": {
+        "sha256": "c803b03684069963500d77b6e0ba122c15ddbb8ef77479728b7ca0a73adecd6e",
+        "exe_bytes": 3696128
+      },
+      "after": {
+        "sha256": "c33bc008e3d7fcaac9470237e866852c235dd7018537c4a4a7acbc085ddd60c9",
+        "exe_bytes": 3723264
+      },
+      "ok": true
+    }
+  ],
+  "runtime_dependencies_added": 0,
+  "preview_pixel_budget_bytes": 4147200,
+  "preview_semantics": "opening/closing context plus distinct visual-change and time-coverage candidates; not uniform timestamps or semantic highlights"
+}

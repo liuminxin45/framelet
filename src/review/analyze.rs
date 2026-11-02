@@ -65,6 +65,14 @@ pub fn run(a: &Args) -> Result<Value> {
         .end
         .map(|t| (t * 1000.).floor() as u64)
         .unwrap_or(u64::MAX);
+    ensure!(
+        end > begin,
+        "analysis window is below millisecond precision"
+    );
+    let mut preview = a
+        .output
+        .as_ref()
+        .map(|_| super::preview::Preview::default());
     let work = crate::frames::scan(
         &a.input,
         // The containing/preceding frame seeds the first in-window difference.
@@ -77,6 +85,23 @@ pub fn run(a: &Args) -> Result<Value> {
             } else {
                 visual.push(rgb, w, h)
             };
+            if let Some(preview) = &mut preview
+                && at + delay > begin
+                && at < end
+            {
+                preview.observe(
+                    super::preview::SourceFrame {
+                        index,
+                        at,
+                        delay,
+                        width: w,
+                        height: h,
+                    },
+                    rgb,
+                    score,
+                    at >= begin && score > 0. && score >= a.min_change,
+                );
+            }
             if at >= begin && at < end && score > 0. && score >= a.min_change {
                 changes += 1;
                 add(
@@ -134,34 +159,16 @@ pub fn run(a: &Args) -> Result<Value> {
     ranges.truncate(32);
     let mut result = json!({"input":a.input.canonicalize()?,"analyzed_start_ms":begin,"analyzed_end_ms":effective_end,"ranges":ranges,"range_count":matched_ranges,"truncated":matched_ranges>32,"changed_frames":changes,"input_actions":input_actions,"candidates":peaks,"candidates_truncated":changes>a.count as u64*2,"semantic_analysis":false,"algorithm":"16px spatial change + input actions + padded merged intervals","warnings":trace_warnings,"work":work,"next":"Review candidate boundaries, then edit the chosen interval; input time is not visual response time."});
     if let Some(output) = &a.output {
-        let span = ranges.first().map(|r| r[0]).unwrap_or(begin);
-        let finish = ranges
-            .last()
-            .map(|r| r[1])
-            .unwrap_or(effective_end)
-            .max(span + 1);
-        let times: Vec<_> = (0..a.count)
-            .map(|i| {
-                let t = if a.count == 1 {
-                    (span + finish) / 2
-                } else {
-                    span + i as u64 * (finish - span - 1) / (a.count - 1) as u64
-                };
-                t as f64 / 1000.
-            })
-            .collect();
-        let preview = super::probe::batch(
-            &a.input,
-            &times,
-            Default::default(),
-            Some(output),
-            super::probe::Export::Sheet,
-        )?;
+        let mut preview = preview.context("analysis preview missing")?;
+        preview.finish(visual.current_rgb())?;
+        let preview = preview.export(&a.input, output, a.count)?;
         result["review_frames"] = preview["frames"].clone();
         result["contact_sheet"] = preview["contact_sheet"].clone();
         result["output"] = json!(output);
         result["preview_work"] = preview["work"].clone();
+        result["preview_selection"] = preview["selection"].clone();
     }
+    result["decode_passes"] = json!(1);
     Ok(result)
 }
 fn add(ranges: &mut Vec<[u64; 2]>, range: [u64; 2]) {

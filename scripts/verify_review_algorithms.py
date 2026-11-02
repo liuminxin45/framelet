@@ -81,6 +81,10 @@ def main():
         client.tool('framelet_probe_frames', dict(input=str(group), times=[.5]*64), ok=False)
         side.write_bytes(original)
         client.tool('framelet_probe_frames', dict(input=str(group), times=[0]))
+        value, _, _ = client.tool('framelet_extract_frames', dict(input=str(group), output=str(root/'group-sheet'), count=6, mode='uniform'))
+        overview = result(value)
+        assert overview['work']['index_reads'] == 1 and overview['work']['segment_validations'] == 2
+        assert overview['decode_passes'] == 2 and len(overview['frames']) == 6 and not overview['missing']
         proof['checks'].append('one index and validation per unique segment; duplicate/order/boundary/gap/tamper/next-request behavior')
         value, _, _ = client.tool('framelet_analyze', dict(input=str(fixture['dense']), start=19.5, end=20))
         assert result(value)['work']['decoded_frames'] == 600
@@ -121,6 +125,36 @@ def main():
             expected = next(p[2] for p in original if p[0] <= at+90 < p[1])
             assert rgb == expected, (at, end)
         proof['checks'].append('window skips prefix RGB, preserves predecessor scores, variable delays and independent transparent/disposal edit pixels')
+        value, _, _ = client.tool('framelet_analyze', dict(input=str(source), output=str(root/'candidate-sheet')))
+        preview = result(value)
+        assert preview['decode_passes'] == 1 and preview['preview_work']['decoded_frames'] == 0
+        assert preview['preview_work']['peak_thumbnail_bytes'] <= 32*240*180*3
+        assert preview['review_frames'][0]['frame_index'] == 0
+        assert preview['review_frames'][-1]['frame_index'] == 4
+        assert len({f['frame_index'] for f in preview['review_frames']}) == len(preview['review_frames'])
+        # Unscaled small thumbnails must match Pillow's independent compositing.
+        with Image.open(preview['contact_sheet']) as sheet:
+            columns = min(4, len(preview['review_frames']))
+            for frame in preview['review_frames']:
+                tile = frame['sheet_tile']-1
+                x, y = tile%columns*256+8, tile//columns*212+24
+                actual = sheet.crop((x,y,x+32,y+24)).convert('RGB').tobytes()
+                assert actual == original[frame['frame_index']][2]
+        value, _, _ = client.tool('framelet_analyze', dict(input=str(fixture['transient']), output=str(root/'transient-sheet')))
+        assert any(f['frame_index'] == 1 for f in result(value)['review_frames']), result(value)
+        full, _, _ = client.tool('framelet_analyze', dict(input=str(fixture['ui']), count=16))
+        value, _, _ = client.tool('framelet_analyze', dict(input=str(fixture['ui']), output=str(root/'bounded-sheet'), count=16))
+        preview = result(value)
+        assert preview['work']['decoded_frames'] == 600 and preview['preview_work']['decoded_frames'] == 0
+        assert preview['preview_work']['peak_thumbnail_bytes'] <= 32*240*180*3
+        assert preview['review_frames'][0]['frame_index'] == 0 and preview['review_frames'][-1]['frame_index'] == 599
+        for key in ['ranges','changed_frames','input_actions','candidates']:
+            assert preview[key] == result(full)[key], key
+        client.tool('framelet_analyze', dict(input=str(source), output=str(root/'candidate-sheet')), ok=False)
+        client.tool('framelet_analyze', dict(input=str(source), start=.0002, end=.0003), ok=False)
+        assert not list(root.glob('.framelet-review-*.partial'))
+        client.tool('framelet_analyze', dict(input=str(source)))
+        proof['checks'].append('single-pass bounded preview preserves context, distinct chronological tiles, independent pixels and 40ms transient; collisions refuse publication')
         proof['ok'] = True
     finally:
         client.close()

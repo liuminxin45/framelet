@@ -1,5 +1,7 @@
 # Framelet agent entry point
 
+For current development review algorithms, measurable work counters and per-batch acceptance, read [docs/algorithm-rollout.md](docs/algorithm-rollout.md). Analyze previews are bounded visual candidates with opening/closing context; request exact timestamps through batch probes when needed.
+
 For installation/distribution use [docs/installation.md](docs/installation.md). The official workflow skill is [skills/framelet/SKILL.md](skills/framelet/SKILL.md). Native integrate install/check/uninstall owns only its receipt-bound client entry and skill files; preserve private backups and captures.
 
 For efficient current MCP calls, read [docs/performance.md](docs/performance.md): await recording readiness/terminal state without model polling, discover action events, analyze intervals once and batch numeric probes before sending images. MCP 2025-11-25, current catalog 3.0 / 23 tools; responses may arrive out of order.

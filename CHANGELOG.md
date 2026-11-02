@@ -2,6 +2,8 @@
 
 ## v0.4.1-dev — unreleased
 
+- Batch 3: single-pass bounded visual-candidate contact sheets with opening/closing context, peak/time coverage and up to 32 thumbnails; select before resizing, reuse the existing comparison tail, and hoist repeated scaling divisions. Add independent preview-pixel, transient, collision and memory-bound regressions, plus per-batch SHA-bound measurements.
+
 - Batch 2: skip out-of-window RGB conversion/comparison while preserving sequential GIF compositing and first in-window predecessor scores; expose edit work counters and independently verify disposal, delays and clipped pixels.
 
 - Batch 1: request-scoped group index snapshots and one content validation per unique segment; pin selected files through decoding, allow concurrent index publication, and preserve global request indices. Add independent review regressions and work counters without new runtime dependencies.
