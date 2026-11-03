@@ -276,7 +276,7 @@ unsafe fn start(hwnd: HWND, paused: bool) {
             4 => 30,
             5 => 50,
             6 => 60,
-            _ => 10,
+            _ => 30,
         };
         let cursor = SendMessageW(GetDlgItem(hwnd, CURSOR as i32), BM_GETCHECK, 0, 0)
             == BST_CHECKED as isize;
@@ -469,7 +469,7 @@ unsafe fn proc_impl(hwnd: HWND, msg: u32, w: WPARAM, l: LPARAM) -> LRESULT {
                 ] {
                     SendMessageW(combo, CB_ADDSTRING, 0, wide(s).as_ptr() as isize);
                 }
-                SendMessageW(combo, CB_SETCURSEL, 0, 0);
+                SendMessageW(combo, CB_SETCURSEL, 4, 0);
                 child(
                     hwnd,
                     "BUTTON",

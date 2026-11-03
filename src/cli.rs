@@ -82,6 +82,8 @@ enum Command {
     Probe(crate::review::probe::Args),
     /// Find bounded visual/input action intervals without semantic claims.
     Analyze(crate::review::analyze::Args),
+    /// Prepare a trimmed human-facing demo candidate; raw media is preserved. Visual review is still required.
+    PrepareDemo(crate::review::demo::Args),
     /// Return the composited frame covering a timestamp (seconds); useful for binary-search review.
     FrameAt {
         input: PathBuf,
@@ -195,6 +197,9 @@ pub fn run() -> Result<()> {
             json!({"ok":true,"result":crate::timeline::query(&input,at,utc_us,event_id,&query)?}),
         )?,
         Command::Analyze(a) => print(json!({"ok":true,"result":crate::review::analyze::run(&a)?}))?,
+        Command::PrepareDemo(a) => {
+            print(json!({"ok":true,"result":crate::review::demo::run(&a)?}))?
+        }
         Command::Probe(a) => print(
             json!({"ok":true,"result":crate::review::probe::batch(&a.input,&a.times,crate::frames::ProbeOptions{reference:a.reference,region:a.compare_region,threshold:a.difference_threshold},a.output.as_deref(),a.export)?}),
         )?,

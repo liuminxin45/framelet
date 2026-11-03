@@ -52,11 +52,12 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
     let _sidecar_lease = crate::file_guard::Lease::input(&p)?;
     let d: Data = crate::json_io::read(std::fs::File::open(p)?)?;
     ensure!(
-        d.schema == 2 && d.samples.len() <= MAX_SAMPLES && d.events.len() <= MAX_EVENTS,
+        d.schema == 3 && d.samples.len() <= MAX_SAMPLES && d.events.len() <= MAX_EVENTS,
         "unsupported timeline or resource limit"
     );
     ensure!(
-        d.region.width > 0
+        d.capture_fps.is_none_or(|f| (1..=60).contains(&f))
+            && d.region.width > 0
             && d.region.height > 0
             && d.width > 0
             && d.height > 0
@@ -141,10 +142,33 @@ pub fn load(gif: &Path) -> Result<Option<Data>> {
             hex(&d.session_id, 32)
                 && d.asset_id.as_ref().is_some_and(|s| hex(s, 32))
                 && d.gif_sha256.as_ref().is_some_and(|s| hex(s, 64)),
-            "schema-2 requires random session/asset IDs and a content digest"
+            "schema-3 requires random session/asset IDs and a content digest"
         );
         let mut ids = std::collections::HashSet::new();
+        let mut marker_ids = std::collections::HashSet::new();
         for e in &d.events {
+            if let Some(marker) = &e.marker {
+                marker.validate()?;
+                ensure!(
+                    marker_ids.len() < crate::recording::markers::LIMIT
+                        && marker_ids.insert(&marker.request_id),
+                    "duplicate marker request ID or marker limit"
+                );
+                ensure!(
+                    e.device == Device::Marker
+                        && e.kind == 0
+                        && e.point.is_none()
+                        && e.vk.is_none()
+                        && e.scan.is_none()
+                        && e.key_name.is_none()
+                        && e.wheel == 0
+                        && !e.injected
+                        && e.flags == 0,
+                    "invalid marker observation"
+                );
+            } else {
+                ensure!(e.device != Device::Marker, "marker payload missing");
+            }
             ensure!(
                 e.key_name.as_ref().is_none_or(|s| s.len() <= 256),
                 "event key name exceeds byte budget"

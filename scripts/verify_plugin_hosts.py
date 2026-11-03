@@ -30,7 +30,7 @@ def main():
     h=Host([a.codex,'app-server','--stdio'],env,market,out/'codex-connect.log')
     try:
         h.initialize();status=h.call('mcpServerStatus/list',{'detail':'full'});(out/'codex-status.json').write_text(json.dumps(status,indent=2),encoding='utf-8')
-        servers=status.get('data',status.get('servers',[]));connected=[s for s in servers if len(s.get('tools',{}))==23 and 'framelet' in s['name']];assert connected,'Codex plugin MCP did not connect'
+        servers=status.get('data',status.get('servers',[]));connected=[s for s in servers if len(s.get('tools',{}))==25 and 'framelet' in s['name']];assert connected,'Codex plugin MCP did not connect'
         skills=h.call('skills/list',{'cwds':[str(market)],'forceReload':True});assert any('framelet' in s['name'] and s['enabled'] for g in skills['data'] for s in g['skills'])
         codex={'ok':True,'server':connected[0]['name'],'tools':len(connected[0]['tools']),'skill_discovered':True}
     finally:h.close()

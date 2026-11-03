@@ -199,8 +199,18 @@ impl GifWriter {
     pub fn set_limit(&mut self, bytes: u64) {
         self.limit = bytes;
     }
+    pub fn process_markers(&mut self, control: &crate::recording::Control) -> Result<()> {
+        let recorder = self
+            .timeline
+            .as_mut()
+            .context("marker timeline unavailable")?;
+        recorder.process_markers(control)
+    }
     pub fn set_capture_fps(&mut self, fps: u32) {
         self.capture_fps = Some(fps);
+        if let Some(t) = &mut self.timeline {
+            t.data.capture_fps = Some(fps);
+        }
         self.metrics.target_fps = Some(fps);
     }
     fn playback(&self) -> Option<PlaybackInfo> {
@@ -371,8 +381,9 @@ impl GifWriter {
         use std::io::Write;
         writer.flush()?;
         writer.get_ref().file.sync_all()?;
+        let final_bytes = writer.get_ref().file.metadata()?.len();
         ensure!(
-            std::fs::metadata(&self.partial)?.len() <= self.limit,
+            final_bytes <= self.limit,
             "GIF exceeds output byte budget; unfinished output discarded"
         );
         // Handle-based publication never replaces an existing user file.
@@ -387,7 +398,7 @@ impl GifWriter {
             frames: self.frames,
             samples: self.samples,
             duration_ms: self.duration_cs * 10,
-            bytes: std::fs::metadata(&self.path)?.len(),
+            bytes: final_bytes,
             timeline: None,
             manifest: None,
             warnings: cleanup_warnings,
@@ -606,15 +617,27 @@ pub fn edit(
     )?;
     let mut stats = writer.context("trim range contains no frames")?.finish()?;
     if let Some(data) = source_timeline {
-        let data = crate::timeline::remap(data, &spans, &stats)?;
-        stats.warnings.extend(data.warnings.iter().cloned());
-        match crate::timeline::publish(output, &data) {
-            Ok(p) => stats.timeline = Some(p),
+        // A random-ID/remapping failure after media publication must not hide saved output.
+        match crate::runtime::guard("timeline.edit.remap", || {
+            crate::timeline::remap(data, &spans, &stats)
+        }) {
+            Ok(data) => {
+                stats.warnings.extend(data.warnings.iter().cloned());
+                match crate::timeline::publish(output, &data) {
+                    Ok(p) => stats.timeline = Some(p),
+                    Err(e) => {
+                        crate::runtime::report("timeline.edit.publish", &e);
+                        stats
+                            .warnings
+                            .push(format!("GIF saved; timeline publication failed: {e}"));
+                    }
+                }
+            }
             Err(e) => {
-                crate::runtime::report("timeline.edit.publish", &e);
+                crate::runtime::report("timeline.edit.remap", &e);
                 stats
                     .warnings
-                    .push(format!("GIF saved; timeline publication failed: {e}"));
+                    .push(format!("GIF saved; timeline remapping failed: {e}"));
             }
         }
     }

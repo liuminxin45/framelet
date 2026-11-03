@@ -33,7 +33,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-sync-') as tmp, tempfile.Tempo
   assert hung['result']['state']=='failed' and 'timeout' in hung['result']['error'],hung
   assert rpc('ping')=={}
   sid=tool('framelet_start_recording',{**common,'output':'good.gif','duration':.8})['session_id'];done=terminal(sid);assert done['result']['state']=='completed',done
-  gif=root/'good.gif';side=gif.with_suffix('.timeline.json');manifest=gif.with_suffix('.capture.json');d=json.loads(side.read_text());assert d['schema']==2 and manifest.exists()
+  gif=root/'good.gif';side=gif.with_suffix('.timeline.json');manifest=gif.with_suffix('.capture.json');d=json.loads(side.read_text());assert d['schema']==3 and manifest.exists()
   ids=[s['id'] for s in d['samples']]+[e['id'] for e in d['events']];assert all(i is not None for i in ids) and len(ids)==len(set(ids))
   tool('framelet_timeline',{'input':'good.gif','at':.1})
   import shutil
@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-sync-') as tmp, tempfile.Tempo
   manifest.unlink();marker=gif.with_suffix('.pending.json');marker.write_text(json.dumps({'schema':1,'gif':'good.gif','pid':0,'owner_created':0,'transaction_id':'test'}));r=tool('framelet_recover',{'input':'good.gif'});assert r['state']=='recovered' and manifest.exists()
   assert rpc('ping')=={}
   print('PASS worker forced exit is terminal failure; MCP survives; next recording succeeds; incomplete recovery does not invent data')
-  print('PASS schema-2 unique IDs, SHA-256 tamper detection, commit manifest and interrupted-pair recovery')
+  print('PASS schema-3 unique IDs, SHA-256 tamper detection, commit manifest and interrupted-pair recovery')
  finally:
   host.stdin.close();host.wait(timeout=15);assert host.returncode==0,host.stderr.read()
 print(json.dumps({'ok':True}))

@@ -1,8 +1,8 @@
 # Fast AI recording and review / 高效 AI 录制与分析
 
-The current catalog is **3.0**, MCP protocol **2025-11-25**, with **23 tools**. Use the installed executable's catalog as the contract. The portable tool still needs no extra runtime. This document describes implemented services; the separate fidelity-preset proposal is not implied to be shipped.
+The current catalog is **4.0**, MCP protocol **2025-11-25**, with **25 tools**. Use the installed executable's catalog as the contract. The portable tool still needs no extra runtime. This document describes implemented services; the separate fidelity-preset proposal is not implied to be shipped.
 
-当前版本提供 23 个工具。运行无需 Python、Node、FFmpeg 或模型运行时；这些仍只是开发测试工具。以实际安装 EXE 的目录为准，本文不代表历史 Release 已被替换，也不代表清晰度四预设已实施。
+当前版本提供 25 个工具。运行无需 Python、Node、FFmpeg 或模型运行时；这些仍只是开发测试工具。以实际安装 EXE 的目录为准，本文不代表历史 Release 已被替换，也不代表清晰度四预设已实施。
 
 ## Recording with fewer model turns / 减少录制过程的模型往返
 
@@ -108,3 +108,5 @@ python scripts/run_checks.py target/release/framelet.exe --desktop --output work
 ```
 
 Synthetic dense traces, independent Pillow pixels, small transient/reverse actions, content-changing caches/cursors, blocked IPC writes, live recording controls and EOF are tested. CI uses work bounds and generous regression thresholds; local benchmark results remain scenario-specific. Real 650-second CLI and MCP acceptance stays separate and SHA-bound. See performance-delivery.md for stage mapping and verification reports for measured results.
+
+Human-facing demo delivery now requires [demo-workflow.md](demo-workflow.md): 30 FPS defaults, acknowledged non-invasive markers, action-window sampling/hold findings and a separate prepare_demo candidate with visual review. These quality statistics reuse the analysis decode; the historical v0.4.1 benchmarks above do not measure the new checks.

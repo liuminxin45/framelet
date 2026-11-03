@@ -15,7 +15,7 @@ for name in ["AGENTS.md", "docs/engineering-standard.md", "docs/agent-guide.md",
 r = subprocess.run([str(exe), "schema"], capture_output=True, text=True, encoding="utf-8", timeout=15, cwd=root)
 assert r.returncode == 0, r.stderr
 catalog = json.loads(r.stdout)
-assert catalog["schema_version"] == "3.0"
-assert len(catalog["tools"]) == 23
+assert catalog["schema_version"] == "4.0"
+assert len(catalog["tools"]) == 25
 assert all(t["name"] != "framelet_record" for t in catalog["tools"])
 print(json.dumps({"ok": True, "version": catalog["version"], "tools": len(catalog["tools"]), "exe_sha256": checksums[0]}))

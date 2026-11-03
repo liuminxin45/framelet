@@ -26,3 +26,5 @@ Current engineering policy: [engineering-standard.md](docs/engineering-standard.
 [Efficient AI workflow / 高效 AI 工作流](docs/performance.md) — nonblocking waits and controls, filtered/paginated input events, one-pass batch probes, transient-aware action intervals and bounded content-verified caches. / 无阻塞等待与控制、事件筛选分页、单遍批量探针、短暂状态候选和有界内容缓存。
 
 Native client integration installs MCP plus workflow skills; binary MCPB and client-plugin bundles preserve the no-extra-runtime model. / 原生客户端接入提供 MCP 注册、Skill 安装与校验；二进制 MCPB/插件包仍无需额外运行时。[Installation / 接入](docs/installation.md)。
+
+[Development demo workflow / 开发版演示工作流](docs/demo-workflow.md): 30 FPS defaults, acknowledged non-invasive anchors, RGB/block difference details, action-window sampling checks and separate trimmed candidates. Raw media stays intact; saved is not visually approved. / 默认 30 FPS、已确认的非侵入式锚点、RGB/分块差分、动作区间采样检查与独立剪辑候选；保留原片，保存不等于演示验收通过。

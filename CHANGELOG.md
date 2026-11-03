@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5.0-dev — Unreleased
+
+- Default human-facing capture to 30 FPS across CLI/MCP/GUI; explicit lower rates remain available for tests.
+- Add bounded, idempotent non-invasive MCP begin/end/point anchors with native acknowledgements and shared observation IDs/clocks. Breaking: catalog 4.0 / 25 tools, timeline 3 only, retaining original capture FPS and typed marker observations; no old-schema reader.
+- Add one-pass RGB difference details, hold/action-sampling quality findings and `prepare-demo` / `framelet_prepare_demo` for separate durable candidates. Preserve raw recordings and require opening/action/closing visual review; unpaired markers refuse automatic trim.
+- Isolate recording control writes from supervision; frozen workers/queued markers cannot block stop/status/timeouts. Preserve published candidates and report postcheck/metadata failures. Add SHA-bound demo regression tests and CI evidence.
+
 ## v0.4.1 — 2026-11-03
 
 - Batch 3: single-pass bounded visual-candidate contact sheets with opening/closing context, peak/time coverage and up to 32 thumbnails; select before resizing, reuse the existing comparison tail, and hoist repeated scaling divisions. Add independent preview-pixel, transient, collision and memory-bound regressions, plus per-batch SHA-bound measurements.

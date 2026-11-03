@@ -12,7 +12,8 @@ use std::{
 use windows_sys::Win32::UI::WindowsAndMessaging::WM_LBUTTONDOWN;
 fn fixture() -> Data {
     Data {
-        schema: 2,
+        schema: 3,
+        capture_fps: Some(30),
         asset_id: Some("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa".into()),
         gif_sha256: None,
         session_id: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb".into(),
@@ -41,6 +42,7 @@ fn fixture() -> Data {
             cursor: Some([50, 50]),
         }],
         events: vec![Event {
+            marker: None,
             id: Some(2),
             device: Device::Mouse,
             vk: None,

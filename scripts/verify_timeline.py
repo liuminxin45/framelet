@@ -17,7 +17,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-timeline-') as tmp:
  for i,d in enumerate([100000,300000,100000,500000]):
   samples.append(dict(seq=i,utc_us=clock+at,capture_us=at,capture_end_us=at+100,coverage_start_us=at,hold_end_us=at+d,media_start_us=at,media_end_us=at+d,gif_frame=i,cursor=[5,5]));at+=d
  events=[dict(seq=i,utc_us=clock+t,mono_us=t,kind=513,point=[5,5],injected=True,wheel=0,media_us=t,gif_frame=next(s['gif_frame'] for s in samples if s['media_start_us']<=t<s['media_end_us'])) for i,t in enumerate([125000,450000,900000])]
- data=dict(schema=2,asset_id=uuid.uuid4().hex,gif_sha256=hashlib.sha256(raw.read_bytes()).hexdigest(),session_id=uuid.uuid4().hex,region=dict(x=-20,y=30,width=32,height=32),width=16,height=16,gif_bytes=raw.stat().st_size,duration_ms=info['duration_ms'],frames=info['frames'],samples=samples,events=events,dropped_events=0,warnings=[])
+ data=dict(schema=3,asset_id=uuid.uuid4().hex,gif_sha256=hashlib.sha256(raw.read_bytes()).hexdigest(),session_id=uuid.uuid4().hex,region=dict(x=-20,y=30,width=32,height=32),width=16,height=16,gif_bytes=raw.stat().st_size,duration_ms=info['duration_ms'],frames=info['frames'],samples=samples,events=events,dropped_events=0,warnings=[])
  for i,sample in enumerate(data['samples']):sample['id']=i+1
  for i,event in enumerate(data['events']):
   sample=next(s for s in data['samples'] if s['media_start_us']<=event['media_us']<s['media_end_us'])
@@ -48,7 +48,9 @@ with tempfile.TemporaryDirectory(prefix='framelet-timeline-') as tmp:
   race=root/'race.gif'
   child=subprocess.Popen([exe,'record','--region','0,0,16,16','--fps','5','--duration','1','--output',str(race)],stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,encoding='utf-8')
   deadline=time.monotonic()+10
-  while not list(root.glob('race.gif.*.partial')):
+  # A partial exists before track() performs its second preflight. The durable pending
+  # transaction proves both collision checks passed, so this races publication, not startup.
+  while not race.with_suffix('.pending.json').exists():
    assert child.poll() is None and time.monotonic()<deadline;time.sleep(.01)
   side(race).write_text('preserve-me',encoding='utf-8')
   stdout,stderr=child.communicate(timeout=15);assert child.returncode==0,stderr

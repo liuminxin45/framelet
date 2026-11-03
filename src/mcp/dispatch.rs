@@ -107,6 +107,8 @@ fn call_value(
     }
     let a = &args;
     match name {
+        "framelet_prepare_demo" => crate::review::demo::run(&serde_json::from_value(a.clone())?),
+        "framelet_mark_recording" => sessions.mark(string(a,"session_id")?,serde_json::from_value(json!({"request_id":string(a,"request_id")?,"kind":string(a,"kind")?,"label":a.get("label").cloned().unwrap_or_else(||json!(""))}))?),
         "framelet_analyze" => crate::review::analyze::run(&serde_json::from_value(a.clone())?),
         "framelet_probe_frames" => {
             let args: crate::review::probe::Args = serde_json::from_value(a.clone())?;

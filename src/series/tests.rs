@@ -190,7 +190,8 @@ fn checkpoint_prefix_integrity_recovery_and_idempotency() {
         crate::identity::sha256_reader(std::fs::File::open(&source).unwrap().take(bytes)).unwrap();
     let stat = w.snapshot_stats(bytes + 1);
     let timeline = crate::timeline::Data {
-        schema: 2,
+        schema: 3,
+        capture_fps: Some(30),
         session_id: i.session_id.clone(),
         asset_id: Some(crate::identity::new_id().unwrap()),
         gif_sha256: None,
@@ -321,7 +322,8 @@ fn recovery_fixture() -> (Root, PathBuf, Checkpoint, PathBuf) {
         crate::identity::sha256_reader(std::fs::File::open(&source).unwrap().take(bytes)).unwrap();
     let stat = w.snapshot_stats(bytes + 1);
     let timeline = crate::timeline::Data {
-        schema: 2,
+        schema: 3,
+        capture_fps: Some(30),
         session_id: i.session_id.clone(),
         asset_id: Some(crate::identity::new_id().unwrap()),
         gif_sha256: None,

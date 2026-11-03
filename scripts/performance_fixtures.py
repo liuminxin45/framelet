@@ -52,7 +52,7 @@ def create(root):
                            sample_id=frame + 1, offset_us=t - starts[frame], seq=i, utc_us=clock + t,
                            mono_us=t, kind=513 if i == 12300 else 512, point=[20, 20],
                            injected=False, wheel=0, media_us=t, gif_frame=frame))
-    data = dict(schema=2, asset_id='a' * 32, gif_sha256=hashlib.sha256(dense.read_bytes()).hexdigest(),
+    data = dict(schema=3, asset_id='a' * 32, gif_sha256=hashlib.sha256(dense.read_bytes()).hexdigest(),
                 session_id='b' * 32, region=dict(x=0, y=0, width=640, height=360), width=640,
                 height=360, gif_bytes=dense.stat().st_size, duration_ms=20000, frames=600,
                 samples=samples, events=events, dropped_events=0, warnings=[])
@@ -100,7 +100,7 @@ def review_corpus(root):
                     capture_end_us=i*1000000+100, coverage_start_us=i*1000000,
                     hold_end_us=(i+1)*1000000, media_start_us=i*1000000,
                     media_end_us=(i+1)*1000000, gif_frame=i//5, cursor=None) for i in range(300)]
-    data = dict(schema=2, asset_id='a'*32, gif_sha256=hashlib.sha256(gif.read_bytes()).hexdigest(),
+    data = dict(schema=3, asset_id='a'*32, gif_sha256=hashlib.sha256(gif.read_bytes()).hexdigest(),
                 session_id='b'*32, region=dict(x=0,y=0,width=64,height=64), width=64,height=64,
                 gif_bytes=gif.stat().st_size,duration_ms=300000,frames=60,samples=samples,
                 events=[],dropped_events=0,warnings=[])

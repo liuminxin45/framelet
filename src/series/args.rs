@@ -26,7 +26,7 @@ pub struct SeriesArgs {
     pub max_mib: u64,
     #[arg(long, allow_hyphen_values = true)]
     pub region: Option<crate::capture::Region>,
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 30)]
     pub fps: u32,
     #[arg(long)]
     pub cursor: bool,
@@ -57,7 +57,7 @@ impl Default for SeriesArgs {
             total_mib: 2048,
             max_mib: 256,
             region: None,
-            fps: 10,
+            fps: 30,
             cursor: false,
             quality: 10,
             max_width: None,

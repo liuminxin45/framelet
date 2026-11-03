@@ -6,7 +6,7 @@
 
 **CLI-first, AI-native Windows recording with keyboard, mouse and frame synchronization.**
 
-**≈3.6 MiB native EXE · No extra runtime installs · CLI First · AI Native**
+**≈3.8 MiB native EXE · No extra runtime installs · CLI First · AI Native**
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [Download](https://github.com/liuminxin45/framelet/releases/latest) · [About](ABOUT.md)
 
@@ -35,12 +35,13 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 | Keyboard/mouse/frame timeline | Locate failed steps and review action results |
 | [1–60 FPS](docs/60fps.md) | State checks and high-rate native review; use 30 FPS for browser sharing |
 | [Efficient AI review](docs/performance.md) | Filtered event queries, one-pass batch probes and transient-aware action intervals |
+| [Demo preparation](docs/demo-workflow.md) | Non-invasive anchors, action sampling checks and separate trimmed candidates (development build) |
 | GIF editing | Precise time cuts and playback speed changes |
 | Native frame extraction | PNGs, contact sheets, timestamp probes and region comparisons |
 | Privacy and guardrails | Fixed masks, scoped MCP paths, no-overwrite and resource limits |
 | Isolation and integrity | Supervised capture process, content hashes and recovery markers |
 
-Static acceptance can use **1 FPS**; compact GIFs **10–15 FPS**; polished demos default to **30 FPS**. Actual sampling depends on workload.
+Static acceptance can use **1 FPS**. Use **10–15 FPS** only for explicitly size-first clips where smooth motion is secondary; human-facing demos default to **30 FPS**, including README GIFs. Actual sampling depends on workload.
 
 ## Measured review performance
 

@@ -108,11 +108,32 @@ fn supervise_value(
         let _ = child.wait();
         anyhow::bail!("assign worker job: {}", std::io::Error::last_os_error());
     }
+    // A suspended native worker must never block supervision in WriteFile/flush.
+    // Only this writer thread can block; closing the job reaps its pipe reader.
+    let mut control_writer: Option<std::thread::JoinHandle<()>> = None;
     let result = (|| -> Result<(Value, std::thread::JoinHandle<()>)> {
         let mut input = child.stdin.take().context("worker stdin missing")?;
         let output = child.stdout.take().context("worker stdout missing")?;
-        writeln!(input, "{}", request)?;
-        input.flush()?;
+        let (outgoing, commands) = mpsc::sync_channel::<Value>(1);
+        control_writer = Some(
+            std::thread::Builder::new()
+                .name("framelet-control-pipe".into())
+                .spawn(move || {
+                    while let Ok(command) = commands.recv() {
+                        if writeln!(input, "{command}")
+                            .and_then(|_| input.flush())
+                            .is_err()
+                        {
+                            break;
+                        }
+                    }
+                })?,
+        );
+        // The initial request uses the same bounded writer as later controls.
+        // Even suspension immediately after spawn cannot trap the supervisor in pipe I/O.
+        outgoing
+            .try_send(request)
+            .map_err(|_| anyhow::anyhow!("initial recording request queue unavailable"))?;
         let (tx, rx) = mpsc::sync_channel(4);
         let reader = std::thread::Builder::new()
             .name("framelet-worker-pipe".into())
@@ -139,19 +160,38 @@ fn supervise_value(
         let mut last = Instant::now();
         let mut prior = (false, false, false);
         let mut stopping_since = None;
+        let mut unsent: Option<Value> = None;
         let outcome: Result<Value> = loop {
             let stop = c.stop.load(Ordering::Relaxed) || external_stop();
             let cancel = c.cancel.load(Ordering::Relaxed);
             let paused = c.paused.load(Ordering::Relaxed);
             let frame = c.single.swap(false, Ordering::Relaxed);
-            if (stop, cancel, paused) != prior || frame {
-                writeln!(
-                    input,
-                    "{}",
-                    json!({"stop":stop,"cancel":cancel,"paused":paused,"frame":frame})
-                )?;
-                input.flush()?;
+            let markers = if unsent.is_none() {
+                c.markers
+                    .lock()
+                    .map_err(|_| anyhow::anyhow!("marker queue lock poisoned"))?
+                    .drain()
+            } else {
+                Vec::new()
+            };
+            if unsent.is_none() && ((stop, cancel, paused) != prior || frame || !markers.is_empty())
+            {
+                unsent = Some(
+                    json!({"stop":stop,"cancel":cancel,"paused":paused,"frame":frame,"markers":markers}),
+                );
                 prior = (stop, cancel, paused);
+            }
+            if let Some(mut command) = unsent.take() {
+                // Terminal intent is sticky even if the older command is still queued.
+                command["stop"] = json!(stop);
+                command["cancel"] = json!(cancel);
+                command["paused"] = json!(paused);
+                command["frame"] = json!(command["frame"].as_bool().unwrap_or(false) || frame);
+                match outgoing.try_send(command) {
+                    Ok(()) => {}
+                    Err(mpsc::TrySendError::Full(command)) => unsent = Some(command),
+                    Err(_) => anyhow::bail!("recording control pipe closed"),
+                }
             }
             if (stop || cancel) && stopping_since.is_none() {
                 stopping_since = Some(Instant::now());
@@ -171,6 +211,14 @@ fn supervise_value(
             match rx.recv_timeout(Duration::from_millis(10)) {
                 Ok(Ok(v)) => {
                     last = Instant::now();
+                    if let Some(receipts) = v.get("marker_receipts") {
+                        let receipts: Vec<crate::recording::markers::Receipt> =
+                            serde_json::from_value(receipts.clone())?;
+                        c.markers
+                            .lock()
+                            .map_err(|_| anyhow::anyhow!("marker ledger lock poisoned"))?
+                            .accept(&receipts)?;
+                    }
                     if let Some(result) = v.get("completed") {
                         if events {
                             crate::runtime::progress(json!({"event":"saved","result":result}));
@@ -212,7 +260,7 @@ fn supervise_value(
                 }
             }
         };
-        drop(input);
+        drop(outgoing);
         drop(rx);
         // Never join a pipe reader while its writer may still be alive/hung.
         // The child is terminated and reaped below before we join on success.
@@ -222,12 +270,26 @@ fn supervise_value(
     let _ = child.kill();
     let _ = child.wait();
     drop(job);
+    let writer_failed = control_writer.is_some_and(|writer| writer.join().is_err());
     let result = result.and_then(|(value, reader)| {
         reader
             .join()
             .map_err(|_| anyhow::anyhow!("worker pipe reader panicked"))?;
         Ok(value)
     });
+    let result = if writer_failed {
+        let cleanup = anyhow::anyhow!("worker control writer panicked");
+        crate::runtime::report("recording.control.cleanup", &cleanup);
+        match result {
+            Ok(_) => Err(cleanup),
+            Err(primary) => Err(primary),
+        }
+    } else {
+        result
+    };
+    if let Ok(mut markers) = c.markers.lock() {
+        markers.terminal("worker ended before acknowledgement; inspect saved timeline or recover after owner exits");
+    }
     if let Err(e) = &result {
         crate::runtime::report("recording.supervisor", e);
     }
@@ -270,6 +332,26 @@ pub fn child_main() -> Result<()> {
                     break;
                 }
                 if let Ok(v) = serde_json::from_str::<Value>(&line) {
+                    let marked = (|| -> Result<()> {
+                        let requests: Vec<crate::recording::markers::Request> =
+                            serde_json::from_value(
+                                v.get("markers").cloned().unwrap_or_else(|| json!([])),
+                            )?;
+                        ensure!(requests.len() <= 8, "worker marker batch too large");
+                        let mut ledger = c
+                            .markers
+                            .lock()
+                            .map_err(|_| anyhow::anyhow!("worker marker lock poisoned"))?;
+                        for request in requests {
+                            ledger.submit(request)?;
+                        }
+                        Ok(())
+                    })();
+                    if let Err(e) = marked {
+                        crate::runtime::report("worker.markers", &e);
+                        c.cancel.store(true, Ordering::Relaxed);
+                        break;
+                    }
                     c.stop
                         .store(v["stop"].as_bool().unwrap_or(false), Ordering::Relaxed);
                     c.cancel
@@ -292,7 +374,7 @@ pub fn child_main() -> Result<()> {
             let _ = writeln!(
                 std::io::stdout().lock(),
                 "{}",
-                json!({"phase":c.phase.load(Ordering::Relaxed),"samples":c.samples.load(Ordering::Relaxed),"recorded_ms":c.elapsed_ms.load(Ordering::Relaxed),"series":c.series.lock().ok().and_then(|v|v.clone())})
+                json!({"marker_receipts":c.markers.lock().map(|l|l.snapshot()).unwrap_or_else(|_|json!([])),"phase":c.phase.load(Ordering::Relaxed),"samples":c.samples.load(Ordering::Relaxed),"recorded_ms":c.elapsed_ms.load(Ordering::Relaxed),"series":c.series.lock().ok().and_then(|v|v.clone())})
             );
         }
     };
@@ -313,13 +395,18 @@ pub fn child_main() -> Result<()> {
             )?)?)
         }
     });
-    let response = match result {
+    let mut response = match result {
         Ok(stats) => json!({"completed":stats}),
         Err(e) => {
             crate::runtime::report("worker.capture", &e);
             json!({"failed":format!("{e:#}")})
         }
     };
+    response["marker_receipts"] = control
+        .markers
+        .lock()
+        .map(|l| l.snapshot())
+        .unwrap_or_else(|_| json!([]));
     writeln!(std::io::stdout().lock(), "{response}")?;
     Ok(())
 }

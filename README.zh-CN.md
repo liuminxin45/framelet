@@ -4,7 +4,7 @@
 
 **CLI 优先、AI Native 的 Windows 键鼠帧同步录制工具。**
 
-**约 3.6 MiB 原生单 EXE · 无需额外运行时 · CLI First · AI Native**
+**约 3.8 MiB 原生单 EXE · 无需额外运行时 · CLI First · AI Native**
 
 [English](README.md) · [简体中文](README.zh-CN.md) · [下载](https://github.com/liuminxin45/framelet/releases/latest) · [关于](ABOUT.md)
 
@@ -33,12 +33,13 @@ Framelet 默认记录**键盘、鼠标与画面采样**，共用 UTC 和单调�
 | 键鼠帧时间线 | 对齐输入、定位失败步骤、复查操作结果 |
 | [1–60 FPS](docs/60fps.md) | 静态验收与高频原生逐帧检查；浏览器分享建议 30 FPS |
 | [高效 AI 复核](docs/performance.md) | 筛选操作事件、单遍批量抽帧、发现短暂变化与动作区间 |
+| [演示成片检查](docs/demo-workflow.md) | 非侵入式锚点、动作采样检查、裁掉首尾等待并保留原片（开发版） |
 | GIF 剪辑 | 按时间裁剪、改变播放速度 |
 | 原生抽帧 | PNG、拼图、时间点探针与区域差分 |
 | 隐私与防护 | 固定遮挡、MCP 目录约束、防覆盖和资源上限 |
 | 故障隔离与校验 | 录制子进程、内容校验与中断恢复标记 |
 
-静态验收可选 **1 FPS**，体积优先的 GIF 选 **10–15 FPS**，正式演示默认 **30 FPS**。实际采样速度取决于负载。
+静态验收可选 **1 FPS**，明确接受动作不流畅的体积优先 GIF 可选 **10–15 FPS**，正式演示默认 **30 FPS**。实际采样速度取决于负载。
 
 ## 复核性能，实测可查
 

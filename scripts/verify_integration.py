@@ -17,7 +17,7 @@ def main():
         config.write_text(original,encoding='utf-8')
         opts=['--client',client,'--config',str(config)]+([] if client=='claude-desktop' else ['--skill-dir',str(skill)])
         installed=run('integrate','install',*opts,'--output-root',captures)
-        assert installed['managed'] and installed['handshake']['tools']==23 and not installed['handshake']['capture_started']
+        assert installed['managed'] and installed['handshake']['tools']==25 and not installed['handshake']['capture_started']
         run('integrate','check',*opts)
         before=config.read_bytes();run('integrate','install',*opts,'--output-root',captures);assert config.read_bytes()==before,'idempotent install rewrote config'
         if client=='codex':assert '# keep comment' in config.read_text(encoding='utf-8');data=tomllib.loads(config.read_text(encoding='utf-8'))['mcp_servers']

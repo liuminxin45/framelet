@@ -23,6 +23,35 @@ pub struct Sessions {
     history: VecDeque<Value>,
 }
 impl Sessions {
+    pub fn mark(&mut self, id: &str, request: crate::recording::markers::Request) -> Result<Value> {
+        request.validate()?;
+        self.reap();
+        let s = self.active.as_ref().filter(|s| s.id == id).ok_or_else(|| {
+            anyhow::anyhow!("recording is not active; inspect its terminal markers/timeline")
+        })?;
+        let mut ledger = s
+            .control
+            .markers
+            .lock()
+            .map_err(|_| anyhow::anyhow!("marker queue lock poisoned"))?;
+        if let Some(value) = ledger.existing(&request)? {
+            return Ok(
+                json!({"receipt":value,"next":"inspect recording_status.markers for native acknowledgement"}),
+            );
+        }
+        ensure!(
+            s.control.phase.load(Ordering::Relaxed) == 1
+                && s.control.samples.load(Ordering::Relaxed) > 0
+                && !s.control.stop.load(Ordering::Relaxed)
+                && !s.control.cancel.load(Ordering::Relaxed)
+                && !s.control.paused.load(Ordering::Relaxed),
+            "markers require a ready, unpaused recording"
+        );
+        let receipt = ledger.submit(request)?;
+        Ok(
+            json!({"receipt":receipt,"next":"queued, not yet an anchor; inspect recording_status.markers for recorded acknowledgement and original observation ID; never repeat UI input"}),
+        )
+    }
     pub fn start_series(&mut self, a: crate::series::SeriesArgs) -> Result<Value> {
         a.validate()?;
         self.reap();
@@ -94,6 +123,11 @@ impl Sessions {
                 return;
             };
             let joined = s.worker.join();
+            if let Ok(mut ledger) = s.control.markers.lock() {
+                ledger.terminal(
+                    "recording ended before marker acknowledgement; inspect saved timeline",
+                );
+            }
             let result = if joined.is_err() {
                 let failure = crate::runtime::report(
                     "recording.join",
@@ -113,7 +147,7 @@ impl Sessions {
                     )
             };
             self.history
-                .push_back(json!({"session_id":s.id,"terminal":true,"result":result}));
+                .push_back(json!({"session_id":s.id,"terminal":true,"result":result,"markers":s.control.markers.lock().map(|l|l.snapshot()).unwrap_or_else(|_|json!({"error":"marker ledger unavailable"}))}));
             if self.history.len() > 16 {
                 self.history.pop_front();
             }
@@ -173,7 +207,7 @@ impl Sessions {
                 state
             };
             return Ok(
-                json!({"session_id":id,"terminal":false,"state":state,"ready":state=="recording"&&s.control.samples.load(Ordering::Relaxed)>0,"next_poll_ms":if state=="starting"||state=="finalizing"{100}else{1000},"wall_remaining_ms":s.max_wall.saturating_sub(s.began.elapsed()).as_millis(),"samples":s.control.samples.load(Ordering::Relaxed),"recorded_ms":s.control.elapsed_ms.load(Ordering::Relaxed),"series":s.control.series.lock().ok().and_then(|v|v.clone())}),
+                json!({"session_id":id,"terminal":false,"state":state,"ready":state=="recording"&&s.control.samples.load(Ordering::Relaxed)>0,"next_poll_ms":if state=="starting"||state=="finalizing"{100}else{1000},"wall_remaining_ms":s.max_wall.saturating_sub(s.began.elapsed()).as_millis(),"samples":s.control.samples.load(Ordering::Relaxed),"recorded_ms":s.control.elapsed_ms.load(Ordering::Relaxed),"markers":s.control.markers.lock().map(|l|l.snapshot()).unwrap_or_else(|_|json!({"error":"marker ledger unavailable"})),"series":s.control.series.lock().ok().and_then(|v|v.clone())}),
             );
         }
         self.history

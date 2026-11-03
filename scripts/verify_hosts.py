@@ -35,7 +35,7 @@ def main():
         host.stdin.write('{"jsonrpc":"2.0","method":"initialized","params":{}}\n');host.stdin.flush()
         status=call('mcpServerStatus/list',{'serverName':'framelet','detail':'full'})
         servers=status.get('data',status.get('servers',[]));assert servers,status
-        server=next(x for x in servers if x['name']=='framelet');tools=server.get('tools',{});assert len(tools)==23,server
+        server=next(x for x in servers if x['name']=='framelet');tools=server.get('tools',{});assert len(tools)==25,server
         skills=call('skills/list',{'cwds':[str(root)],'forceReload':True})
         flat=[s for group in skills['data'] for s in group['skills']];assert any(Path(s['path']).resolve()==(skill/'SKILL.md').resolve() and s['enabled'] for s in flat), 'Installed skill not discovered'
         proof={'ok':True,'exe_sha256':hashlib.sha256(exe.read_bytes()).hexdigest(),'codex':{'host':initialized,'tools':len(tools),'skill_discovered':True,'application_protocol':'real Codex app-server; no model turn'},'claude':None}

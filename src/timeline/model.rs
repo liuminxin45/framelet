@@ -20,6 +20,7 @@ pub struct Sample {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Event {
+    pub marker: Option<crate::recording::markers::Request>,
     pub id: Option<u64>,
     pub device: Device,
     pub vk: Option<u32>,
@@ -41,6 +42,7 @@ pub struct Event {
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Data {
+    pub capture_fps: Option<u32>,
     pub schema: u32,
     pub asset_id: Option<String>,
     pub gif_sha256: Option<String>,
@@ -63,4 +65,5 @@ pub enum Device {
     #[default]
     Mouse,
     Keyboard,
+    Marker,
 }

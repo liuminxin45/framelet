@@ -1,0 +1,255 @@
+{
+  "version": "0.5.0-dev",
+  "distribution_scope": "local development installation and source delivery; public v0.4.1 assets unchanged",
+  "exe_sha256": "af14d76664da2b823363d4ba065ae30b141eb88c3769288c089182cc4cd1d421",
+  "exe_bytes": 3966976,
+  "runtime_dependencies_added": 0,
+  "catalog": "4.0",
+  "tools": 25,
+  "timeline_schema": 3,
+  "gates": {
+    "rustfmt": true,
+    "clippy_warnings_denied": true,
+    "rust_unit_tests_passed": 36,
+    "actionlint": "1.7.12 SHA-verified",
+    "skill_validation": true
+  },
+  "core": {
+    "ok": true,
+    "suite": "core",
+    "desktop": true,
+    "exe_sha256": "af14d76664da2b823363d4ba065ae30b141eb88c3769288c089182cc4cd1d421",
+    "checks": [
+      {
+        "name": "verify",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 3.578,
+        "ok": true
+      },
+      {
+        "name": "verify_frames",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 3.719,
+        "ok": true
+      },
+      {
+        "name": "verify_timeline",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 10.125,
+        "ok": true
+      },
+      {
+        "name": "verify_defense",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 7.453,
+        "ok": true
+      },
+      {
+        "name": "verify_sync",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 18.25,
+        "ok": true
+      },
+      {
+        "name": "verify_robustness",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 3.375,
+        "ok": true
+      },
+      {
+        "name": "verify_series",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 36.032,
+        "ok": true
+      },
+      {
+        "name": "verify_60fps",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 10.187,
+        "ok": true
+      },
+      {
+        "name": "verify_interruptions",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 28.484,
+        "ok": true
+      },
+      {
+        "name": "verify_performance",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 11.5,
+        "ok": true
+      },
+      {
+        "name": "verify_review_algorithms",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 15.688,
+        "ok": true
+      },
+      {
+        "name": "verify_demo",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 45.312,
+        "ok": true
+      },
+      {
+        "name": "verify_integration",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 11.063,
+        "ok": true
+      },
+      {
+        "name": "fuzz_regression",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 16.468,
+        "ok": true
+      },
+      {
+        "name": "mcp-sdk",
+        "timeout_seconds": 180,
+        "exit_code": 0,
+        "elapsed_seconds": 2.719,
+        "ok": true
+      }
+    ]
+  },
+  "demo": {
+    "ok": true,
+    "exe_sha256": "af14d76664da2b823363d4ba065ae30b141eb88c3769288c089182cc4cd1d421",
+    "checks": [
+      "32.23s / 8-frame idle-heavy regression: one-pass action discovery, short candidate, all original pixels, raw preserved and collision/invalid range refusal",
+      "default 30 FPS; acknowledged begin/end share observation IDs/clocks; duplicate request safe; no synthetic OS input; static marked candidate and trace remapping",
+      "series rotation preserves marker/native identity and acknowledges cross-part incomplete review ranges without inventing boundaries",
+      "pause/terminal insertion refused; frozen worker with full marker queue remains responsive, times out, reports unconfirmed anchors, reaps child and permits next task",
+      "hostile marker sidecar rejected before publication and next analysis succeeds",
+      "analysis cancellation during durable edit preserves raw/pending evidence, reports incomplete recovery, reaps analysis worker and next preparation succeeds",
+      "foreign sidecar publication race preserves valid candidate and foreign bytes; postcheck reports saved path/structured failure; retry refuses overwrite and next analysis succeeds",
+      "unpaired marker refuses automatic trim; action-window under-sampling detected independently of long static periods"
+    ],
+    "fixture": {
+      "duration_ms": 32230,
+      "encoded_frames": 8,
+      "candidate_duration_ms": 2290,
+      "numeric_analysis_decode_passes": 1
+    }
+  },
+  "long": [
+    {
+      "suite": "long-cli",
+      "elapsed_seconds": 652.6869999999763,
+      "parts_ms": [
+        300000,
+        300000,
+        50000
+      ],
+      "scenario": "real 64x64 GDI capture, full privacy mask, 1 FPS; lifecycle test, not motion benchmark",
+      "checks": [
+        {
+          "name": "long-cli",
+          "timeout_seconds": 760,
+          "exit_code": 0,
+          "elapsed_seconds": 653.953,
+          "ok": true
+        }
+      ]
+    },
+    {
+      "suite": "long-mcp",
+      "elapsed_seconds": 654.3439999999828,
+      "parts_ms": [
+        300000,
+        300000,
+        50000
+      ],
+      "scenario": "64x64 real GDI capture, full privacy mask, 1 FPS; lifecycle/durability test, not a motion benchmark",
+      "checks": [
+        {
+          "name": "long-mcp",
+          "timeout_seconds": 760,
+          "exit_code": 0,
+          "elapsed_seconds": 655.063,
+          "ok": true
+        }
+      ]
+    }
+  ],
+  "distribution": {
+    "ok": true,
+    "version": "0.5.0-dev",
+    "exe_sha256": "af14d76664da2b823363d4ba065ae30b141eb88c3769288c089182cc4cd1d421",
+    "mcpb_sha256": "65778c1ac2b7db4769cdd0a7c13a5aa5d91c679fb7973c675500e9cdea143691",
+    "checks": [
+      "exact EXE and skill parity across formats",
+      "MCPB official validator",
+      "pinned source schemas for portable plugin and registry",
+      "Claude plugin strict validator",
+      "Windows-only binary without extra runtime declarations"
+    ],
+    "gui_installation_claimed": false
+  },
+  "hosts": {
+    "codex_tools": 25,
+    "skill_discovered": true,
+    "claude": {
+      "version": "2.1.316 (Claude Code)",
+      "connection": "real Claude Code mcp list reading installed user config",
+      "ok": true
+    }
+  },
+  "plugin_hosts": {
+    "ok": true,
+    "version": "0.5.0-dev",
+    "exe_sha256": "af14d76664da2b823363d4ba065ae30b141eb88c3769288c089182cc4cd1d421",
+    "codex": {
+      "ok": true,
+      "server": "framelet",
+      "tools": 25,
+      "skill_discovered": true
+    },
+    "claude": {
+      "ok": true,
+      "source": "local plugin marketplace + exact MCPB + user-config directory",
+      "native_cache_verified": true
+    },
+    "model_turns": 0,
+    "gui_installation_claimed": false
+  },
+  "global_install": {
+    "ok": true,
+    "tools": 25,
+    "tested_outside_project": true,
+    "skill_enabled": true,
+    "model_turns": 0,
+    "requires_current_chat_reconnect": true
+  },
+  "real_private_case": {
+    "before_ms": 32230,
+    "after_ms": 2290,
+    "frames": 8,
+    "frames_with_pixel_difference": 0,
+    "source": "existing private recording; GIF-only copy, original schema-2 trace left unchanged; no new recording or schema conversion",
+    "visual_review_required": true
+  },
+  "initial_test_correction": "A pre-existing timeline publication race test waited for writer creation, before the second collision preflight. It now waits for the durable pending transaction; focused retest and all 15 final core groups pass. No production assertion was lowered.",
+  "limits": [
+    "30 FPS short capture check uses a masked 64x64 region and requires measured action sampling >=24 FPS; not a full-desktop motion guarantee.",
+    "650-second tests use 1 FPS masked GDI capture to verify lifecycle/durability, not motion quality.",
+    "Native marker recorded acknowledgement is in-memory observation; saved validated timeline/manifest proves persistence.",
+    "Unpaired per-part series markers require explicit reviewed ranges. prepare_demo operates on one committed GIF.",
+    "Abrupt process death can retain partial/pending evidence; missing frames or input are never fabricated. Saved candidates still require visual review."
+  ]
+}

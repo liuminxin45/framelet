@@ -32,7 +32,7 @@ function image(r) {
 try {
   await client.connect(transport);
   const tools = (await client.listTools()).tools;
-  assert.equal(tools.length, 23);
+  assert.equal(tools.length, 25);
   assert(!tools.some(t => t.name === 'framelet_record'));
   checks.push('SDK initialization and tool discovery');
   const resources=(await client.listResources()).resources;

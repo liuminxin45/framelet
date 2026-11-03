@@ -1,12 +1,12 @@
 # Interaction timeline / 交互时间线
 
-## Schema 2: keyboard–mouse–frame synchronization / 键鼠帧同步
+## Schema 3: keyboard–mouse–frame synchronization / 键鼠帧同步
 
-Only the current schema 2 is supported; missing identity/coverage fields and unsupported schemas are rejected, never silently migrated.
+Only the current schema 3 is supported; missing identity/coverage fields and unsupported schemas are rejected, never silently migrated.
 
 Recordings default to a shared keyboard/mouse/frame observer. Keyboard transitions use the Windows low-level input hook in the same message thread and bounded queue as mouse events. Input is collected only during an explicit recording, and keyboard scope is a foreground window intersecting the capture region. A fully masked region suppresses keyboard collection; a visual mask is not a general password filter.
 
-Schema 2 uses a random `session_id` and `asset_id`, plus one shared observation counter: samples and events have disjoint `id` values. Query results expand these into `event_uid`, `sample_uid` and `frame_uid`. Several events may reference one sample/frame. Native edits preserve original event/sample identities and UTC, generate a new asset identity, and remap playback links.
+Schema 3 uses a random `session_id` and `asset_id`, plus one shared observation counter: samples and events have disjoint `id` values. Query results expand these into `event_uid`, `sample_uid` and `frame_uid`. Several events may reference one sample/frame. Native edits preserve original event/sample identities and UTC, generate a new asset identity, and remap playback links.
 
 Keyboard events have `device:keyboard`, `vk`, `scan`, `flags`, `key_name`, down/up message kind, and the same timing/link fields as mouse events. Message kinds: key down/up 256/257; system-key down/up 260/261. Key records are not clipboard contents or IME-committed text. Unicode-packet scan units are exposed separately when present.
 
@@ -72,3 +72,7 @@ Files publish without overwrite through handle-based rename after staging and sy
 Metadata collection remains bounded in memory; compare CPU and package size on the target workload before claiming negligible overhead.
 
 Recovery discovery is included in framelet_context (bounded root scan, no automatic deletion). The final manifest is a content-completion marker; recording warnings and dropped-event counts still indicate trace quality.
+
+## Intent markers / 意图锚点
+
+Timeline 3 adds optional original capture_fps and typed marker observations (device=marker, kind=0, marker={request_id,kind,label}). They share the event/sample observation namespace, UTC and monotonic clock. They never inject OS input. Numeric event kinds apply to keyboard/mouse; use the marker payload for begin/end/point intent. Native recorded acknowledgements describe observation in worker memory; only the saved validated timeline/manifest proves persistence. A failed capture may lose acknowledged in-memory observations. Unmapped or unpaired markers are explicit review findings. Native editing preserves retained original marker IDs/timestamps and remaps media/sample/frame links. See [demo workflow](demo-workflow.md).

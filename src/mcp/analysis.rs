@@ -31,6 +31,7 @@ pub fn heavy(name: &str) -> bool {
             | "framelet_monitors"
             | "framelet_probe_frames"
             | "framelet_analyze"
+            | "framelet_prepare_demo"
     )
 }
 pub fn failure(error: &anyhow::Error) -> Value {

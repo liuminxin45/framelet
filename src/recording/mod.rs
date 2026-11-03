@@ -1,3 +1,4 @@
+pub mod markers;
 mod options;
 mod services;
 use crate::{
@@ -14,6 +15,7 @@ use std::{
 
 #[derive(Default)]
 pub struct Control {
+    pub markers: std::sync::Mutex<markers::Ledger>,
     pub series: std::sync::Mutex<Option<serde_json::Value>>,
     pub stop: AtomicBool,
     pub single: AtomicBool,
@@ -157,6 +159,7 @@ pub(crate) fn run_local(
         );
     }
     loop {
+        writer.process_markers(c)?;
         notify(c);
         let now = Instant::now();
         if !was_paused {

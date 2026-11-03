@@ -59,6 +59,7 @@ pub fn run(a: &Args) -> Result<Value> {
     let mut peaks = Vec::<Value>::new();
     let mut total = 0;
     let mut changes = 0u64;
+    let mut holds = super::quality::Holds::default();
     let pad = (a.padding * 1000.).round() as u64;
     let begin = (a.start * 1000.).floor() as u64;
     let end = a
@@ -80,6 +81,7 @@ pub fn run(a: &Args) -> Result<Value> {
         |_, at, delay, _, _| at < end && at + delay >= begin,
         |index, at, delay, w, h, rgb| {
             total = at + delay;
+            holds.observe(at, delay, begin, end);
             let score = if rgb.is_empty() {
                 0.
             } else {
@@ -112,7 +114,7 @@ pub fn run(a: &Args) -> Result<Value> {
                     ],
                 );
                 if peaks.len() < a.count * 2 {
-                    peaks.push(json!({"frame_index":index,"timestamp_ms":at,"duration_ms":delay,"spatial_change":score}));
+                    peaks.push(json!({"frame_index":index,"timestamp_ms":at,"duration_ms":delay,"spatial_change":score,"difference":visual.details}));
                 }
             }
             Ok(at + delay < end)
@@ -122,13 +124,18 @@ pub fn run(a: &Args) -> Result<Value> {
     let effective_end = total.min(end);
     let mut input_actions = 0usize;
     let mut trace_warnings = Vec::new();
-    if let Some(data) = crate::timeline::load(&a.input)? {
-        trace_warnings = data.warnings;
+    let timeline = crate::timeline::load(&a.input)?;
+    if let Some(data) = &timeline {
+        trace_warnings = data.warnings.clone();
         if data.dropped_events > 0 {
             trace_warnings.push(format!("{} input events dropped", data.dropped_events));
         }
         let mut input_ranges = Vec::new();
-        for event in data.events.iter().filter(|e| e.kind != 512) {
+        for event in data
+            .events
+            .iter()
+            .filter(|e| e.kind != 512 && e.device != crate::timeline::Device::Marker)
+        {
             if let Some(t) = event
                 .media_us
                 .map(|t| t / 1000)
@@ -156,6 +163,13 @@ pub fn run(a: &Args) -> Result<Value> {
         range[1] = range[1].min(effective_end);
     }
     let matched_ranges = ranges.len();
+    let quality = super::quality::report(
+        timeline.as_ref(),
+        &holds,
+        begin,
+        effective_end,
+        &ranges[..ranges.len().min(32)],
+    );
     ranges.truncate(32);
     let mut result = json!({"input":a.input.canonicalize()?,"analyzed_start_ms":begin,"analyzed_end_ms":effective_end,"ranges":ranges,"range_count":matched_ranges,"truncated":matched_ranges>32,"changed_frames":changes,"input_actions":input_actions,"candidates":peaks,"candidates_truncated":changes>a.count as u64*2,"semantic_analysis":false,"algorithm":"16px spatial change + input actions + padded merged intervals","warnings":trace_warnings,"work":work,"next":"Review candidate boundaries, then edit the chosen interval; input time is not visual response time."});
     if let Some(output) = &a.output {
@@ -169,6 +183,7 @@ pub fn run(a: &Args) -> Result<Value> {
         result["preview_selection"] = preview["selection"].clone();
     }
     result["decode_passes"] = json!(1);
+    result["quality"] = quality;
     Ok(result)
 }
 fn add(ranges: &mut Vec<[u64; 2]>, range: [u64; 2]) {
@@ -247,7 +262,7 @@ fn group(a: &Args) -> Result<Value> {
                 ],
             );
         }
-        segments.push(json!({"part":part.number,"path":root.join(&part.recording.output),"input_actions":local["input_actions"],"warnings":local["warnings"]}));
+        segments.push(json!({"part":part.number,"path":root.join(&part.recording.output),"quality":local["quality"],"input_actions":local["input_actions"],"warnings":local["warnings"]}));
     }
     let count = ranges.len();
     ranges.truncate(32);

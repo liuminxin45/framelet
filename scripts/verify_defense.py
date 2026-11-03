@@ -14,7 +14,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-defense-') as tmp:
  info=run('inspect',raw)['result'];side=raw.with_suffix('.timeline.json')
  s=dict(seq=0,utc_us=100000000,capture_us=0,capture_end_us=100,coverage_start_us=0,hold_end_us=500000,media_start_us=0,media_end_us=500000,gif_frame=0,cursor=[2,2]);s2={**s,'seq':1,'utc_us':100500000,'capture_us':500000,'capture_end_us':500100,'coverage_start_us':500000,'hold_end_us':1000000,'media_start_us':500000,'media_end_us':1000000,'gif_frame':1}
  e=dict(seq=0,utc_us=100100000,mono_us=100000,kind=513,point=[2,2],injected=True,wheel=0,media_us=100000,gif_frame=0)
- data=dict(schema=2,asset_id=uuid.uuid4().hex,gif_sha256=hashlib.sha256(raw.read_bytes()).hexdigest(),session_id=uuid.uuid4().hex,region=dict(x=0,y=0,width=8,height=8),width=8,height=8,gif_bytes=raw.stat().st_size,duration_ms=1000,frames=2,samples=[s,s2],events=[e],dropped_events=0,warnings=[])
+ data=dict(schema=3,asset_id=uuid.uuid4().hex,gif_sha256=hashlib.sha256(raw.read_bytes()).hexdigest(),session_id=uuid.uuid4().hex,region=dict(x=0,y=0,width=8,height=8),width=8,height=8,gif_bytes=raw.stat().st_size,duration_ms=1000,frames=2,samples=[s,s2],events=[e],dropped_events=0,warnings=[])
  for i,sample in enumerate(data['samples']):sample['id']=i+1
  for i,event in enumerate(data['events']):
   sample=next(s for s in data['samples'] if s['media_start_us']<=event['media_us']<s['media_end_us'])
@@ -33,6 +33,7 @@ with tempfile.TemporaryDirectory(prefix='framelet-defense-') as tmp:
  for stream,key,value in [('events','sample_id',2),('events','offset_us',100001),('events','sample_id',None),('samples','gif_frame',1),('samples','cursor',[-1,2]),('samples','hold_end_us',0),('samples','media_end_us',750000),('events','gif_frame',1),('events','gif_frame',None),('events','point',[8,2])]:
   d=copy.deepcopy(data);d[stream][0][key]=value;cases.append(d)
  d=copy.deepcopy(data);d['samples'].reverse();cases.append(d)
+ d=copy.deepcopy(data);d['schema']=2;cases.append(d)
  for d in cases:
   store(d);run('timeline',raw,ok=False);out=root/'must-not-publish.gif';run('edit',raw,'--output',out,ok=False);assert not out.exists()
  store(data)

@@ -97,6 +97,7 @@ unsafe fn mouse_impl(code: i32, w: usize, l: isize) -> isize {
                     if events.len() < MAX_EVENTS {
                         let seq = events.len() as u64;
                         events.push(Event {
+                            marker: None,
                             id: Some(s.next_id.fetch_add(1, Ordering::Relaxed)),
                             device: Device::Mouse,
                             vk: None,
@@ -194,6 +195,7 @@ unsafe extern "system" fn keyboard(code: i32, w: usize, l: isize) -> isize {
                             };
                             let seq = events.len() as u64;
                             events.push(Event {
+                            marker: None,
                                 id: Some(s.next_id.fetch_add(1, Ordering::Relaxed)),
                                 device: Device::Keyboard,
                                 vk: Some(k.vkCode),
@@ -248,6 +250,67 @@ pub struct Recorder {
     pending: VecDeque<Sample>,
 }
 impl Recorder {
+    pub fn process_markers(&mut self, control: &crate::recording::Control) -> anyhow::Result<()> {
+        let requests = control
+            .markers
+            .lock()
+            .map_err(|_| anyhow::anyhow!("marker queue lock poisoned"))?
+            .drain();
+        for request in requests {
+            let result = (|| {
+                anyhow::ensure!(
+                    !control.cancel.load(Ordering::Relaxed)
+                        && !control.paused.load(Ordering::Relaxed),
+                    "marker rejected during cancellation/pause"
+                );
+                self.collect_events();
+                anyhow::ensure!(
+                    self.data.events.len() < MAX_EVENTS,
+                    "input trace full; marker not recorded"
+                );
+                let mut events = self
+                    .shared
+                    .events
+                    .lock()
+                    .map_err(|_| anyhow::anyhow!("marker event lock poisoned"))?;
+                anyhow::ensure!(
+                    self.data.events.len() + events.len() < MAX_EVENTS,
+                    "input trace full; marker not recorded"
+                );
+                let mono = self.shared.start.elapsed().as_micros() as u64;
+                let utc = utc_us();
+                let id = self.shared.next_id.fetch_add(1, Ordering::Relaxed);
+                let seq = (self.data.events.len() + events.len()) as u64;
+                events.push(Event {
+                    marker: Some(request.clone()),
+                    id: Some(id),
+                    device: Device::Marker,
+                    vk: None,
+                    scan: None,
+                    flags: 0,
+                    key_name: None,
+                    sample_id: None,
+                    offset_us: None,
+                    seq,
+                    utc_us: utc,
+                    mono_us: mono,
+                    kind: 0,
+                    point: None,
+                    injected: false,
+                    wheel: 0,
+                    media_us: None,
+                    gif_frame: None,
+                });
+                Ok((id, utc, mono))
+            })();
+            control
+                .markers
+                .lock()
+                .map_err(|_| anyhow::anyhow!("marker queue lock poisoned"))?
+                .finish(&request, result);
+        }
+        Ok(())
+    }
     pub fn new(region: Region, width: u32, height: u32, masks: &[Region]) -> anyhow::Result<Self> {
         let session_id = crate::identity::new_id()?;
         let shared = Arc::new(Shared {
@@ -261,7 +324,8 @@ impl Recorder {
             callback_failed: AtomicBool::new(false),
         });
         let mut data = Data {
-            schema: 2,
+            schema: 3,
+            capture_fps: Some(30),
             asset_id: Some(session_id.clone()),
             gif_sha256: None,
             session_id,
@@ -472,6 +536,7 @@ impl Recorder {
         self.data.clone()
     }
     fn map_events(data: &mut Data, stats: &Stats) {
+        data.events.sort_by_key(|e| (e.mono_us, e.id));
         for i in 0..data.samples.len().saturating_sub(1) {
             let next = data.samples[i + 1].capture_us;
             data.samples[i].hold_end_us = data.samples[i].hold_end_us.min(next);
@@ -565,7 +630,8 @@ mod rotation_tests {
             tid: 0,
             pending: VecDeque::new(),
             data: Data {
-                schema: 2,
+                schema: 3,
+                capture_fps: Some(30),
                 session_id: session.clone(),
                 asset_id: Some(crate::identity::new_id().unwrap()),
                 gif_sha256: None,
@@ -602,6 +668,7 @@ mod rotation_tests {
             std::thread::sleep(std::time::Duration::from_millis(1));
             let id = shared.next_id.fetch_add(1, Ordering::Relaxed);
             shared.events.lock().unwrap().push(Event {
+                marker: None,
                 id: Some(id),
                 device: Device::Keyboard,
                 vk: Some(65),

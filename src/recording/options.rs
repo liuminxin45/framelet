@@ -8,7 +8,7 @@ pub struct RecordArgs {
     #[arg(long, allow_hyphen_values = true)]
     #[serde(default)]
     pub region: Option<Region>,
-    #[arg(long, default_value_t = 10)]
+    #[arg(long, default_value_t = 30)]
     #[serde(default = "default_fps")]
     pub fps: u32,
     #[arg(long, default_value_t = 60.0)]
@@ -52,7 +52,7 @@ fn default_max_mib() -> u64 {
     256
 }
 fn default_fps() -> u32 {
-    10
+    30
 }
 fn default_duration() -> f64 {
     60.0

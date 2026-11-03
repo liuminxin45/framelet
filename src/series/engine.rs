@@ -201,6 +201,7 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
     let grab = Grabber::new(region, a.cursor)?;
     let mut recorder = Recorder::new(region, w, h, &a.masks)?;
     recorder.set_identity(&index.session_id, &crate::identity::new_id()?);
+    recorder.data.capture_fps = Some(a.fps);
     let mut number = 1u32;
     let mut start_cs = 0u64;
     let mut writer = Some(new_writer(root, &index, number, w, h)?);
@@ -220,6 +221,7 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
     let mut ending = "duration".to_string();
     let result = crate::runtime::guard("series.capture", || -> Result<()> {
         loop {
+            recorder.process_markers(c)?;
             notify(c);
             if let Some(f) = finalizer.take() {
                 finalizer = f.poll(&mut index, root, c, &mut notify, false)?;
