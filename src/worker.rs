@@ -157,6 +157,7 @@ fn supervise_value(
             })?;
         let began = Instant::now();
         let mut progress_tick = Instant::now();
+        let mut ready_sent = false;
         let mut last = Instant::now();
         let mut prior = (false, false, false);
         let mut stopping_since = None;
@@ -221,7 +222,9 @@ fn supervise_value(
                     }
                     if let Some(result) = v.get("completed") {
                         if events {
-                            crate::runtime::progress(json!({"event":"saved","result":result}));
+                            crate::runtime::progress(
+                                json!({"event":"saved","result":result,"visual_review_required":true}),
+                            );
                         }
                         break Ok(result.clone());
                     }
@@ -244,6 +247,17 @@ fn supervise_value(
                         && let Ok(mut state) = c.series.lock()
                     {
                         *state = Some(v.clone());
+                    }
+                    if events
+                        && !ready_sent
+                        && c.phase.load(Ordering::Relaxed) == 1
+                        && c.samples.load(Ordering::Relaxed) > 0
+                        && stopping_since.is_none()
+                    {
+                        ready_sent = true;
+                        crate::runtime::progress(
+                            json!({"event":"ready","samples":c.samples.load(Ordering::Relaxed),"recorded_ms":c.elapsed_ms.load(Ordering::Relaxed)}),
+                        );
                     }
                     if events && progress_tick.elapsed() >= Duration::from_secs(1) {
                         progress_tick = Instant::now();
@@ -368,8 +382,11 @@ pub fn child_main() -> Result<()> {
             }
         })?;
     let mut last = Instant::now() - Duration::from_secs(1);
+    let mut ready_reported = false;
     let mut notify = |c: &Control| {
-        if last.elapsed() >= Duration::from_millis(100) {
+        let ready = c.phase.load(Ordering::Relaxed) == 1 && c.samples.load(Ordering::Relaxed) > 0;
+        if last.elapsed() >= Duration::from_millis(100) || (ready && !ready_reported) {
+            ready_reported |= ready;
             last = Instant::now();
             let _ = writeln!(
                 std::io::stdout().lock(),

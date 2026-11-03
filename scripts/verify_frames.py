@@ -60,6 +60,38 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
         assert not (root/'invalid-at.png').exists()
     print('PASS timestamp probes cover the correct half-open frame interval; invalid/end timestamps publish nothing')
 
+    directory = root/'batch review'
+    batch = run('probe', source, '--times', 0, 1.5, 2.999, '--output-dir', directory)['result']
+    assert directory.is_dir() and pathlib.Path(batch['contact_sheet']) == directory/'contact-sheet.png'
+    assert {p.name for p in directory.iterdir()} == {'contact-sheet.png', 'manifest.json'}
+    assert json.loads((directory/'manifest.json').read_text())['frames'] == batch['frames']
+    with Image.open(batch['contact_sheet']) as sheet:
+        assert sheet.format == 'PNG'
+    assert [f['frame_index'] for f in batch['frames']] == [0, 1, 2]
+    exported = run('probe', source, '--times', 0, 1.5, 2.999, '--output-dir', root/'batch frames', '--export', 'frames')['result']
+    for frame, expected in zip(exported['frames'], pages):
+        with Image.open(frame['output']) as actual:
+            assert actual.convert('RGB').tobytes() == expected.tobytes()
+    sentinel = (directory/'manifest.json').read_bytes()
+    run('probe', source, '--times', 0, '--output-dir', directory, ok=False)
+    assert (directory/'manifest.json').read_bytes() == sentinel
+    for flag in ['--output', '-o']:
+        run('probe', source, '--times', 0, flag, root/'old-output', ok=False)
+        assert not (root/'old-output').exists()
+    run('probe', source, '--times', 3, '--output-dir', root/'bad-batch', ok=False)
+    assert not (root/'bad-batch').exists()
+    print('PASS probe output directory, independent PNG decode, overwrite refusal, obsolete flag rejection and failure cleanup')
+
+    expected = run('probe', source, '--times', 2.999, 0, 1.5, 0)['result']['frames']
+    for times in [('2.999,0,1.5,0',), ('2.999,0', '1.5', '0')]:
+        actual = run('probe', source, '--times', *times)['result']
+        assert actual['frames'] == expected and actual['decode_passes'] == 1
+    assert len(run('probe', source, '--times', ','.join(['0']*64))['result']['frames']) == 64
+    for times in ['', '0,,1', '0,', '0,bad', '0,-1', '0,NaN', '0,inf', ','.join(['0']*65)]:
+        run('probe', source, '--times='+times, '--output-dir', root/'bad-times', ok=False)
+        assert not (root/'bad-times').exists()
+    print('PASS space/comma/mixed timestamp input, caller order, duplicates, 64-value bound and invalid-input cleanup')
+
     compared=run('frame-at', source, '--at', 1.5, '--reference', root/'at-0.png', '--compare-region', '2,3,10,8', '--output', root/'compared.png')['result']['comparison']
     assert compared['pixels']==80 and compared['changed_pixels']==80 and compared['changed_fraction']==1
     assert abs(compared['mean_absolute_error']-(255+128)/3)<0.001
@@ -100,4 +132,4 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
     assert not (root/'bad').exists() and not (root/'broken').exists()
     assert not list(root.glob('.framelet-*.partial'))
     print('PASS overwrite refusal, bounded options, malformed input and failure cleanup')
-print(json.dumps({'ok':True,'frame_extraction_checks':6}))
+print(json.dumps({'ok':True,'frame_extraction_checks':8}))

@@ -63,6 +63,7 @@ try {
   assert(info.frames > 0 && info.duration_ms >= 300);
   const edited = await call('framelet_edit', { input, output: path.join(output, 'trim.gif'), start: 0.1, end: 0.3 });
   assert.equal(edited.structuredContent.result.duration_ms, 200);
+  assert(edited.content.some(c=>c.type==='text' && c.text.includes('not been visually approved')));
   checks.push('SDK inspect and trim');
   const probes = await call('framelet_probe_frames', {input, times:[0.1,0.2,0.1]});
   assert.equal(probes.structuredContent.result.decode_passes,1);
@@ -71,6 +72,7 @@ try {
   const analysis = await call('framelet_analyze', {input,output:path.join(output,'analysis'),include_image:true});
   image(analysis);
   assert.equal(analysis.structuredContent.result.semantic_analysis,false);
+  assert(analysis.content.some(c=>c.type==='text' && c.text.includes('visual review required')));
   checks.push('SDK validates batch/analysis structured schemas and opt-in contact sheet');
   const invalid = await client.callTool({ name: 'framelet_inspect', arguments: { input, arbitrary: true } });
   assert.equal(invalid.isError, true);

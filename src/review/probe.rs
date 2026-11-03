@@ -9,9 +9,11 @@ use std::{
 #[serde(deny_unknown_fields)]
 pub struct Args {
     pub input: PathBuf,
-    #[arg(long,num_args=1..=64,required=true)]
+    /// Playback seconds separated by spaces or commas, e.g. --times 0 2 4.5 or --times 0,2,4.5.
+    #[arg(long,num_args=1..=64,required=true,value_delimiter=',')]
     pub times: Vec<f64>,
-    #[arg(short, long)]
+    /// Create a new directory containing contact-sheet.png and manifest.json; --export frames adds individual PNGs.
+    #[arg(long = "output-dir", value_name = "DIRECTORY")]
     pub output: Option<PathBuf>,
     #[arg(long,value_enum,default_value_t=Export::Sheet)]
     #[serde(default)]

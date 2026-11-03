@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.1 — 2026-11-03
+
+- Fix MCP artifact readback under Windows packaged-host AppData redirection by resolving the actual writable output root. Retain path/reparse guards; the empty root probe is create-new and delete-on-close.
+- Add one CLI `--events` readiness event after sampling starts, and mark final CLI capture results as requiring visual review. Stop acknowledges a request; the original recording process owns the final saved result.
+- Clarify MCP save/review summaries: capture samples versus encoded GIF images, requested versus measured action sampling, longest action gap and quality warnings. Saved content is never automatically approved.
+- Breaking CLI change: `probe --output-dir` replaces `--output`/`-o`, with no old aliases. Timestamp lists accept spaces, commas or mixed separators; MCP array input is unchanged.
+- Simplify recording guidance and document browser/desktop and system-input observation boundaries. Add real masked CLI/MCP workflow regressions to both Windows CI images.
+
 ## v0.5.0 — 2026-11-03
 
 - Default human-facing capture to 30 FPS across CLI/MCP/GUI; explicit lower rates remain available for tests.

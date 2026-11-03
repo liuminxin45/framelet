@@ -92,7 +92,7 @@ impl Waits {
                         let timed_out=w.began.elapsed()>=Duration::from_millis(w.args.timeout_ms);
                         if terminal||matches!(w.args.until,Until::Ready)&&ready||timed_out {
                             status["wait_timed_out"]=json!(timed_out&&!terminal&&!(matches!(w.args.until,Until::Ready)&&ready));
-                            Some(json!({"content":[{"type":"text","text":"Recording wait completed; read structuredContent.result."}],"structuredContent":{"ok":true,"result":status},"isError":false}))
+                            Some(json!({"content":[{"type":"text","text":super::summary::text("framelet_wait_recording", &status)}],"structuredContent":{"ok":true,"result":status},"isError":false}))
                         }else{None}
                     }
                 }

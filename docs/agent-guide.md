@@ -14,7 +14,7 @@ MCP 初始化说明和 `framelet_context.editing_recipe` 会告知 Agent 这套�
 
 ## Default interaction timeline / 默认交互时间线
 
-Schema-2 recordings default to keyboard + mouse + frame synchronization. Call `framelet_timeline` with `event_id` to retrieve one event and its unique sample/frame identity and offset. Read [timeline.md](timeline.md) before interpreting links. Recordings run in a kill-on-close supervised worker; failed sessions include output/pending paths. Use `framelet_recover` after an interrupted worker has exited. Never repeat a click or keystroke just because metadata publication failed; inspect the GIF/manifest and failure first.
+Schema-3 recordings default to keyboard + mouse + frame synchronization. Call `framelet_timeline` with `event_id` to retrieve one event and its unique sample/frame identity and offset. Read [timeline.md](timeline.md) before interpreting links. Recordings run in a kill-on-close supervised worker; failed sessions include output/pending paths. Use `framelet_recover` after an interrupted worker has exited. Never repeat a click or keystroke just because metadata publication failed; inspect the GIF/manifest and failure first.
 
 新版默认记录键鼠帧。先查事件 ID，再查看对应及相邻画面；不要因元数据错误就重复点击或输入。读 `warnings`、`manifest` 和偏差字段，确认画面是否真正覆盖了动作。记录不包含剪贴板或输入法最终文本；按键内容仍可能敏感。
 
@@ -38,7 +38,7 @@ Supported range: **1–60 FPS**. These are starting points; choose the evidence 
 
 **Development testing does not automatically mean 1 FPS is enough.** At 1 FPS, sub-second dialogs, flicker or errors may be missed. Default to 30 FPS for polished demos; deliberately use 10–15 FPS when compact output matters more.
 
-Start with a short trial at `max_width:960` or `1280`. Estimate actual sampling speed from `recording_status` samples and recorded elapsed time, not encoded GIF frame count: static frames may be merged. If capture is slow, reduce the region or output size first; explain the compromise if lowering demo FPS is necessary. Encoded width × height × FPS must be ≤80,000,000. Requested FPS is a ceiling; GIF centisecond delay resolution also means 30 FPS does not guarantee uniform 33.33 ms intervals. MCP exposes the same advice in `framelet_context.capture_guidance`.
+Record directly at the intended size; do not downscale by default. Use a short trial only for large regions, high FPS or uncertain performance. Check actual sampling, not encoded GIF frame count: static frames may be merged. If performance is insufficient, adjust the region, output size or FPS and report the trade-off. Encoded width × height × FPS must be ≤80,000,000. Requested FPS is a ceiling; GIF centisecond delays do not guarantee uniform 33.33 ms intervals at 30 FPS. See `framelet_context.capture_guidance`.
 
 ### 按场景选择帧率（CLI / MCP）
 
@@ -54,7 +54,7 @@ Start with a short trial at `max_width:960` or `1280`. Estimate actual sampling 
 
 **“开发测试”不等于 1 FPS 足够**：1 FPS 可能漏掉不足一秒的弹窗、闪烁或错误状态。正式演示默认 30 FPS；若明确优先考虑体积，可主动选择 10–15 FPS。
 
-AI 先用 `max_width:960` 或 `1280` 短录，再根据 `recording_status` 的采样数和录制时长估计实际采样速度。不要用编码后的 GIF 帧数判断采样帧率，静态帧可能被合并。性能不足时，优先缩小区域或输出尺寸；若必须降低演示帧率，应说明取舍。输出宽 × 高 × FPS 不能超过 80,000,000；指定 FPS 是采样上限，GIF 的百分之一秒延时精度也不保证 30 FPS 对应均匀的 33.33 ms 帧间隔。MCP 的 `framelet_context.capture_guidance` 提供同一套建议。
+按目标尺寸直接录制，不默认缩小画面。仅在大选区、高帧率或性能不确定时短录验证。检查实际采样率，不用编码帧数判断，静态帧可能合并。性能不足再调整区域、输出尺寸或帧率，并说明取舍。输出宽 × 高 × FPS 不得超过 80,000,000；指定 FPS 是采样上限，GIF 百分之一秒延时不保证 30 FPS 对应均匀的 33.33 ms 帧间隔。参见 `framelet_context.capture_guidance`。
 
 ## 1. Establish the task / 先明确剪辑目标
 

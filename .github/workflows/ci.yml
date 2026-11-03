@@ -71,6 +71,7 @@ jobs:
             work/ci-${{ matrix.os }}/*.log
             work/ci-${{ matrix.os }}/performance/verification.json
             work/ci-${{ matrix.os }}/review-algorithms/verification.json
+            work/ci-${{ matrix.os }}/workflow/verification.json
             work/ci-${{ matrix.os }}/demo/verification.json
             work/ci-${{ matrix.os }}/integration/verification.json
             work/distribution-check/verification.json

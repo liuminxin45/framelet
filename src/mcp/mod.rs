@@ -2,6 +2,7 @@ pub(crate) mod analysis;
 mod catalog;
 mod dispatch;
 mod resources;
+mod summary;
 mod wait;
 use anyhow::Result;
 pub use catalog::catalog;

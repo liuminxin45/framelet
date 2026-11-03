@@ -153,7 +153,9 @@ pub fn run() -> Result<()> {
             let cancel = Arc::new(AtomicBool::new(false));
             let c = cancel.clone();
             ctrlc::set_handler(move || c.store(true, Ordering::Relaxed))?;
-            print(json!({"ok":true,"result":record(&a,Some(&cancel))?}))?;
+            print(
+                json!({"ok":true,"result":record(&a,Some(&cancel))?,"visual_review_required":true}),
+            )?;
         }
         Command::RecordSeries(a) => {
             let cancel = Arc::new(AtomicBool::new(false));
@@ -166,7 +168,7 @@ pub fn run() -> Result<()> {
                 "request_id already exists; inspect/recover its recording group"
             );
             print(
-                json!({"ok":true,"result":crate::series::run(&plan,&crate::recording::Control::default(),||cancel.load(Ordering::Relaxed)||event.as_ref().is_some_and(|e|e.signaled()))?}),
+                json!({"ok":true,"result":crate::series::run(&plan,&crate::recording::Control::default(),||cancel.load(Ordering::Relaxed)||event.as_ref().is_some_and(|e|e.signaled()))?,"visual_review_required":true}),
             )?;
         }
         Command::Recordings {

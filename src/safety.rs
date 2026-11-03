@@ -29,7 +29,7 @@ impl Paths {
                     .join("Captures")
             });
         std::fs::create_dir_all(&root)?;
-        let root = root.canonicalize()?;
+        let root = crate::file_guard::writable_directory(&root)?;
         let mut reads = vec![root.clone()];
         if let Ok(value) = std::env::var("FRAMELET_MCP_READ_ROOTS") {
             for p in serde_json::from_str::<Vec<PathBuf>>(&value)
@@ -53,7 +53,7 @@ impl Paths {
                 {"intent":"fast_motion_check","fps":50,"description_en":"Use 40-50 FPS only for fast motion or brief visual defects after checking performance.","description_zh":"快速动作或短暂视觉缺陷可选 40-50 FPS，先验证性能。"}
             ],
             "selection_rule":"Choose by the evidence needed, not merely whether the task is development. At 1 FPS, sub-second states may be missed; even 60 FPS does not guarantee every transient is captured.",
-            "performance_rule":"FPS is a sampling ceiling, not a measured guarantee. Start with a short trial at max_width 960 or 1280; inspect samples / recorded elapsed time from recording_status, not encoded GIF frame count (static frames may be merged). Reduce capture area or max_width before lowering presentation FPS; if lowering FPS is necessary, report the compromise. Encoded width * height * FPS must be <= 80000000.",
+            "performance_rule":"Record at the intended size without default downscaling. Use a short trial only for large regions, high FPS or uncertain performance. Requested FPS is a target, not a measured guarantee; encoded GIF images are not capture samples. If performance is insufficient, adjust region, output size or FPS and report the trade-off. Encoded width * height * FPS must be <= 80000000.",
             "timing_note":"GIF delays use centiseconds. 60 FPS mixes 10/20ms delays; Chromium stretches <=10ms to 100ms. Use 30 FPS for sharing; inspect playback.browser_timing_warning and actual sample rate.",
             "guide":"docs/agent-guide.md"
         },"workflow":"cache context/catalog -> choose region -> start_recording -> wait_recording ready -> operate UI -> stop_recording -> wait_recording terminal -> analyze -> batch probe uncertain boundaries -> edit and verify","editing_recipe":{"algorithm":"stable-region difference + bisection + frame-interval cache","steps":["inspect duration; identify a single action or extract 4-6 overview frames first","save opening and closing frame_at PNG anchors; select a stable image region that reflects page position","probe midpoint with reference, compare_region, include_image:false; omit output to avoid PNG writes","use comparison.changed_fraction for the boundary predicate; pixel threshold defaults to 24 but tune for content","reuse [timestamp_ms,timestamp_ms+duration_ms) and frame_index to skip repeated queries","stop near 200-500 ms uncertainty; visually confirm boundary images; trim with context and verify 3-4 final frames"],"assumption":"single monotonic action with stable endpoint regions; not semantic importance","decoder_note":"GIF prefix decoding remains sequential; this reduces model images, PNG writes and repeated probes"},"path_policy":"relative paths resolve under output_root; outputs and reads must stay inside configured roots"});

@@ -1,6 +1,6 @@
 # Human-facing demo workflow / 面向人类的演示工作流
 
-Current release contract: v0.5.0, catalog 4.0 / 25 MCP tools, timeline 3. The public v0.4.1 artifacts and measurements remain historical and immutable. This change adds no runtime dependency. CLI/MCP/GUI default capture is 30 FPS; tests can explicitly choose 1–60 FPS. Old timeline schemas are rejected, never silently migrated; their GIF pixels can still be inspected with inspect/probe. Keep older portable versions for historical trace queries.
+Current release contract: v0.5.1, catalog 4.0 / 25 MCP tools, timeline 3. The public v0.4.1 artifacts and measurements remain historical and immutable. This change adds no runtime dependency. CLI/MCP/GUI default capture is 30 FPS; tests can explicitly choose 1–60 FPS. Old timeline schemas are rejected, never silently migrated; their GIF pixels can still be inspected with inspect/probe. Keep older portable versions for historical trace queries.
 
 ## Record and mark / 录制与标记
 

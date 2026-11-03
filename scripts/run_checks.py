@@ -51,6 +51,7 @@ def main():
             ("verify_performance", ["--output",str(root / "performance")]),
             ("verify_review_algorithms", ["--output",str(root / "review-algorithms")]),
             ("verify_demo", ["--output",str(root / "demo")]),
+            ("verify_workflow", ["--output",str(root / "workflow")]),
             ("verify_integration", ["--output",str(root / "integration")]),
             ("fuzz_regression", ["--iterations", "1000", "--seed", "20261102", "--output", str(root / "fuzz.json")]),
         ]]

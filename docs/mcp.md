@@ -37,6 +37,8 @@ Download and extract the portable ZIP from [Releases](https://github.com/liuminx
 
 `FRAMELET_MCP_ROOT` is created on startup; extra read directories must already exist. Both environment settings are optional. The default root is `%LOCALAPPDATA%\Framelet\Captures`, and reads are limited to that root unless extra directories are configured. Restart the MCP connection after updating the executable/configuration.
 
+Use `framelet_context.output_root` and returned artifact paths rather than guessing AppData paths: Windows may redirect a packaged host's writes. Initialization resolves the actual writable root with an empty create-new, delete-on-close probe; path and reparse guards remain enforced. / 以 context 和返回路径为准，避免自行拼接 AppData；打包宿主可能重定向写入，初始化通过自动清理的空探针确定实际产物目录，越界与 reparse 校验保持启用。
+
 `FRAMELET_MCP_ROOT` 启动时自动创建；额外读取目录必须已存在。两个环境变量均可省略，默认根目录为 `%LOCALAPPDATA%\Framelet\Captures`；不额外配置时，只能读取此目录内的文件。升级 EXE 或修改配置后重新连接 MCP。
 
 MCP is a protocol, not a universal installer. Each AI host registers its local command; a remote/cloud AI needs an authorized local connector/executor to reach this Windows process. A local EXE path on another machine is insufficient.

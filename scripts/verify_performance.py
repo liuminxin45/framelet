@@ -16,13 +16,13 @@ from performance_fixtures import create, publish_trace
 
 
 class Client:
-    def __init__(self, exe, root):
+    def __init__(self, exe, root, *, capture_root=None):
         self.seq = 0
         self.q = queue.Queue()
         self.backlog = {}
         self.log = (root / 'mcp.log').open('w', encoding='utf-8')
         self.p = subprocess.Popen([str(exe), 'mcp'], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                                  stderr=self.log, env={**os.environ, 'FRAMELET_MCP_ROOT': str(root),
+                                  stderr=self.log, env={**os.environ, 'FRAMELET_MCP_ROOT': str(capture_root if capture_root is not None else root),
                                                        'FRAMELET_MCP_READ_ROOTS': '[]'})
         def read():
             for line in self.p.stdout:

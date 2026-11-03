@@ -288,6 +288,9 @@ pub(super) fn call(
     }
     let result =
         json!({"ok":true,"result":value,"performance":{"cache":crate::review_cache::stats()}});
-    content.insert(0,json!({"type":"text","text":format!("{name} completed. Read structuredContent.result; images are included only when requested.")}));
+    content.insert(
+        0,
+        json!({"type":"text","text":super::summary::text(name, &result["result"])}),
+    );
     Ok(json!({"content":content,"structuredContent":result,"isError":false}))
 }

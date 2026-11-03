@@ -8,6 +8,8 @@ description: Record and review Windows software tests, bug reproductions and pro
 
 Produce a reviewable recording or test artifact that matches the user's goal. Framelet captures the visible Windows desktop; use the host's browser/desktop tools to operate the app. A remote host needs an authorized executor on that Windows computer.
 
+A browser-tool screenshot may show a background tab; before recording, confirm the intended target is visible on the actual desktop.
+
 ## Connect and choose evidence
 
 Discover the available Framelet tools and call `framelet_context` once per connection. Use its installed documentation root, supported limits and FPS guidance; do not memorize an API catalog in this skill. If tools are missing, read `references/installation.json` when present for this machine's executable/client, otherwise locate the portable executable or `framelet` on PATH. Run `integrate check --client <client>` with that executable. Register it with `integrate install` when installation is within the user's requested work, then reconnect the host. Do not invent a cloud URL or start a network daemon.
@@ -31,5 +33,7 @@ If an operation fails, inspect its structured failure and already saved artifact
 Query action events before requesting many pictures. Analyze unknown or repeated motion once for candidate intervals; batch uncertain timestamps through `framelet_probe_frames`. Default intermediate probes to numeric output. Request a contact sheet or selected images when visual judgment is needed, and check opening/closing context before editing. Candidate changes are not semantic highlights. Human-facing demos require the demo quality/trim workflow plus opening/action/closing visual review before delivery; raw capture success alone is insufficient.
 
 Preserve original event/sample identities when reporting tests. State requested versus measured sampling and any missing events. Default keyboard/mouse observation remains enabled; visual masks do not redact keyboard input. Keep raw traces local unless sharing them is requested, and review media before publication.
+
+No observed system input does not mean no UI operation occurred; inspect the pictures for visual behavior, and require matching events only when verifying system input traces.
 
 Return the saved artifact paths, what was exercised or shown, verification evidence and material limitations. Honor the user's requested format; do not claim a UI action or new recording when only existing media was analyzed.

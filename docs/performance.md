@@ -19,6 +19,10 @@ The current catalog is **4.0**, MCP protocol **2025-11-25**, with **25 tools**. 
 
 Status includes `ready`, `next_poll_ms`, `wall_remaining_ms`, sample count and media elapsed time. Start/stop/cancel are controls; wait remains an active asynchronous request while other controls execute. Clients must correlate responses by JSON-RPC ID, not line order.
 
+CLI `record` / `record-series --events` emits one JSONL `ready` event on stderr after the first successfully observed sample. Wait for that event before UI input; an early exit is not readiness. `stop --session` only acknowledges the stop request: await the original recording process's final stdout JSON and exit code for saved paths/warnings. Final capture results require visual review; `ok` is not content approval.
+
+CLI 的 `--events` 在首个成功采样被监督器确认后向 stderr 发送一次 `ready`。提前退出不代表就绪；stop 只确认停止请求，保存结果以原录制进程最终 stdout JSON 和退出码为准。成功保存仍须检查内容。
+
 状态给出 ready、建议轮询间隔、剩余墙钟预算、采样数和媒体时间。MCP 响应允许乱序；不要按输出行顺序匹配请求。
 
 ## Event discovery / 事件发现
@@ -60,8 +64,10 @@ Optional output is an atomically published directory. `export:sheet` is the defa
 默认输出只写联系表与 manifest；frames 模式另写全尺寸 PNG。组级探针按分段分别遍历，数字结果仍可全局定位；图像导出选择具体分段。frame_at 继续作为单点操作，经过内容校验的重复点和参考图可复用有界缓存。
 
 ```powershell
-framelet probe demo.gif --times 0 2 4.5 --output review --export sheet
+framelet probe demo.gif --times 0 2 4.5 --output-dir review --export sheet
 ```
+
+CLI `--times` accepts spaces or commas, e.g. `--times 0,2,4.5`. / CLI 时间点支持空格或逗号分隔，例如 `--times 0,2,4.5`。
 
 ## Action intervals / 动作区间
 
