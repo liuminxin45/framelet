@@ -30,7 +30,7 @@ try {
         $content = Get-Content -LiteralPath $_.FullName -Raw -Encoding UTF8
         $mediaRef = if ($version.EndsWith("-dev")) { "main" } else { "v$version" }
         $mediaBase = "https://raw.githubusercontent.com/liuminxin45/framelet/$mediaRef/docs/images/"
-        $content.Replace('(docs/images/', '(' + $mediaBase).Replace('(images/', '(' + $mediaBase) | Set-Content -LiteralPath $_.FullName -Encoding UTF8 -NoNewline
+        $content.Replace('(docs/images/', '(' + $mediaBase).Replace('(images/', '(' + $mediaBase).Replace('src="docs/images/', 'src="' + $mediaBase) | Set-Content -LiteralPath $_.FullName -Encoding UTF8 -NoNewline
     }
     python scripts/licenses.py $packageStage
     if ($LASTEXITCODE -ne 0) { throw 'Dependency license collection failed' }

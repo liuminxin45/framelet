@@ -1,6 +1,6 @@
 # Changelog
 
-## v0.5.0-dev — Unreleased
+## v0.5.0 — 2026-11-03
 
 - Default human-facing capture to 30 FPS across CLI/MCP/GUI; explicit lower rates remain available for tests.
 - Add bounded, idempotent non-invasive MCP begin/end/point anchors with native acknowledgements and shared observation IDs/clocks. Breaking: catalog 4.0 / 25 tools, timeline 3 only, retaining original capture FPS and typed marker observations; no old-schema reader.

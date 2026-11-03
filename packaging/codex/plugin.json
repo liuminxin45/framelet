@@ -1,7 +1,7 @@
 {
   "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
   "name": "framelet",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Record Windows software tests and demos, review synchronized actions and trim GIFs. Windows 键鼠帧同步录制与高效剪辑。",
   "author": {"name": "Neo / 刘民心", "url": "https://liuminxin.cn"},
   "repository": "https://github.com/liuminxin45/framelet",

@@ -22,8 +22,6 @@ New captures save `demo.gif`, `demo.timeline.json` and `demo.capture.json`. SHA-
 
 新版默认同步记录键盘、鼠标与采样；使用随机会话/资产标识和跨事件、采样共享的观测 ID。按事件 ID 查询可找到原始采样、GIF 帧及时间偏差。多次操作允许对应同一帧；暂停期间没有画面的事件不会被强行关联。剪辑保留原始身份和电脑时间，派生 GIF 使用新资产标识。新文件带内容校验与完成清单，中断后可验证恢复。
 
-New local development feature, not yet published. 新增本地开发功能，尚未发布。
-
 Every GUI, CLI and MCP recording enables frame timestamps and keyboard/mouse monitoring by default. No extra runtime or background service is required. Normal GIF viewing is unchanged. A successful capture returns `timeline`, `manifest` and `warnings`; inspect them before claiming a complete trace. Key-level events are collected; clipboard, IME-committed text and UI-element content are not read.
 
 GUI、CLI、MCP 默认开启帧时间与鼠标交互记录，不需额外运行时或常驻服务。输出 `demo.gif` 和相邻 `demo.timeline.json`；返回值包含时间线路径与警告。先检查警告再判断记录是否完整。不会采集键盘文本或 UI 元素内容。

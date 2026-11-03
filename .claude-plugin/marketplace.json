@@ -12,8 +12,8 @@
       "name": "framelet",
       "source": {
         "source": "archive",
-        "url": "https://github.com/liuminxin45/framelet/releases/download/v0.4.1/framelet-v0.4.1-claude-plugin.zip",
-        "sha256": "3c8c6370eb111f6253f6a970149355ee33f231303e1e191751bc3c21a83aa261"
+        "url": "https://github.com/liuminxin45/framelet/releases/download/v0.5.0/framelet-v0.5.0-claude-plugin.zip",
+        "sha256": "b75faa53c75f58e0acde2f0c366b66397f1a68033436a05b7a3a75f86eff8936"
       },
       "description": "Windows keyboard/mouse/frame recording and GIF review for software testing and demos."
     }

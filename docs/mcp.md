@@ -10,7 +10,7 @@ The portable EXE **is** the MCP server: your AI client launches `framelet.exe mc
 
 Call `framelet_context` first. `documentation` returns relative document paths, a local document root and a repository fallback URL. The local development version records timestamps/mouse events by default and adds `framelet_timeline`; see [timeline.md](timeline.md). Only the current catalog and timeline schema 3 are supported.
 
-先调用 context 获取路径、文档与帧率建议。本地开发版默认记录时间线；先查点击，再抽取操作前后画面。文档随便携包提供，源码目录也有 AGENTS.md 入口。
+先调用 context 获取路径、文档与帧率建议。当前版本默认记录时间线；先查点击，再抽取操作前后画面。文档随便携包提供，源码目录也有 AGENTS.md 入口。
 
 Native installation and client bundles: [installation.md](installation.md). The runtime also exposes version-matched `framelet://guides/*` resources; hosts can read guides without resolving local filesystem paths.
 

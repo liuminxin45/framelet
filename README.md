@@ -35,7 +35,7 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 | Keyboard/mouse/frame timeline | Locate failed steps and review action results |
 | [1–60 FPS](docs/60fps.md) | State checks and high-rate native review; use 30 FPS for browser sharing |
 | [Efficient AI review](docs/performance.md) | Filtered event queries, one-pass batch probes and transient-aware action intervals |
-| [Demo preparation](docs/demo-workflow.md) | Non-invasive anchors, action sampling checks and separate trimmed candidates (development build) |
+| [Demo preparation](docs/demo-workflow.md) | Non-invasive anchors, action sampling checks and separate trimmed candidates |
 | GIF editing | Precise time cuts and playback speed changes |
 | Native frame extraction | PNGs, contact sheets, timestamp probes and region comparisons |
 | Privacy and guardrails | Fixed masks, scoped MCP paths, no-overwrite and resource limits |

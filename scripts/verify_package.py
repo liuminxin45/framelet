@@ -17,5 +17,8 @@ assert r.returncode == 0, r.stderr
 catalog = json.loads(r.stdout)
 assert catalog["schema_version"] == "4.0"
 assert len(catalog["tools"]) == 25
+for document in ["README.md", "README.zh-CN.md"]:
+    text = (root / document).read_text(encoding="utf-8-sig")
+    assert 'src="docs/images/' not in text and "(docs/images/" not in text, "Portable image links must resolve to published assets"
 assert all(t["name"] != "framelet_record" for t in catalog["tools"])
 print(json.dumps({"ok": True, "version": catalog["version"], "tools": len(catalog["tools"]), "exe_sha256": checksums[0]}))
