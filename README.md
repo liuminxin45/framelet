@@ -2,6 +2,8 @@
 
 # Framelet
 
+<img src="docs/images/project-logo.png" width="160" alt="framelet logo" />
+
 **CLI-first, AI-native Windows recording with keyboard, mouse and frame synchronization.**
 
 **≈3.6 MiB native EXE · No extra runtime installs · CLI First · AI Native**
