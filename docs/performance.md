@@ -11,6 +11,10 @@ The current catalog is **4.0**, MCP protocol **2025-11-25**, with **25 tools**. 
 3. `framelet_stop_recording` returns promptly. `framelet_wait_recording(until:"terminal")` awaits the saved result without blocking controls. A client can perform this wait without repeatedly asking the model to poll.
 4. Analyze once, review the candidate interval, batch probe uncertain boundaries, then edit and verify.
 
+For a visible window, `window_handle` may replace `region`; use the handle from `framelet_windows`. It resolves once to a fixed physical desktop rectangle returned in `window_selection`. Moving, minimizing, covering, or changing the window can change what is captured. It is not an occlusion-independent window capture backend. CLI `record` / `record-series` also accept `--window-handle`.
+
+For an independent window surface, pass the HWND as `window_surface` (CLI `--window-surface`). WGC can record a background or covered window that Windows continues to render. The window must remain open, unminimized, and at its original desktop position and size for coordinate mapping. Unsupported or protected content may fail or be blank. The result reports `capture_backend: wgc_window` and `reused_window_snapshots`; repeated snapshots count scheduled reads of the latest known surface, not newly rendered frames.
+
 连接时缓存 context/catalog；明确区域后 start，再 wait 等待 ready。操作结束 stop，wait 等待 terminal。等待工具最多 30 秒，超时只返回当前状态，不会自动停止或取消录制；客户端可继续等待。取消 wait 也不改变录制状态。CLI/MCP 定时单 GIF 的默认时长为 **60 秒**，上限 300 秒；更长任务使用分组轮转。暂停仍受墙钟期限限制。
 
 ```json
@@ -81,6 +85,18 @@ CLI `--times` accepts spaces or commas, e.g. `--times 0,2,4.5`. / CLI 时间点�
 ```
 
 Review the intervals and limited images, then call framelet_edit. Keep original event/sample IDs and interpret offsets using timeline.md. For a known single monotonic boundary, local numerical bisection remains useful; it is no longer necessary to make the model discover every action through repeated image calls.
+
+`framelet_edit` accepts up to 64 ordered, non-overlapping `ranges` (`[{"start":0.2,"end":0.8},{"start":1.2,"end":2.5}]`), plus `crop` and up to 32 `masks` in source GIF pixels. One decode/export produces a new GIF. CLI: `framelet edit raw.gif --output clip.gif --range 0.2 0.8 --range 1.2 2.5 --crop 4,5,20,10 --mask 6,7,3,2`. Ranges cannot be combined with start/end. Redacted derived timelines remove all keyboard events and omit masked coordinates; original files remain sensitive. Cropping a recording with a scaled source timeline is refused until exact physical-coordinate mapping is supported.
+
+编辑支持多个有序、不重叠的保留区间，并可按源 GIF 像素裁剪和遮挡；一次解码输出新文件。遮挡后的派生时间线删除键盘事件并隐藏遮挡坐标，原始文件仍可能包含敏感信息。采集时缩放过的带时间线录像暂不支持裁剪，避免错误映射物理坐标。
+
+`highlight_clicks:true` / `--highlight-clicks` adds brief rings to observed mouse-down events, requires the source timeline and never highlights masked/out-of-crop points. / 可选点击圈只使用已记录的鼠标事件，遮挡内和裁剪外的坐标不会高亮。
+
+`max_bytes` / `--max-bytes` enforces a hard output size budget before publication. It does not automatically reduce resolution, color or frame rate; if the limit cannot be met, adjust the selected ranges or crop and retry. / 可选体积上限在发布前校验，不自动降低画质；超限时需调整保留区间或裁剪范围后重试。
+
+Opt in with `auto_compress:true` (CLI `--auto-compress`) alongside the byte limit. The editor tries normal encoding first, then up to two reductions in color precision, preserving the selected dimensions and playback time. It reports `compression_color_bits_per_channel`, and publishes no output if none of the attempts fit. / 显式启用后，正常编码超限才尝试最多两档降色，保留尺寸和播放时长；仍超限则不发布。
+
+For literal text search at selected playback times, use `framelet_probe_frames` with `find_text` (CLI `probe --find-text`). Windows OCR checks up to 16 requested timestamps, once per distinct encoded frame, using the local profile OCR language. Each result adds a `text_match` boolean. Only the requested frames are searched. / 本地 OCR 只搜索指定时间点，返回是否匹配，不返回识别全文；需要本机具备 Windows OCR 语言组件。
 
 v0.4.1 collects a bounded visual-candidate contact sheet during this same analysis pass: up to count distinct opening/closing/change/time-coverage frames, rather than uniform timestamps. preview_selection states the policy; preview_work reports zero additional decodes and at most 4,147,200 thumbnail pixel bytes. The existing comparison buffer supplies the closing frame. These thumbnails do not reduce full-resolution change detection. Use batch probes for exact timestamp selections. Windowed analysis converts only intersecting frames and one predecessor; editing converts only retained frames. GIF prefix decoding/compositing remains sequential. Group probes/overviews read one index snapshot and validate each unique selected segment once under request-long input leases; work.index_reads/segment_validations expose that work.
 

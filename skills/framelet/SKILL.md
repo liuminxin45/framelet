@@ -32,6 +32,8 @@ If an operation fails, inspect its structured failure and already saved artifact
 
 Query action events before requesting many pictures. Analyze unknown or repeated motion once for candidate intervals; batch uncertain timestamps through `framelet_probe_frames`. Default intermediate probes to numeric output. Request a contact sheet or selected images when visual judgment is needed, and check opening/closing context before editing. Candidate changes are not semantic highlights. Human-facing demos require the demo quality/trim workflow plus opening/action/closing visual review before delivery; raw capture success alone is insufficient.
 
+GIF frame index is not elapsed seconds or necessarily one capture sample: identical images may share one long hold. Probe playback timestamps for time-based review. One probe per second is not frame-by-frame review; for transient checks inspect relevant encoded frames and actual timeline sample times and gaps. Set `merge_identical:false` when recording and again when editing if separate identical encoded images are needed; this cannot recover missed samples and editing can change boundaries.
+
 Preserve original event/sample identities when reporting tests. State requested versus measured sampling and any missing events. Default keyboard/mouse observation remains enabled; visual masks do not redact keyboard input. Keep raw traces local unless sharing them is requested, and review media before publication.
 
 No observed system input does not mean no UI operation occurred; inspect the pictures for visual behavior, and require matching events only when verifying system input traces.

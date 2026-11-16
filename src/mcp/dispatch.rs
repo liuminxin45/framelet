@@ -58,7 +58,7 @@ fn call_value(
             anyhow::ensure!(v.as_u64().is_some(), "utc_us must be a nonnegative integer");
         }
     }
-    for key in ["cursor", "include_image"] {
+    for key in ["cursor", "include_image", "auto_compress"] {
         if key == "cursor" && name == "framelet_timeline" {
             continue;
         }
@@ -67,6 +67,7 @@ fn call_value(
         }
     }
     let mut args = a.clone();
+    let mut window_selection = None;
     for key in ["offset", "limit"] {
         if let Some(v) = a.get(key) {
             anyhow::ensure!(v.as_u64().is_some(), "{key} must be a nonnegative integer");
@@ -97,10 +98,33 @@ fn call_value(
                 .as_bool()
                 .ok_or_else(|| anyhow::anyhow!("full_screen must be boolean"))?,
         };
+        let window = args
+            .get("window_handle")
+            .map(|v| {
+                v.as_u64()
+                    .filter(|v| *v > 0)
+                    .ok_or_else(|| anyhow::anyhow!("window_handle must be a positive integer"))
+            })
+            .transpose()?;
         anyhow::ensure!(
-            args.get("region").is_some_and(|v| !v.is_null()) ^ full,
-            "choose exactly one explicit region or full_screen:true"
+            usize::from(args.get("region").is_some_and(|v| !v.is_null()))
+                + usize::from(full)
+                + usize::from(window.is_some())
+                + usize::from(args.get("window_surface").is_some())
+                == 1,
+            "choose exactly one region, window_handle, window_surface, or full_screen:true"
         );
+        if let Some(handle) = window {
+            let mut selected = None;
+            crate::capture::resolve_window(&mut selected, Some(handle))?;
+            args["region"] = json!(selected);
+            window_selection = Some(
+                json!({"handle":handle,"region":selected,"mode":"fixed_desktop_region","warning":"Window movement or occlusion changes captured content; the region does not follow it."}),
+            );
+            args.as_object_mut()
+                .context("arguments must be an object")?
+                .remove("window_handle");
+        }
         args.as_object_mut()
             .context("arguments must be an object")?
             .remove("full_screen");
@@ -126,6 +150,7 @@ fn call_value(
                 },
                 args.output.as_deref(),
                 args.export,
+                args.find_text.as_deref(),
             )
         }
         "framelet_recover" => {
@@ -136,7 +161,11 @@ fn call_value(
                 crate::transaction::recover(p)
             }
         }
-        "framelet_start_series" => sessions.start_series(serde_json::from_value(a.clone())?),
+        "framelet_start_series" => {
+            let mut result = sessions.start_series(serde_json::from_value(a.clone())?)?;
+            if let Some(selection) = window_selection { result["window_selection"] = selection; }
+            Ok(result)
+        },
         "framelet_recording_list" => crate::series::discover(
             paths.output_root(),
             a["offset"].as_u64().unwrap_or(0) as usize,
@@ -173,7 +202,9 @@ fn call_value(
         "framelet_cancel_recording" => sessions.action(string(a, "session_id")?, "cancel"),
         "framelet_start_recording" => {
             let args: crate::recording::RecordArgs = serde_json::from_value(a.clone())?;
-            sessions.start(args)
+            let mut result = sessions.start(args)?;
+            if let Some(selection) = window_selection { result["window_selection"] = selection; }
+            Ok(result)
         }
         "framelet_doctor" => Ok(crate::recording::doctor()),
         "framelet_monitors" => Ok(serde_json::to_value(crate::capture::monitors())?),
@@ -237,12 +268,21 @@ fn call_value(
             crate::frames::extract_value(&serde_json::from_value(a.clone())?)
         }
         "framelet_read_image" => Ok(json!({"input":string(a,"input")?})),
-        "framelet_edit" => Ok(serde_json::to_value(crate::encode::edit(
+        "framelet_edit" => Ok(serde_json::to_value(crate::encode::edit_advanced(
             Path::new(string(a, "input")?),
             Path::new(string(a, "output")?),
-            number(a, "start", 0.0)?,
-            a.get("end").map(|_| number(a, "end", 0.0)).transpose()?,
-            number(a, "speed", 1.0)?,
+            crate::encode::EditOptions {
+                start: number(a, "start", 0.0)?,
+                end: a.get("end").map(|_| number(a, "end", 0.0)).transpose()?,
+                speed: number(a, "speed", 1.0)?,
+                ranges: &serde_json::from_value::<Vec<crate::encode::EditRange>>(a.get("ranges").cloned().unwrap_or_else(|| json!([])))?,
+                crop: a.get("crop").map(|r| serde_json::from_value(r.clone())).transpose()?,
+                masks: &serde_json::from_value::<Vec<crate::capture::Region>>(a.get("masks").cloned().unwrap_or_else(|| json!([])))?,
+                highlight_clicks: a.get("highlight_clicks").map(|v|v.as_bool().ok_or_else(||anyhow::anyhow!("highlight_clicks must be boolean"))).transpose()?.unwrap_or(false),
+                max_bytes: a.get("max_bytes").map(|v|v.as_u64().ok_or_else(||anyhow::anyhow!("max_bytes must be a positive integer"))).transpose()?,
+                auto_compress: a["auto_compress"].as_bool().unwrap_or(false),
+                merge_identical: a.get("merge_identical").map(|v|v.as_bool().ok_or_else(||anyhow::anyhow!("merge_identical must be boolean"))).transpose()?.unwrap_or(true),
+            },
         )?)?),
         _ => anyhow::bail!("unknown tool"),
     }

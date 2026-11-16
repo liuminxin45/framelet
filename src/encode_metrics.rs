@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct Metrics {
+    pub capture_backend: Option<String>,
+    #[serde(default)]
+    pub reused_window_snapshots: u64,
     pub target_fps: Option<u32>,
     pub source_samples: u64,
     pub samples_per_media_second: Option<f64>,
@@ -14,6 +17,7 @@ pub struct Metrics {
     pub exact_palette_frames: u64,
     pub quantized_frames: u64,
     pub merged_samples: u64,
+    pub merge_identical: Option<bool>,
     pub checkpoint_snapshots: u64,
 }
 pub fn micros(elapsed: std::time::Duration) -> u64 {

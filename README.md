@@ -36,7 +36,8 @@ Keyboard records contain down/up transitions, key codes and scan codes, not clip
 | [1–60 FPS](docs/60fps.md) | State checks and high-rate native review; use 30 FPS for browser sharing |
 | [Efficient AI review](docs/performance.md) | Filtered event queries, one-pass batch probes and transient-aware action intervals |
 | [Demo preparation](docs/demo-workflow.md) | Non-invasive anchors, action sampling checks and separate trimmed candidates |
-| GIF editing | Precise time cuts and playback speed changes |
+| GIF editing | Multi-range cuts, speed, crop, redaction, optional click rings and output size limit |
+| Frame inspection | Optionally keep identical GIF frames separate; review samples by their recorded timestamps |
 | Native frame extraction | PNGs, contact sheets, timestamp probes and region comparisons |
 | Privacy and guardrails | Fixed masks, scoped MCP paths, no-overwrite and resource limits |
 | Isolation and integrity | Supervised capture process, content hashes and recovery markers |

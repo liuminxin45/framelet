@@ -20,6 +20,7 @@ mod sessions;
 mod storage;
 mod timeline;
 mod transaction;
+mod window_capture;
 mod worker;
 
 fn main() {

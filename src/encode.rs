@@ -35,6 +35,7 @@ pub struct GifWriter {
     preserve_partial: bool,
     capture_fps: Option<u32>,
     short_delay_frames: u64,
+    merge_identical: bool,
 }
 impl GifWriter {
     pub fn new(path: &Path, width: u32, height: u32, quality: i32) -> Result<Self> {
@@ -130,6 +131,7 @@ impl GifWriter {
             preserve_partial: work.is_some(),
             capture_fps: None,
             short_delay_frames: 0,
+            merge_identical: true,
         })
     }
     pub fn track(
@@ -147,11 +149,15 @@ impl GifWriter {
         )?);
         Ok(())
     }
-    pub fn capture(&mut self, grab: &crate::capture::Grabber) -> Result<Vec<u8>> {
+    pub fn capture(&mut self, grab: &crate::capture::RecordingSource) -> Result<Vec<u8>> {
         let began = std::time::Instant::now();
         let at = self.timeline.as_ref().map(|t| t.begin());
         let mut pixels = std::mem::take(&mut self.spare_rgb);
-        grab.rgb_into(&mut pixels)?;
+        let reused = grab.rgb_into(&mut pixels)?;
+        self.metrics
+            .capture_backend
+            .get_or_insert_with(|| grab.name().into());
+        self.metrics.reused_window_snapshots += u64::from(reused);
         if let (Some(t), Some(at)) = (self.timeline.as_mut(), at) {
             t.captured(at);
         }
@@ -198,6 +204,10 @@ impl GifWriter {
     }
     pub fn set_limit(&mut self, bytes: u64) {
         self.limit = bytes;
+    }
+    pub fn set_merge_identical(&mut self, merge: bool) {
+        self.merge_identical = merge;
+        self.metrics.merge_identical = Some(merge);
     }
     pub fn process_markers(&mut self, control: &crate::recording::Control) -> Result<()> {
         let recorder = self
@@ -251,7 +261,7 @@ impl GifWriter {
         out.flush()?;
         out.get_ref().file.sync_all()?;
         let bytes = out.get_ref().file.metadata()?.len();
-        ensure!(bytes <= self.limit, "GIF exceeds output byte budget");
+        ensure!(bytes <= self.limit, ByteBudgetExceeded);
         Ok(bytes)
     }
     fn flush(&mut self) -> Result<()> {
@@ -266,7 +276,7 @@ impl GifWriter {
                 .write_frame(&frame)?;
             ensure!(
                 std::fs::metadata(&self.partial)?.len() <= self.limit,
-                "GIF exceeds output byte budget; unfinished output discarded"
+                ByteBudgetExceeded
             );
             self.frames += 1;
             if let std::borrow::Cow::Owned(buffer) = frame.buffer {
@@ -290,7 +300,8 @@ impl GifWriter {
         ensure!(delay > 0, "GIF delay must be positive");
         self.samples += 1;
         self.duration_cs += u64::from(delay);
-        if rgb == self.previous
+        if self.merge_identical
+            && rgb == self.previous
             && self
                 .pending
                 .as_ref()
@@ -302,6 +313,22 @@ impl GifWriter {
                 .delay += delay;
             self.mapped(delay);
             self.metrics.merged_samples += 1;
+            self.spare_rgb = rgb;
+            return Ok(());
+        }
+        if !self.merge_identical && rgb == self.previous && !self.previous.is_empty() {
+            self.flush()?;
+            self.pending = Some(Frame {
+                width: 1,
+                height: 1,
+                delay,
+                dispose: DisposalMethod::Keep,
+                transparent: Some(0),
+                palette: Some(vec![0, 0, 0, 0, 0, 0]),
+                buffer: std::borrow::Cow::Owned(vec![0]),
+                ..Frame::default()
+            });
+            self.mapped(delay);
             self.spare_rgb = rgb;
             return Ok(());
         }
@@ -382,10 +409,7 @@ impl GifWriter {
         writer.flush()?;
         writer.get_ref().file.sync_all()?;
         let final_bytes = writer.get_ref().file.metadata()?.len();
-        ensure!(
-            final_bytes <= self.limit,
-            "GIF exceeds output byte budget; unfinished output discarded"
-        );
+        ensure!(final_bytes <= self.limit, ByteBudgetExceeded);
         // Handle-based publication never replaces an existing user file.
         crate::storage::publish_file(&writer.get_ref().file, &self.path)?;
         self.committed = true;
@@ -537,7 +561,28 @@ pub struct EditResult {
     #[serde(flatten)]
     pub stats: Stats,
     pub work: crate::frames::DecodeStats,
+    pub compression_color_bits_per_channel: u8,
 }
+#[derive(Clone, Copy, serde::Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct EditRange {
+    pub start: f64,
+    pub end: f64,
+}
+#[derive(Clone, Copy)]
+pub struct EditOptions<'a> {
+    pub start: f64,
+    pub end: Option<f64>,
+    pub speed: f64,
+    pub ranges: &'a [EditRange],
+    pub crop: Option<crate::capture::Region>,
+    pub masks: &'a [crate::capture::Region],
+    pub highlight_clicks: bool,
+    pub max_bytes: Option<u64>,
+    pub merge_identical: bool,
+    pub auto_compress: bool,
+}
+
 pub fn edit(
     input: &Path,
     output: &Path,
@@ -545,6 +590,69 @@ pub fn edit(
     end: Option<f64>,
     speed: f64,
 ) -> Result<EditResult> {
+    edit_advanced(
+        input,
+        output,
+        EditOptions {
+            start,
+            end,
+            speed,
+            ranges: &[],
+            crop: None,
+            masks: &[],
+            highlight_clicks: false,
+            max_bytes: None,
+            merge_identical: true,
+            auto_compress: false,
+        },
+    )
+}
+
+pub fn edit_advanced(input: &Path, output: &Path, options: EditOptions<'_>) -> Result<EditResult> {
+    ensure!(
+        !options.auto_compress || options.max_bytes.is_some(),
+        "auto_compress requires max_bytes"
+    );
+    let _lease = crate::file_guard::Lease::input(input)?;
+    for bits in [8, 4, 2] {
+        match edit_attempt(input, output, options, bits) {
+            Err(error)
+                if options.auto_compress
+                    && bits > 2
+                    && error.downcast_ref::<ByteBudgetExceeded>().is_some() => {}
+            result => return result,
+        }
+    }
+    unreachable!("final compression attempt always returns")
+}
+
+#[derive(Debug)]
+struct ByteBudgetExceeded;
+impl std::fmt::Display for ByteBudgetExceeded {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str("GIF exceeds output byte budget; unfinished output discarded")
+    }
+}
+impl std::error::Error for ByteBudgetExceeded {}
+
+fn edit_attempt(
+    input: &Path,
+    output: &Path,
+    options: EditOptions<'_>,
+    color_bits: u8,
+) -> Result<EditResult> {
+    let EditOptions {
+        start,
+        end,
+        speed,
+        ranges,
+        crop,
+        masks,
+        highlight_clicks,
+        max_bytes,
+        merge_identical,
+        auto_compress: _,
+    } = options;
     ensure!(
         speed.is_finite()
             && (0.01..=100.0).contains(&speed)
@@ -558,7 +666,112 @@ pub fn edit(
         "output already exists: {}",
         output.display()
     );
+    ensure!(
+        ranges.len() <= 64 && masks.len() <= 32,
+        "at most 64 ranges and 32 masks"
+    );
+    ensure!(
+        ranges.is_empty() || (start == 0.0 && end.is_none()),
+        "ranges cannot be combined with start/end"
+    );
+    ensure!(
+        max_bytes.is_none_or(|n| (1..=268_435_456).contains(&n)),
+        "max_bytes must be 1..268435456"
+    );
+    let explicit_ranges = !ranges.is_empty();
+    let ranges: Vec<(f64, f64)> = if ranges.is_empty() {
+        vec![(start, end.unwrap_or(f64::INFINITY))]
+    } else {
+        ranges.iter().map(|r| (r.start, r.end)).collect()
+    };
+    ensure!(
+        ranges.iter().all(|(a, b)| a.is_finite()
+            && *a >= 0.0
+            && *b > *a
+            && (!explicit_ranges || (b * 1_000_000.0).round() > (a * 1_000_000.0).round())
+            && (b.is_finite() || (!explicit_ranges && ranges.len() == 1)))
+            && ranges.windows(2).all(|w| w[0].1 <= w[1].0),
+        "ranges must be ordered, non-overlapping and finite"
+    );
+    let _input_lease = crate::file_guard::Lease::input(input)?;
+    let header = gif::DecodeOptions::new().read_info(File::open(input)?)?;
+    let (width, height) = (u32::from(header.width()), u32::from(header.height()));
+    let valid = |r: &crate::capture::Region| {
+        r.x >= 0
+            && r.y >= 0
+            && r.width > 0
+            && r.height > 0
+            && r.x as u64 + r.width as u64 <= width as u64
+            && r.y as u64 + r.height as u64 <= height as u64
+    };
+    ensure!(
+        crop.as_ref().is_none_or(valid) && masks.iter().all(valid),
+        "crop and masks must fit the source image"
+    );
     let source_timeline = crate::timeline::load(input)?;
+    ensure!(
+        !highlight_clicks || source_timeline.is_some(),
+        "click highlighting requires a recorded input timeline"
+    );
+    if let Some(data) = &source_timeline {
+        ensure!(
+            masks.is_empty() || data.warnings.len() < 63,
+            "timeline warning limit prevents safe redaction"
+        );
+        if let Some(r) = crop {
+            ensure!(
+                data.region.x.checked_add(r.x).is_some()
+                    && data.region.y.checked_add(r.y).is_some(),
+                "crop coordinate overflow"
+            );
+        }
+    }
+    if crop.is_some()
+        && source_timeline
+            .as_ref()
+            .is_some_and(|d| d.region.width != width || d.region.height != height)
+    {
+        anyhow::bail!(
+            "cropping scaled recordings with a timeline is not supported; source pixel mapping is not exact"
+        );
+    }
+    let mut clicks = Vec::new();
+    if highlight_clicks {
+        let data = source_timeline.as_ref().context("missing input timeline")?;
+        for e in &data.events {
+            if e.device != crate::timeline::Device::Mouse || ![513, 516, 519, 523].contains(&e.kind)
+            {
+                continue;
+            }
+            let (Some(t), Some([x, y])) = (e.media_us, e.point) else {
+                continue;
+            };
+            let gx = (x as u64 * width as u64 / data.region.width as u64) as i32;
+            let gy = (y as u64 * height as u64 / data.region.height as u64) as i32;
+            if !ranges
+                .iter()
+                .any(|(a, b)| (t as f64) / 1e6 >= *a && (t as f64) / 1e6 < *b)
+            {
+                continue;
+            }
+            if masks.iter().any(|r| {
+                gx >= r.x
+                    && gy >= r.y
+                    && i64::from(gx) < i64::from(r.x) + i64::from(r.width)
+                    && i64::from(gy) < i64::from(r.y) + i64::from(r.height)
+            }) {
+                continue;
+            }
+            let (ox, oy) = crop.map_or((0, 0), |r| (r.x, r.y));
+            let (ow, oh) = crop.map_or((width, height), |r| (r.width, r.height));
+            if gx < ox || gy < oy || gx - ox >= ow as i32 || gy - oy >= oh as i32 {
+                continue;
+            }
+            clicks.push((t, gx - ox, gy - oy));
+            ensure!(clicks.len() <= 4096, "click highlight limit is 4096");
+        }
+        clicks.sort_unstable_by_key(|v| v.0);
+    }
     let _pending = if source_timeline.is_some() {
         Some(crate::transaction::begin(output)?)
     } else {
@@ -571,55 +784,160 @@ pub fn edit(
     let mut writer: Option<GifWriter> = None;
     let mut timing_error = 0.0;
     let mut output_cs = 0u64;
+    let mut last_seen_end = 0.0f64;
     let work = crate::frames::scan(
         input,
         |_, at, delay, _, _| {
-            (at + delay) as f64 / 1000. > start && end.is_none_or(|end| (at as f64 / 1000.) < end)
+            ranges.iter().any(|(start, end)| {
+                (at + delay) as f64 / 1000. > *start && (at as f64 / 1000.) < *end
+            })
         },
         |_, at, delay_ms, w, h, rgb| {
             let time = at as f64 / 1000.0;
             let next = (at + delay_ms) as f64 / 1000.0;
-            let included = next.min(end.unwrap_or(f64::INFINITY)) - time.max(start);
-            if included > 0.0 {
-                let desired = included / speed * 100.0 + timing_error;
-                let mut delay = desired.round().max(1.0) as u64;
-                timing_error = desired - delay as f64;
-                output_cs += delay;
-                ensure!(
-                    output_cs <= 360_000,
-                    "edited GIF exceeds 1 hour duration budget"
-                );
-                if writer.is_none() {
-                    writer = Some(GifWriter::new(output, w, h, 10)?);
+            last_seen_end = next;
+            for &(start, end) in &ranges {
+                let lo = (time.max(start) * 1e6).round() as u64;
+                let hi = (next.min(end) * 1e6).round() as u64;
+                if hi <= lo {
+                    continue;
                 }
-                while delay > 0 {
-                    let part = delay.min(65535);
-                    let w = writer.as_mut().context("GIF editor not initialized")?;
-                    let out_start = w.duration_cs * 10_000;
-                    w.push(rgb.to_vec(), part as u16)?;
-                    // Split long holds while preserving the exact rounded output duration.
-                    let src_start = (time.max(start) * 1e6).round() as u64;
-                    let src_end = (next.min(end.unwrap_or(f64::INFINITY)) * 1e6).round() as u64;
-                    let total = desired.round().max(1.0) as u64;
-                    let consumed = total - delay;
-                    spans.push((
-                        src_start + (src_end - src_start) * consumed / total,
-                        src_start + (src_end - src_start) * (consumed + part) / total,
-                        out_start,
-                        w.duration_cs * 10_000,
-                        w.frames,
-                    ));
-                    delay -= part;
+                let first = clicks.partition_point(|c| c.0.saturating_add(350_000) <= lo);
+                let last = clicks.partition_point(|c| c.0 < hi);
+                let relevant = &clicks[first..last];
+                let mut cuts = vec![lo, hi];
+                for &(t, _, _) in relevant {
+                    if t > lo && t < hi {
+                        cuts.push(t);
+                    }
+                    let stop = t.saturating_add(350_000);
+                    if stop > lo && stop < hi {
+                        cuts.push(stop);
+                    }
+                }
+                cuts.sort_unstable();
+                cuts.dedup();
+                for bounds in cuts.windows(2) {
+                    let (src_start, src_end) = (bounds[0], bounds[1]);
+                    let included = (src_end - src_start) as f64 / 1e6;
+                    let desired = included / speed * 100.0 + timing_error;
+                    let mut delay = desired.round().max(1.0) as u64;
+                    timing_error = desired - delay as f64;
+                    output_cs += delay;
+                    ensure!(
+                        output_cs <= 360_000,
+                        "edited GIF exceeds 1 hour duration budget"
+                    );
+                    if writer.is_none() {
+                        let r = crop.unwrap_or(crate::capture::Region {
+                            x: 0,
+                            y: 0,
+                            width: w,
+                            height: h,
+                        });
+                        writer = Some(GifWriter::new(output, r.width, r.height, 10)?);
+                        writer
+                            .as_mut()
+                            .context("writer missing")?
+                            .set_merge_identical(merge_identical);
+                        if let Some(limit) = max_bytes {
+                            writer.as_mut().context("editor missing")?.set_limit(limit);
+                        }
+                    }
+                    let mut pixels = rgb.to_vec();
+                    if color_bits < 8 {
+                        let levels = (1u16 << color_bits) - 1;
+                        for channel in &mut pixels {
+                            let level = (u16::from(*channel) * levels + 127) / 255;
+                            *channel = (level * 255 / levels) as u8;
+                        }
+                    }
+                    for mask in masks {
+                        for y in mask.y as usize..mask.y as usize + mask.height as usize {
+                            let i = (y * w as usize + mask.x as usize) * 3;
+                            pixels[i..i + mask.width as usize * 3].fill(24);
+                        }
+                    }
+                    if let Some(r) = crop {
+                        let mut clipped =
+                            Vec::with_capacity(r.width as usize * r.height as usize * 3);
+                        for y in r.y as usize..r.y as usize + r.height as usize {
+                            let i = (y * w as usize + r.x as usize) * 3;
+                            clipped.extend_from_slice(&pixels[i..i + r.width as usize * 3]);
+                        }
+                        pixels = clipped;
+                    }
+                    let mid = src_start + (src_end - src_start) / 2;
+                    let (ow, oh) = crop.map_or((width, height), |r| (r.width, r.height));
+                    let (ox, oy) = crop.map_or((0, 0), |r| (r.x, r.y));
+                    for &(t, x, y) in relevant {
+                        if t > mid || mid >= t.saturating_add(350_000) {
+                            continue;
+                        }
+                        for dy in -10i32..=10 {
+                            for dx in -10i32..=10 {
+                                let dist = dx * dx + dy * dy;
+                                let (px, py) = (x + dx, y + dy);
+                                if !(64..=100).contains(&dist)
+                                    || px < 0
+                                    || py < 0
+                                    || px >= ow as i32
+                                    || py >= oh as i32
+                                {
+                                    continue;
+                                }
+                                let (sx, sy) = (px + ox, py + oy);
+                                if masks.iter().any(|r| {
+                                    sx >= r.x
+                                        && sy >= r.y
+                                        && i64::from(sx) < i64::from(r.x) + i64::from(r.width)
+                                        && i64::from(sy) < i64::from(r.y) + i64::from(r.height)
+                                }) {
+                                    continue;
+                                }
+                                let i = (py as usize * ow as usize + px as usize) * 3;
+                                pixels[i..i + 3].copy_from_slice(&[255, 80, 40]);
+                            }
+                        }
+                    }
+                    while delay > 0 {
+                        let part = delay.min(65535);
+                        let w = writer.as_mut().context("GIF editor not initialized")?;
+                        let out_start = w.duration_cs * 10_000;
+                        let frame = if delay <= 65535 {
+                            std::mem::take(&mut pixels)
+                        } else {
+                            pixels.clone()
+                        };
+                        w.push(frame, part as u16)?;
+                        // Split long holds while preserving the exact rounded output duration.
+                        let total = desired.round().max(1.0) as u64;
+                        let consumed = total - delay;
+                        spans.push((
+                            src_start + (src_end - src_start) * consumed / total,
+                            src_start + (src_end - src_start) * (consumed + part) / total,
+                            out_start,
+                            w.duration_cs * 10_000,
+                            w.frames,
+                        ));
+                        delay -= part;
+                    }
                 }
             }
-            Ok(end.is_none_or(|e| next < e))
+            Ok(next < ranges.last().map_or(0.0, |r| r.1))
         },
     )?;
+    ensure!(
+        !explicit_ranges || ranges.last().is_some_and(|r| r.1 <= last_seen_end),
+        "edit range exceeds source duration"
+    );
     let mut stats = writer.context("trim range contains no frames")?.finish()?;
     if let Some(data) = source_timeline {
         // A random-ID/remapping failure after media publication must not hide saved output.
         match crate::runtime::guard("timeline.edit.remap", || {
-            crate::timeline::remap(data, &spans, &stats)
+            let mut data = crate::timeline::remap(data, &spans, &stats)?;
+            crate::timeline::transform_coordinates(&mut data, crop, masks)?;
+            Ok(data)
         }) {
             Ok(data) => {
                 stats.warnings.extend(data.warnings.iter().cloned());
@@ -652,7 +970,11 @@ pub fn edit(
             }
         }
     }
-    Ok(EditResult { stats, work })
+    Ok(EditResult {
+        stats,
+        work,
+        compression_color_bits_per_channel: color_bits,
+    })
 }
 pub fn inspect(input: &Path) -> Result<serde_json::Value> {
     Ok(inventory(input)?.0)

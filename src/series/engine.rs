@@ -1,6 +1,6 @@
 use super::{model::*, store};
 use crate::{
-    capture::Grabber,
+    capture::RecordingSource,
     encode::GifWriter,
     recording::Control,
     timeline::{Data, Recorder},
@@ -157,6 +157,7 @@ fn new_writer(root: &Path, index: &Index, number: u32, w: u32, h: u32) -> Result
         Some(&root.join(".work")),
     )?;
     writer.set_limit(index.request.max_mib * 1024 * 1024);
+    writer.set_merge_identical(index.request.merge_identical);
     writer.set_capture_fps(index.request.fps);
     Ok(writer)
 }
@@ -198,7 +199,7 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
         notify(c);
         std::thread::sleep(Duration::from_millis(10));
     }
-    let grab = Grabber::new(region, a.cursor)?;
+    let grab = RecordingSource::new(region, a.cursor, a.window_surface)?;
     let mut recorder = Recorder::new(region, w, h, &a.masks)?;
     recorder.set_identity(&index.session_id, &crate::identity::new_id()?);
     recorder.data.capture_fps = Some(a.fps);
@@ -393,6 +394,18 @@ pub fn run_local(plan: &Plan, c: &Control, mut notify: impl FnMut(&Control)) -> 
         index.failure = Some(format!("{e:#}").chars().take(4096).collect());
         ending = "capture_failure".into();
         crate::runtime::report("series.capture", &e);
+    }
+    if ending == "duration"
+        && index.failure.is_none()
+        && let Some(expected) = total_cs
+        && start_cs < expected
+    {
+        index.failure = Some(format!(
+            "Capture ended before the full media duration could be saved: {} of {} ms. Committed parts were preserved.",
+            start_cs * 10,
+            expected * 10,
+        ));
+        ending = "incomplete_duration".into();
     }
     let incomplete = index.failure.is_some()
         || index

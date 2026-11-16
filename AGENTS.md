@@ -14,6 +14,8 @@ For reliable long recordings, read docs/long-recording.md. Use record-series / f
 
 Read docs/agent-guide.md before operating Framelet. Read docs/timeline.md for default interaction timestamps and time/coordinate mapping. Build, package and verification instructions are in docs/development.md; MCP installation and path rules are in docs/mcp.md.
 
+GIF frame indices are not seconds or guaranteed sample indices. Probe playback times for timed states; one image per second is not frame-by-frame review. Inspect actual timeline sample times/gaps for transients. Recording and editing accept `merge_identical:false`; it does not restore missed samples or guarantee original frame boundaries after editing.
+
 At runtime initialize MCP and call framelet_context first: it returns documentation locations, recording roots, FPS presets and the editing recipe. Query framelet_timeline before requesting many images. Use the current catalog as the API contract; unsupported names and versions fail explicitly.
 
 Read docs/architecture.md for module boundaries and the failure contract. Read docs/code-audit.md for findings and remaining limitations. On failure inspect structured failure, warnings, output paths and diagnostics; do not assume a failed metadata step means the GIF was lost or repeat a user interaction automatically.

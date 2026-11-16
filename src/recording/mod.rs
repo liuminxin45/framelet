@@ -2,7 +2,7 @@ pub mod markers;
 mod options;
 mod services;
 use crate::{
-    capture::{self, Grabber, Region},
+    capture::{self, RecordingSource, Region},
     encode::{GifWriter, Stats},
 };
 use anyhow::{Result, ensure};
@@ -40,7 +40,14 @@ pub fn validate(a: &RecordArgs) -> Result<(Region, u32, u32)> {
     ensure!(a.masks.len() <= 32, "at most 32 privacy masks");
     crate::safety::extension(&a.output, "gif")?;
     ensure!(!a.output.exists(), "output already exists");
-    let r = a.region.unwrap_or_else(capture::desktop);
+    ensure!(
+        a.window_surface.is_none() || a.region.is_none(),
+        "choose region or window_surface"
+    );
+    let r = match a.window_surface {
+        Some(hwnd) => crate::window_capture::region(hwnd)?,
+        None => a.region.unwrap_or_else(capture::desktop),
+    };
     capture::validate(r)?;
     let w = a.max_width.unwrap_or(r.width).min(r.width);
     ensure!(
@@ -104,7 +111,7 @@ pub fn transform(mut rgb: Vec<u8>, r: Region, w: u32, h: u32, masks: &[Region]) 
 }
 fn capture_frame(
     writer: &mut GifWriter,
-    grab: &Grabber,
+    grab: &RecordingSource,
     r: Region,
     w: u32,
     h: u32,
@@ -138,8 +145,9 @@ pub(crate) fn run_local(
         notify(c);
         std::thread::sleep(Duration::from_millis(20));
     }
-    let grab = Grabber::new(r, a.cursor)?;
+    let grab = RecordingSource::new(r, a.cursor, a.window_surface)?;
     let mut writer = GifWriter::new(&a.output, w, h, a.quality)?;
+    writer.set_merge_identical(a.merge_identical);
     writer.track(r, &a.masks)?;
     writer.set_limit(a.max_mib * 1024 * 1024);
     writer.set_capture_fps(a.fps);

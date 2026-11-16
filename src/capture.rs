@@ -54,6 +54,43 @@ pub fn desktop() -> Region {
         }
     }
 }
+/// Resolve a visible window once to a fixed desktop rectangle, not a window surface.
+pub fn resolve_window(region: &mut Option<Region>, handle: Option<u64>) -> Result<()> {
+    let Some(handle) = handle else {
+        return Ok(());
+    };
+    ensure!(region.is_none(), "choose region or window_handle, not both");
+    let hwnd = usize::try_from(handle).context("invalid window handle")? as HWND;
+    unsafe {
+        ensure!(
+            !hwnd.is_null()
+                && IsWindow(hwnd) != 0
+                && IsWindowVisible(hwnd) != 0
+                && IsIconic(hwnd) == 0,
+            "window is invalid, hidden or minimized"
+        );
+        let mut bounds: RECT = std::mem::zeroed();
+        ensure!(
+            GetWindowRect(hwnd, &mut bounds) != 0,
+            "cannot read window rectangle"
+        );
+        let w = i64::from(bounds.right) - i64::from(bounds.left);
+        let h = i64::from(bounds.bottom) - i64::from(bounds.top);
+        ensure!(
+            w > 0 && h > 0 && w <= 8192 && h <= 8192,
+            "invalid window rectangle"
+        );
+        let selected = Region {
+            x: bounds.left,
+            y: bounds.top,
+            width: w as u32,
+            height: h as u32,
+        };
+        validate(selected)?;
+        *region = Some(selected);
+    }
+    Ok(())
+}
 pub fn validate(r: Region) -> Result<()> {
     let d = desktop();
     ensure!(
@@ -275,4 +312,31 @@ pub fn windows() -> Vec<WindowInfo> {
         EnumWindows(Some(cb), &mut out as *mut _ as isize);
     }
     out
+}
+
+pub enum RecordingSource {
+    Desktop(Grabber),
+    Window(crate::window_capture::WindowSource),
+}
+impl RecordingSource {
+    pub fn new(region: Region, cursor: bool, window_surface: Option<u64>) -> Result<Self> {
+        match window_surface {
+            Some(handle) => Ok(Self::Window(crate::window_capture::WindowSource::new(
+                handle, region, cursor,
+            )?)),
+            None => Ok(Self::Desktop(Grabber::new(region, cursor)?)),
+        }
+    }
+    pub fn name(&self) -> &'static str {
+        match self {
+            Self::Desktop(_) => "gdi_desktop",
+            Self::Window(_) => "wgc_window",
+        }
+    }
+    pub fn rgb_into(&self, rgb: &mut Vec<u8>) -> Result<bool> {
+        match self {
+            Self::Desktop(source) => source.rgb_into(rgb).map(|()| false),
+            Self::Window(source) => source.rgb_into(rgb),
+        }
+    }
 }

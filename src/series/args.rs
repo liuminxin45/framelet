@@ -26,12 +26,23 @@ pub struct SeriesArgs {
     pub max_mib: u64,
     #[arg(long, allow_hyphen_values = true)]
     pub region: Option<crate::capture::Region>,
+    /// Resolve a visible window once to a fixed desktop region; it is not tracked if moved.
+    #[arg(long, conflicts_with = "region")]
+    #[serde(skip)]
+    pub window_handle: Option<u64>,
+    /// Capture this HWND's independent WGC surface, including while occluded.
+    #[arg(long, conflicts_with_all = ["region", "window_handle"])]
+    #[serde(default)]
+    pub window_surface: Option<u64>,
     #[arg(long, default_value_t = 30)]
     pub fps: u32,
     #[arg(long)]
     pub cursor: bool,
     #[arg(long, default_value_t = 10)]
     pub quality: i32,
+    /// Merge consecutive identical images; set false for frame inspection.
+    #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+    pub merge_identical: bool,
     #[arg(long)]
     pub max_width: Option<u32>,
     #[arg(long = "mask", allow_hyphen_values = true)]
@@ -57,9 +68,12 @@ impl Default for SeriesArgs {
             total_mib: 2048,
             max_mib: 256,
             region: None,
+            window_handle: None,
+            window_surface: None,
             fps: 30,
             cursor: false,
             quality: 10,
+            merge_identical: true,
             max_width: None,
             masks: vec![],
             delay: 0.0,
@@ -73,11 +87,14 @@ impl SeriesArgs {
     pub fn capture(&self, output: &Path) -> crate::recording::RecordArgs {
         crate::recording::RecordArgs {
             region: self.region,
+            window_handle: None,
+            window_surface: self.window_surface,
             fps: self.fps,
             duration: 1.0,
             output: output.into(),
             cursor: self.cursor,
             quality: self.quality,
+            merge_identical: self.merge_identical,
             session: None,
             events: false,
             max_width: self.max_width,

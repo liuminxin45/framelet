@@ -5,7 +5,7 @@ mod recorder;
 mod store;
 #[cfg(test)]
 mod tests;
-pub use mapping::remap;
+pub use mapping::{remap, transform_coordinates};
 #[cfg(test)]
 use model::*;
 pub use model::{Data, Device};

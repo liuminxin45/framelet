@@ -8,6 +8,14 @@ pub struct RecordArgs {
     #[arg(long, allow_hyphen_values = true)]
     #[serde(default)]
     pub region: Option<Region>,
+    /// Resolve a visible window once to a fixed desktop region; moving or covering it changes the captured content.
+    #[arg(long, conflicts_with = "region")]
+    #[serde(skip)]
+    pub window_handle: Option<u64>,
+    /// Capture this HWND's independent WGC surface, including while occluded.
+    #[arg(long, conflicts_with_all = ["region", "window_handle"])]
+    #[serde(default)]
+    pub window_surface: Option<u64>,
     #[arg(long, default_value_t = 30)]
     #[serde(default = "default_fps")]
     pub fps: u32,
@@ -23,6 +31,10 @@ pub struct RecordArgs {
     #[arg(long, default_value_t = 10)]
     #[serde(default = "default_quality")]
     pub quality: i32,
+    /// Merge consecutive identical images; set false for frame inspection.
+    #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+    #[serde(default = "default_merge_identical")]
+    pub merge_identical: bool,
     /// Named stop handle, e.g. demo. Stop with `framelet stop --session demo`.
     #[arg(long)]
     #[serde(default)]
@@ -59,4 +71,7 @@ fn default_duration() -> f64 {
 }
 fn default_quality() -> i32 {
     10
+}
+fn default_merge_identical() -> bool {
+    true
 }

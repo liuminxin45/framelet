@@ -1,6 +1,6 @@
 [package]
 name = "framelet"
-version = "0.5.1"
+version = "0.5.2"
 edition = "2024"
 description = "A tiny native Windows screen recorder for people and agents"
 license = "MIT"
@@ -8,6 +8,8 @@ repository = "https://github.com/liuminxin45/framelet"
 readme = "README.md"
 
 [dependencies]
+windows-capture = "=2.0.1"
+windows = { version = "0.62.2", features = ["Foundation", "Graphics_Imaging", "Media_Ocr", "Security_Cryptography", "Storage_Streams"] }
 anyhow = "1"
 base64 = "0.22"
 clap = { version = "4", features = ["derive"] }
@@ -17,7 +19,7 @@ png = "0.17"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 toml_edit = { version = "0.25.17", features = ["serde"] }
-windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_System_Console", "Win32_System_SystemInformation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls", "Win32_UI_Controls_Dialogs", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_Storage_FileSystem", "Win32_Security", "Win32_Security_Cryptography", "Win32_System_JobObjects"] }
+windows-sys = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Dwm", "Win32_System_LibraryLoader", "Win32_System_Threading", "Win32_System_Console", "Win32_System_SystemInformation", "Win32_UI_WindowsAndMessaging", "Win32_UI_Controls", "Win32_UI_Controls_Dialogs", "Win32_UI_HiDpi", "Win32_UI_Input_KeyboardAndMouse", "Win32_Storage_FileSystem", "Win32_Security", "Win32_Security_Cryptography", "Win32_System_JobObjects"] }
 
 [profile.release]
 opt-level = "s"

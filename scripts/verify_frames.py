@@ -4,7 +4,10 @@ import json
 import pathlib
 import subprocess
 import tempfile
+import hashlib
+import uuid
 from PIL import Image, ImageDraw
+from performance_fixtures import publish_trace
 
 parser = argparse.ArgumentParser()
 parser.add_argument('exe', type=pathlib.Path)
@@ -92,6 +95,105 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
         assert not (root/'bad-times').exists()
     print('PASS space/comma/mixed timestamp input, caller order, duplicates, 64-value bound and invalid-input cleanup')
 
+    # A complex palette must not flicker when a duplicate is encoded as a transparent delta.
+    gradient=Image.new('RGB',(64,64))
+    gradient.putdata([((i*13)%256,(i*29)%256,(i*47)%256) for i in range(4096)])
+    gradient.save(root/'gradient.gif',duration=1000)
+    two=root/'gradient-separated.gif'
+    result=run('edit',root/'gradient.gif','--output',two,'--range',0,.5,'--range',.5,1,'--merge-identical','false')['result']
+    assert result['frames']==2 and result['duration_ms']==1000
+    with Image.open(two) as image:
+        image.seek(0); first=image.convert('RGB').tobytes()
+        image.seek(1); assert image.convert('RGB').tobytes()==first
+    merged=run('edit',two,'--output',root/'gradient-merged.gif')['result']
+    assert merged['frames']==1 and merged['duration_ms']==1000
+    print('PASS optional identical-frame preservation retains composited complex-color pixels and playback time')
+
+    noisy = Image.new('RGB', (128, 96))
+    import random
+    rng = random.Random(41)
+    noisy.putdata([tuple(rng.randrange(256) for _ in range(3)) for _ in range(128*96)])
+    noisy.save(root/'noisy.gif', duration=1000)
+    normal = run('edit', root/'noisy.gif', '--output', root/'normal.gif')['result']
+    budget = normal['bytes'] * 9 // 10
+    compact = run('edit', root/'noisy.gif', '--output', root/'compact.gif', '--max-bytes', budget,
+                  '--auto-compress')['result']
+    assert compact['bytes'] <= budget and compact['compression_color_bits_per_channel'] < 8
+    assert [compact[k] for k in ('width','height','duration_ms')] == [normal[k] for k in ('width','height','duration_ms')]
+    run('edit', root/'noisy.gif', '--output', root/'impossible.gif', '--max-bytes', 1, '--auto-compress', ok=False)
+    assert not (root/'impossible.gif').exists()
+    print('PASS bounded opt-in automatic compression and no output on impossible budget')
+
+    edited = root/'multi.gif'
+    result = run('edit', source, '--output', edited, '--range', 0.2, 0.8, '--range', 1.2, 2.5,
+                 '--crop', '4,5,20,10', '--mask', '6,7,3,2')['result']
+    assert result['duration_ms']==1900 and (result['width'],result['height'])==(20,10)
+    with Image.open(edited) as gif:
+        assert gif.n_frames==3
+        for i, color in enumerate([(255,0,0),(0,128,0),(0,0,255)]):
+            gif.seek(i); frame=gif.convert('RGB')
+            assert frame.getpixel((0,0))==color
+            assert frame.getpixel((2,2))==(24,24,24)
+    for options in [('--range',0,2,'--range',1,2.5),('--range',0,4),('--range',0,'inf'),
+                    ('--crop','60,40,10,10'),('--mask','-1,0,2,2'),('--start',.2,'--range',0,1),
+                    ('--range',0.1,0.1000001)]:
+        run('edit',source,'--output',root/'bad-edit.gif',*options,ok=False)
+        assert not (root/'bad-edit.gif').exists()
+    assert not list(root.glob('*.pending.json'))
+    print('PASS single-pass multi-range crop/redaction pixels, duration, validation and no partial publication')
+
+    samples = [dict(id=i+1,seq=i,utc_us=10000000+i*1000000,capture_us=i*1000000,
+                    capture_end_us=i*1000000+100,coverage_start_us=i*1000000,hold_end_us=(i+1)*1000000,
+                    media_start_us=i*1000000,media_end_us=(i+1)*1000000,gif_frame=i,cursor=[10,10]) for i in range(3)]
+    def event(id,seq,kind,media,point,device='mouse'):
+        sample=media//1000000
+        return dict(id=id,seq=seq,device=device,vk=65 if device=='keyboard' else None,
+                    scan=30 if device=='keyboard' else None,key_name='A' if device=='keyboard' else None,
+                    flags=0,sample_id=sample+1,offset_us=media-sample*1000000,utc_us=10000000+media,
+                    mono_us=media,kind=kind,point=point,injected=False,wheel=0,media_us=media,gif_frame=sample)
+    events=[event(4,0,513,300000,[6,7]),event(5,1,256,1300000,None,'keyboard'),
+            event(6,2,513,2200000,[20,20]),event(7,3,513,2400000,[10,10])]
+    trace=dict(schema=3,session_id=uuid.uuid4().hex,asset_id=uuid.uuid4().hex,
+        gif_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),region=dict(x=-100,y=30,width=64,height=48),
+        width=64,height=48,gif_bytes=source.stat().st_size,duration_ms=3000,frames=3,
+        samples=samples,events=events,dropped_events=0,warnings=[])
+    publish_trace(source,trace)
+    out=root/'traced.gif'
+    res=run('edit',source,'--output',out,'--range',.2,.8,'--range',1.2,2.5,
+            '--crop','4,5,20,10','--mask','6,7,3,2')['result']
+    assert res['timeline'] and res['manifest'] and res['warnings']
+    derived=json.loads(out.with_suffix('.timeline.json').read_text(encoding='utf-8'))
+    assert derived['session_id']==trace['session_id'] and derived['asset_id']!=trace['asset_id']
+    assert derived['region']==dict(x=-96,y=35,width=20,height=10)
+    assert [(e['id'],e['point']) for e in derived['events']]==[(4,None),(6,None),(7,[6,5])]
+    assert all(e['device']!='keyboard' for e in derived['events'])
+    checked=run('timeline',out,'--event-id',7,'--detail','full')['result']
+    assert checked['events'][0]['desktop_point']==[-90,40] and checked['events'][0]['gif_point']==[6.0,5.0]
+    assert checked['events'][0]['utc_us']==trace['events'][3]['utc_us']
+    assert not out.with_suffix('.pending.json').exists()
+    print('PASS multi-range timeline identity, coordinate remapping, keyboard redaction and manifest validation')
+
+    marked=root/'marked.gif'
+    run('edit',source,'--output',marked,'--mask','6,7,3,2','--mask','18,10,3,2','--highlight-clicks')
+    assert run('inspect',marked)['result']['duration_ms']==3000
+    for time_value,point,expected_color in [(0.35,(14,7),(255,0,0)),(2.25,(28,20),(255,80,40)),(2.45,(18,10),(24,24,24)),(2.8,(28,20),(0,0,255))]:
+        picture=root/f'marked-{time_value}.png'
+        run('frame-at',marked,'--at',time_value,'--output',picture)
+        with Image.open(picture) as im: assert im.convert('RGB').getpixel(point)==expected_color
+    assert run('timeline',marked,'--event-id',6)['result']['events'][0]['id']==6
+    run('edit',edited,'--output',root/'no-trace.gif','--highlight-clicks',ok=False)
+    assert not (root/'no-trace.gif').exists()
+    print('PASS opt-in click rings follow observed events, honor redaction and preserve playback duration')
+
+    for input_gif in [source,edited]:
+        before=hashlib.sha256(input_gif.read_bytes()).hexdigest()
+        run('edit',input_gif,'--output',root/'too-large.gif','--max-bytes','1',ok=False)
+        assert not (root/'too-large.gif').exists() and not (root/'too-large.pending.json').exists()
+        assert hashlib.sha256(input_gif.read_bytes()).hexdigest()==before
+    limited=run('edit',source,'--output',root/'limited.gif','--max-bytes','100000')['result']
+    assert limited['bytes']<=100000 and pathlib.Path(limited['output']).is_file()
+    print('PASS output byte budget refuses publication, cleans owned staging and preserves original')
+
     compared=run('frame-at', source, '--at', 1.5, '--reference', root/'at-0.png', '--compare-region', '2,3,10,8', '--output', root/'compared.png')['result']['comparison']
     assert compared['pixels']==80 and compared['changed_pixels']==80 and compared['changed_fraction']==1
     assert abs(compared['mean_absolute_error']-(255+128)/3)<0.001
@@ -132,4 +234,4 @@ with tempfile.TemporaryDirectory(prefix='framelet-frames-') as tmp:
     assert not (root/'bad').exists() and not (root/'broken').exists()
     assert not list(root.glob('.framelet-*.partial'))
     print('PASS overwrite refusal, bounded options, malformed input and failure cleanup')
-print(json.dumps({'ok':True,'frame_extraction_checks':8}))
+print(json.dumps({'ok':True,'frame_extraction_checks':12}))

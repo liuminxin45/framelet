@@ -111,6 +111,27 @@ enum Command {
         end: Option<f64>,
         #[arg(long, default_value_t = 1.0)]
         speed: f64,
+        /// Repeat a pair of start/end seconds for multiple retained ranges.
+        #[arg(long = "range", num_args = 2, action = clap::ArgAction::Append)]
+        ranges: Vec<f64>,
+        /// Crop rectangle in source GIF pixels: x,y,width,height.
+        #[arg(long, allow_hyphen_values = true)]
+        crop: Option<Region>,
+        /// Redaction rectangle in source GIF pixels; repeatable.
+        #[arg(long = "mask", allow_hyphen_values = true)]
+        masks: Vec<Region>,
+        /// Overlay a short ring at recorded mouse clicks.
+        #[arg(long)]
+        highlight_clicks: bool,
+        /// Refuse to publish a GIF exceeding this byte limit.
+        #[arg(long)]
+        max_bytes: Option<u64>,
+        /// Set false to preserve identical encoded images for frame inspection.
+        #[arg(long, action = clap::ArgAction::Set, default_value_t = true)]
+        merge_identical: bool,
+        /// Try reduced colors to meet --max-bytes, preserving dimensions and time.
+        #[arg(long, requires = "max_bytes")]
+        auto_compress: bool,
     },
     /// Request a running recording to stop. Uses an OS named event.
     Stop {
@@ -149,7 +170,8 @@ pub fn run() -> Result<()> {
         Command::WorkerRecord => crate::worker::child_main()?,
         Command::WorkerAnalyze => crate::mcp::analysis::child_main()?,
         Command::Gui => crate::gui::run()?,
-        Command::Record(a) => {
+        Command::Record(mut a) => {
+            crate::capture::resolve_window(&mut a.region, a.window_handle.take())?;
             let cancel = Arc::new(AtomicBool::new(false));
             let c = cancel.clone();
             ctrlc::set_handler(move || c.store(true, Ordering::Relaxed))?;
@@ -157,7 +179,8 @@ pub fn run() -> Result<()> {
                 json!({"ok":true,"result":record(&a,Some(&cancel))?,"visual_review_required":true}),
             )?;
         }
-        Command::RecordSeries(a) => {
+        Command::RecordSeries(mut a) => {
+            crate::capture::resolve_window(&mut a.region, a.window_handle.take())?;
             let cancel = Arc::new(AtomicBool::new(false));
             let flag = cancel.clone();
             ctrlc::set_handler(move || flag.store(true, Ordering::Relaxed))?;
@@ -203,7 +226,7 @@ pub fn run() -> Result<()> {
             print(json!({"ok":true,"result":crate::review::demo::run(&a)?}))?
         }
         Command::Probe(a) => print(
-            json!({"ok":true,"result":crate::review::probe::batch(&a.input,&a.times,crate::frames::ProbeOptions{reference:a.reference,region:a.compare_region,threshold:a.difference_threshold},a.output.as_deref(),a.export)?}),
+            json!({"ok":true,"result":crate::review::probe::batch(&a.input,&a.times,crate::frames::ProbeOptions{reference:a.reference,region:a.compare_region,threshold:a.difference_threshold},a.output.as_deref(),a.export,a.find_text.as_deref())?}),
         )?,
         Command::Frames(a) => print(json!({"ok":true,"result":crate::frames::extract_value(&a)?}))?,
         Command::FrameAt {
@@ -222,7 +245,27 @@ pub fn run() -> Result<()> {
             start,
             end,
             speed,
-        } => print(json!({"ok":true,"result":encode::edit(&input,&output,start,end,speed)?}))?,
+            ranges,
+            crop,
+            masks,
+            highlight_clicks,
+            max_bytes,
+            merge_identical,
+            auto_compress,
+        } => {
+            let ranges: Vec<_> = ranges
+                .as_chunks::<2>()
+                .0
+                .iter()
+                .map(|r| encode::EditRange {
+                    start: r[0],
+                    end: r[1],
+                })
+                .collect();
+            print(
+                json!({"ok":true,"result":encode::edit_advanced(&input,&output,encode::EditOptions {start,end,speed,ranges:&ranges,crop,masks:&masks,highlight_clicks,max_bytes,merge_identical,auto_compress})?}),
+            )?
+        }
         Command::Stop { session } => {
             stop(&session)?;
             print(json!({"ok":true,"session":session,"stop_requested":true}))?;

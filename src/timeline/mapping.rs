@@ -1,5 +1,73 @@
 use super::model::*;
 use crate::encode::Stats;
+
+pub fn transform_coordinates(
+    data: &mut Data,
+    crop: Option<crate::capture::Region>,
+    masks: &[crate::capture::Region],
+) -> anyhow::Result<()> {
+    let original = data.region;
+    let width = data.width;
+    let height = data.height;
+    let map = |point: Option<[i32; 2]>| -> Option<[i32; 2]> {
+        let [x, y] = point?;
+        let gx = x as u64 * width as u64 / original.width as u64;
+        let gy = y as u64 * height as u64 / original.height as u64;
+        if masks.iter().any(|r| {
+            gx >= r.x as u64
+                && gx < r.x as u64 + r.width as u64
+                && gy >= r.y as u64
+                && gy < r.y as u64 + r.height as u64
+        }) {
+            return None;
+        }
+        if let Some(r) = crop {
+            if gx < r.x as u64
+                || gx >= r.x as u64 + r.width as u64
+                || gy < r.y as u64
+                || gy >= r.y as u64 + r.height as u64
+            {
+                return None;
+            }
+            return Some([x - r.x, y - r.y]);
+        }
+        Some([x, y])
+    };
+    for s in &mut data.samples {
+        s.cursor = map(s.cursor);
+    }
+    for e in &mut data.events {
+        e.point = map(e.point);
+    }
+    if !masks.is_empty() {
+        data.events.retain(|e| e.device != Device::Keyboard);
+        anyhow::ensure!(
+            data.warnings.len() < 64,
+            "timeline warning limit prevents safe redaction"
+        );
+        data.warnings.push(
+            "Keyboard observations removed from redacted output; inspect original trace separately"
+                .into(),
+        );
+    }
+    if let Some(r) = crop {
+        data.region.x = data
+            .region
+            .x
+            .checked_add(r.x)
+            .ok_or_else(|| anyhow::anyhow!("crop coordinate overflow"))?;
+        data.region.y = data
+            .region
+            .y
+            .checked_add(r.y)
+            .ok_or_else(|| anyhow::anyhow!("crop coordinate overflow"))?;
+        data.region.width = r.width;
+        data.region.height = r.height;
+        data.width = r.width;
+        data.height = r.height;
+    }
+    Ok(())
+}
 // Actual per-frame output timing, including centisecond rounding, drives trim/speed remapping.
 pub fn remap(
     mut data: Data,

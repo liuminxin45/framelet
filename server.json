@@ -3,7 +3,7 @@
   "name": "io.github.liuminxin45/framelet",
   "title": "Framelet",
   "description": "Tiny native Windows screen recorder with keyboard/mouse/frame sync and GIF review.",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "repository": {
     "url": "https://github.com/liuminxin45/framelet",
     "source": "github"
@@ -11,8 +11,8 @@
   "packages": [
     {
       "registryType": "mcpb",
-      "identifier": "https://github.com/liuminxin45/framelet/releases/download/v0.5.1/framelet-v0.5.1-windows-x64.mcpb",
-      "fileSha256": "54ad197da475ba6c0fc9366afeab632add4ab272d4f857dbb958062a2b10cdf5",
+      "identifier": "https://github.com/liuminxin45/framelet/releases/download/v0.5.2/framelet-v0.5.2-windows-x64.mcpb",
+      "fileSha256": "c982eafc2079d3ca5b482665d37285ff28e8ed2c27201ac9002bdb05f869866d",
       "transport": {
         "type": "stdio"
       }

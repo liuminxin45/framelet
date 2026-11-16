@@ -64,6 +64,12 @@ try {
   const edited = await call('framelet_edit', { input, output: path.join(output, 'trim.gif'), start: 0.1, end: 0.3 });
   assert.equal(edited.structuredContent.result.duration_ms, 200);
   assert(edited.content.some(c=>c.type==='text' && c.text.includes('not been visually approved')));
+  const multi = await call('framelet_edit', {input, output:path.join(output,'multi.gif'),
+    ranges:[{start:0.05,end:0.10},{start:0.20,end:0.30}], crop:{x:0,y:0,width:2,height:2},
+    masks:[{x:0,y:0,width:1,height:1}]});
+  assert.equal(multi.structuredContent.result.duration_ms,150);
+  assert.equal(multi.structuredContent.result.width,2);
+  assert.equal(multi.structuredContent.result.height,2);
   checks.push('SDK inspect and trim');
   const probes = await call('framelet_probe_frames', {input, times:[0.1,0.2,0.1]});
   assert.equal(probes.structuredContent.result.decode_passes,1);

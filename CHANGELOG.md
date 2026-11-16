@@ -1,5 +1,13 @@
 # Changelog
 
+## v0.5.2 — 2026-11-16
+
+- Add explicit identical-frame merging control for recording, rotating series and editing, with timeline-aware AI review guidance.
+- Add multi-range editing, crop, redaction, recorded-click highlighting, strict output size limit and fixed window-handle selection.
+- Add opt-in WGC capture of an HWND surface, including covered windows that remain rendered.
+- Add local Windows OCR matching at selected playback timestamps and opt-in color reduction to fit a GIF byte budget.
+
+
 ## v0.5.1 — 2026-11-03
 
 - Fix MCP artifact readback under Windows packaged-host AppData redirection by resolving the actual writable output root. Retain path/reparse guards; the empty root probe is create-new and delete-on-close.

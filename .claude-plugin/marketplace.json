@@ -12,7 +12,7 @@
       "name": "framelet",
       "source": {
         "source": "archive",
-        "url": "https://github.com/liuminxin45/framelet/releases/download/v0.5.1/framelet-v0.5.1-claude-plugin.zip",
+        "url": "https://github.com/liuminxin45/framelet/releases/download/v0.5.2/framelet-v0.5.2-claude-plugin.zip",
         "sha256": "1e42fe8b43cb6250bcb13ac3241a84f4d0f102c86cac26d2a28496943e10076d"
       },
       "description": "Windows keyboard/mouse/frame recording and GIF review for software testing and demos."

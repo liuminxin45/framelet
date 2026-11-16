@@ -128,6 +128,17 @@ def short(exe, root):
         assert done["result"]["state"] == "completed", done
         directory = s["directory"]
         validate(exe, directory, [1000, 1000, 1000])
+        unmerged = m.tool("framelet_start_series", {**common, "name":"separate", "duration":6,
+            "segment_seconds":3, "merge_identical":False})
+        unmerged_done = m.wait(unmerged["session_id"], lambda s: s["terminal"])
+        assert unmerged_done["result"]["state"] == "completed", unmerged_done
+        index = json.loads((Path(unmerged["directory"])/"recording.json").read_text(encoding="utf-8"))
+        assert len(index['parts']) == 2
+        for part in index['parts']:
+            stats=part['recording']
+            assert stats['capture_metrics']['merge_identical'] is False
+            assert stats['capture_metrics']['merged_samples']==0 and stats['frames']==stats['samples']>=2,stats
+        validate(exe, unmerged['directory'], [3000, 3000])
         assert m.tool("framelet_start_series", args)["existing"]
         query = m.tool("framelet_frame_at", {"input": directory, "at": 1.2,
                                              "output": str(root / "global-probe.png")})

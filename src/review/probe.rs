@@ -12,6 +12,9 @@ pub struct Args {
     /// Playback seconds separated by spaces or commas, e.g. --times 0 2 4.5 or --times 0,2,4.5.
     #[arg(long,num_args=1..=64,required=true,value_delimiter=',')]
     pub times: Vec<f64>,
+    /// Search selected frames for literal text using local Windows OCR.
+    #[arg(long)]
+    pub find_text: Option<String>,
     /// Create a new directory containing contact-sheet.png and manifest.json; --export frames adds individual PNGs.
     #[arg(long = "output-dir", value_name = "DIRECTORY")]
     pub output: Option<PathBuf>,
@@ -181,7 +184,14 @@ pub fn batch(
     options: ProbeOptions,
     output: Option<&Path>,
     export: Export,
+    find_text: Option<&str>,
 ) -> Result<Value> {
+    if let Some(query) = find_text {
+        ensure!(
+            !query.trim().is_empty() && query.len() <= 256 && times.len() <= 16,
+            "find_text requires 1..256 bytes of text and at most 16 timestamps"
+        );
+    }
     ensure!(
         (1..=64).contains(&times.len())
             && times
@@ -220,6 +230,7 @@ pub fn batch(
                 },
                 None,
                 export,
+                find_text,
             )?;
             passes += value["decode_passes"].as_u64().unwrap_or(0);
             decoded += value["work"]["decoded_frames"].as_u64().unwrap_or(0);
@@ -275,8 +286,14 @@ pub fn batch(
                     h,
                     rgb: rgb.to_vec(),
                 };
+                let text_match = find_text
+                    .map(|query| super::ocr::contains(rgb, w, h, query))
+                    .transpose()?;
                 for (&time, indices) in matches {
                     let mut value = metadata(&frame, input, time, reference.as_ref(), &options)?;
+                    if let Some(found) = text_match {
+                        value["text_match"] = json!(found);
+                    }
                     if let Some(output) = output.filter(|_| export == Export::Frames) {
                         let name = stage
                             .as_ref()
